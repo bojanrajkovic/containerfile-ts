@@ -1,3 +1,18 @@
 // pattern: Functional Core
 // Entry point for containerfile-ts library
-// Exports will be added as features are implemented
+
+export type {
+  Instruction,
+  FromInstruction,
+  RunInstruction,
+  CopyInstruction,
+  AddInstruction,
+  WorkdirInstruction,
+  EnvInstruction,
+  ExposeInstruction,
+  CmdInstruction,
+  EntrypointInstruction,
+  ArgInstruction,
+  LabelInstruction,
+  Containerfile,
+} from './types.js';

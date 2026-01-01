@@ -19,8 +19,8 @@ pnpm test:watch # Run tests in watch mode
 
 This library follows the Functional Core, Imperative Shell pattern:
 
-- **Functional Core** (`src/types.ts`, `src/instructions.ts`): Pure types and factory functions with no I/O
-- **Imperative Shell** (future `src/render.ts`): String rendering and file output
+- **Functional Core** (`src/types.ts`, `src/instructions.ts`, `src/render.ts`): Pure types, factory functions, and rendering with no I/O. Currently all production code is Functional Core.
+- **Imperative Shell** (not yet needed): File I/O operations (writing Dockerfiles to disk) would go here when added. Tests in `tests/` are Imperative Shell as they perform file I/O to load fixtures.
 
 ### File Structure
 
@@ -29,6 +29,7 @@ src/
   index.ts        # Public API exports
   types.ts        # All instruction types and option types
   instructions.ts # Factory functions for creating instructions
+  render.ts       # Rendering functions for Dockerfile output
 tests/
   generation.test.ts  # Fixture-based generation tests
   fixtures/           # Test fixtures with generator.ts and expected.Dockerfile
@@ -79,6 +80,19 @@ Factory functions create instruction objects with optional parameters via option
 | `label` | `(key: string, value: string)` | |
 | `containerfile` | `(def: Containerfile)` | Identity function for type safety |
 
+### Render Functions
+
+| Function | Signature | Notes |
+|----------|-----------|-------|
+| `render` | `(containerfile: Containerfile): string` | Renders full Containerfile to Dockerfile string |
+
+Rendering behavior:
+- Instructions joined with newlines (no trailing newline)
+- RUN with array uses exec form `["cmd", "arg"]`
+- EXPOSE omits `/tcp` suffix (default protocol)
+- LABEL values are quoted
+- Options rendered in order: `--platform`, `--from`, `--chown`, `--chmod`
+
 ### Validation
 
 The `expose()` function validates:
@@ -114,7 +128,7 @@ To add a new test fixture:
 - Phase 1: Project Scaffolding - Complete
 - Phase 2: Core Instruction Types - Complete
 - Phase 3: Factory Functions - Complete
-- Phase 4: Rendering Logic - Not started
+- Phase 4: Rendering Logic - Complete
 - Phase 5: Multi-Stage Support - Not started
 - Phase 6: Testing Infrastructure - Complete
 - Phase 7: Linting and Git Hooks - Not started

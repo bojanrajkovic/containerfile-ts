@@ -36,3 +36,5 @@ export {
   label,
   containerfile,
 } from './instructions.js';
+
+export { render } from './render.js';

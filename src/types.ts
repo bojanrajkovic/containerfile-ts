@@ -149,3 +149,42 @@ export type Instruction =
 export type Containerfile = {
   readonly instructions: ReadonlyArray<Instruction>;
 };
+
+/**
+ * Options for the from() factory function
+ */
+export type FromOptions = {
+  readonly as?: string;
+  readonly platform?: string;
+};
+
+/**
+ * Options for the copy() factory function
+ */
+export type CopyOptions = {
+  readonly from?: string;
+  readonly chown?: string;
+  readonly chmod?: string;
+};
+
+/**
+ * Options for the add() factory function
+ */
+export type AddOptions = {
+  readonly chown?: string;
+  readonly chmod?: string;
+};
+
+/**
+ * Options for the expose() factory function
+ */
+export type ExposeOptions = {
+  readonly protocol?: 'tcp' | 'udp' | 'sctp';
+};
+
+/**
+ * Options for the arg() factory function
+ */
+export type ArgOptions = {
+  readonly defaultValue?: string;
+};

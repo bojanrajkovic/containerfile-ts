@@ -15,4 +15,24 @@ export type {
   ArgInstruction,
   LabelInstruction,
   Containerfile,
+  FromOptions,
+  CopyOptions,
+  AddOptions,
+  ExposeOptions,
+  ArgOptions,
 } from './types.js';
+
+export {
+  from,
+  run,
+  copy,
+  add,
+  workdir,
+  env,
+  expose,
+  cmd,
+  entrypoint,
+  arg,
+  label,
+  containerfile,
+} from './instructions.js';

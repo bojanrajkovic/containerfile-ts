@@ -9,7 +9,8 @@ TypeScript library for generating Containerfiles/Dockerfiles programmatically us
 ```bash
 pnpm install    # Install dependencies
 pnpm build      # Build TypeScript
-pnpm test       # Run tests (when available)
+pnpm test       # Run tests
+pnpm test:watch # Run tests in watch mode
 ```
 
 ## Architecture
@@ -28,6 +29,9 @@ src/
   index.ts        # Public API exports
   types.ts        # All instruction types and option types
   instructions.ts # Factory functions for creating instructions
+tests/
+  generation.test.ts  # Fixture-based generation tests
+  fixtures/           # Test fixtures with generator.ts and expected.Dockerfile
 ```
 
 ## Public API Contracts
@@ -92,6 +96,19 @@ Throws `Error` with descriptive message on invalid input.
 - All fields are `readonly`
 - Strict TypeScript configuration
 
+## Testing
+
+Tests use Vitest with a fixture-based approach:
+
+- Each fixture has a `generator.ts` exporting a `fixture` containerfile definition
+- Each fixture has an `expected.Dockerfile` with the expected rendered output
+- Tests dynamically discover fixtures and verify generation matches expected output
+
+To add a new test fixture:
+1. Create `tests/fixtures/<fixture-name>/generator.ts`
+2. Create `tests/fixtures/<fixture-name>/expected.Dockerfile`
+3. Export `fixture` from the generator file
+
 ## Implementation Status
 
 - Phase 1: Project Scaffolding - Complete
@@ -99,6 +116,6 @@ Throws `Error` with descriptive message on invalid input.
 - Phase 3: Factory Functions - Complete
 - Phase 4: Rendering Logic - Not started
 - Phase 5: Multi-Stage Support - Not started
-- Phase 6: Testing Infrastructure - Not started
+- Phase 6: Testing Infrastructure - Complete
 - Phase 7: Linting and Git Hooks - Not started
 - Phase 8: Documentation - In progress

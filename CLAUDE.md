@@ -11,7 +11,16 @@ pnpm install    # Install dependencies
 pnpm build      # Build TypeScript
 pnpm test       # Run tests
 pnpm test:watch # Run tests in watch mode
+pnpm lint       # Run oxlint
+pnpm lint:fix   # Run oxlint with auto-fix
 ```
+
+## Git Hooks
+
+Husky manages git hooks:
+
+- **pre-commit**: Runs `pnpm lint:fix` to auto-fix lint issues
+- **pre-push**: Runs `pnpm typecheck && pnpm test` to verify before push
 
 ## Architecture
 
@@ -155,5 +164,5 @@ To add a new test fixture:
 - Phase 4: Rendering Logic - Complete
 - Phase 5: Multi-Stage Support - Complete
 - Phase 6: Testing Infrastructure - Complete
-- Phase 7: Linting and Git Hooks - Not started
+- Phase 7: Linting and Git Hooks - Complete
 - Phase 8: Documentation - In progress

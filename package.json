@@ -20,7 +20,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "oxlint",
-    "lint:fix": "oxlint --fix"
+    "lint:fix": "oxlint --fix",
+    "prepare": "husky"
   },
   "keywords": [
     "dockerfile",
@@ -40,6 +41,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "husky": "^9.1.0",
     "oxlint": "^0.15.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"

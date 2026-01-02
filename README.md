@@ -2,6 +2,8 @@
 
 Type-safe Dockerfile/Containerfile generation with declarative TypeScript, inspired by [gha-ts](https://github.com/JLarky/gha-ts).
 
+> **Note:** This is a vibe-coded library, built quickly with AI assistance as an experiment in declarative container definitions. It works, but take it in that spirit. PRs welcome if you find rough edges!
+
 ## Installation
 
 ```bash

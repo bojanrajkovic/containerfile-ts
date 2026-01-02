@@ -226,6 +226,8 @@ Architecture Decision Records go in `adrs/` with sequential filenames:
 
 Track future tasks, enhancements, and bugs using [GitHub Issues](https://github.com/bojanrajkovic/containerfile-ts/issues).
 
+**Before creating issues:** Show the user the proposed title, body, and labels for each issue and ask for feedback before creating it.
+
 Historical context for potential future instructions is in `docs/future-instructions.md`.
 
 ## Implementation Status

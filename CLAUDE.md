@@ -2,36 +2,57 @@
 
 > Freshness: 2026-01-01
 
-TypeScript library for generating Containerfiles/Dockerfiles programmatically using type-safe declarative object literals.
+Type-safe Dockerfile/Containerfile generation with declarative TypeScript.
 
 ## Quick Start
 
 ```bash
 pnpm install    # Install dependencies
-pnpm build      # Build TypeScript
+pnpm build      # Compile TypeScript
 pnpm test       # Run tests
 pnpm test:watch # Run tests in watch mode
-pnpm lint       # Run oxlint
-pnpm lint:fix   # Run oxlint with auto-fix
+pnpm lint       # Run linter
+pnpm lint:fix   # Run linter with auto-fix
 ```
 
-## Git Hooks
+## Project Structure
 
-Husky manages git hooks:
-
-- **pre-commit**: Runs `pnpm lint:fix` to auto-fix lint issues
-- **pre-push**: Runs `pnpm typecheck && pnpm test` to verify before push
+```
+src/
+  index.ts          # Public exports
+  types.ts          # Instruction types (Functional Core)
+  instructions.ts   # Factory functions (Functional Core)
+  stage.ts          # Stage factory (Functional Core)
+  render.ts         # Dockerfile rendering (Functional Core)
+tests/
+  fixtures/         # Expected Dockerfiles + generators
+  generation.test.ts
+docs/
+  design-plans/     # Design documents
+  implementation-plans/  # Implementation task plans
+adrs/               # Architecture Decision Records
+```
 
 ## Architecture
 
 ### FCIS Pattern
 
-This library follows the Functional Core, Imperative Shell pattern:
+This project follows Functional Core, Imperative Shell:
+- **Functional Core:** All src/ files are pure - types, factory functions, rendering. Currently all production code is Functional Core.
+- **Imperative Shell:** Tests perform I/O (file reading, dynamic imports)
 
-- **Functional Core** (`src/types.ts`, `src/instructions.ts`, `src/render.ts`): Pure types, factory functions, and rendering with no I/O. Currently all production code is Functional Core.
-- **Imperative Shell** (not yet needed): File I/O operations (writing Dockerfiles to disk) would go here when added. Tests in `tests/` are Imperative Shell as they perform file I/O to load fixtures.
+Mark all files with pattern comment: `// pattern: Functional Core` or `// pattern: Imperative Shell`
 
-### File Structure
+### Type System
+
+- Use `type` over `interface` (except for class contracts)
+- Use `ReadonlyArray<T>` for array parameters
+- Use `null` for absent values (not `undefined`)
+- Use `Array<T>` syntax (not `T[]`)
+- All fields are `readonly`
+- Strict TypeScript configuration
+
+### File Structure Details
 
 ```
 src/
@@ -135,15 +156,12 @@ The `expose()` function validates:
 
 Throws `Error` with descriptive message on invalid input.
 
-## TypeScript Conventions
-
-- Use `type` over `interface`
-- Use `ReadonlyArray<T>` for immutable arrays
-- Use `null` for absent values, not `undefined`
-- All fields are `readonly`
-- Strict TypeScript configuration
-
 ## Testing
+
+Fixture-based testing:
+1. Create `tests/fixtures/<name>/expected.Dockerfile`
+2. Create `tests/fixtures/<name>/generator.ts` exporting `fixture`
+3. Run `pnpm test` - generator output compared to expected
 
 Tests use Vitest with a fixture-based approach:
 
@@ -156,6 +174,54 @@ To add a new test fixture:
 2. Create `tests/fixtures/<fixture-name>/expected.Dockerfile`
 3. Export `fixture` from the generator file
 
+## Git Workflow
+
+### Conventional Commits
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/). All commit messages must follow this format:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+```
+
+**Types:**
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `chore:` - Maintenance tasks, dependencies, tooling
+- `docs:` - Documentation only changes
+- `test:` - Adding or updating tests
+- `refactor:` - Code change that neither fixes a bug nor adds a feature
+
+### Trunk-Based Development
+
+1. Create feature branch from main
+2. Make commits per logical change (using conventional commits)
+3. Pre-commit hook runs `pnpm lint:fix`
+4. Pre-push hook runs `pnpm typecheck && pnpm test`
+5. Squash merge back to main with descriptive message
+
+### Merge Guidelines
+
+- **Always squash merge** feature branches to main (keeps history clean)
+- **Commit messages should describe what was built**, not implementation details
+- **Do not reference phase numbers** or implementation plan details in final commit messages
+- Focus on the "what" and "why" for users, not the "how" of development
+
+### Git Hooks
+
+Husky manages git hooks:
+
+- **pre-commit**: Runs `pnpm lint:fix` to auto-fix lint issues
+- **pre-push**: Runs `pnpm typecheck && pnpm test` to verify before push
+
+## ADRs
+
+Architecture Decision Records go in `adrs/` with sequential filenames:
+- `00-use-discriminated-unions.md`
+- `01-fixture-based-testing.md`
+
 ## Implementation Status
 
 - Phase 1: Project Scaffolding - Complete
@@ -165,4 +231,4 @@ To add a new test fixture:
 - Phase 5: Multi-Stage Support - Complete
 - Phase 6: Testing Infrastructure - Complete
 - Phase 7: Linting and Git Hooks - Complete
-- Phase 8: Documentation - In progress
+- Phase 8: Documentation - Complete

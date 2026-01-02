@@ -222,6 +222,12 @@ Architecture Decision Records go in `adrs/` with sequential filenames:
 - `00-use-discriminated-unions.md`
 - `01-fixture-based-testing.md`
 
+## Future Work
+
+Track future tasks, enhancements, and bugs using [GitHub Issues](https://github.com/bojanrajkovic/containerfile-ts/issues).
+
+Historical context for potential future instructions is in `docs/future-instructions.md`.
+
 ## Implementation Status
 
 - Phase 1: Project Scaffolding - Complete

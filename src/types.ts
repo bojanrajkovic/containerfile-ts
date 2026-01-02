@@ -144,11 +144,19 @@ export type Instruction =
   | LabelInstruction;
 
 /**
- * A complete Containerfile definition
+ * A named stage in a multi-stage build
  */
-export type Containerfile = {
+export type Stage = {
+  readonly name: string;
   readonly instructions: ReadonlyArray<Instruction>;
 };
+
+/**
+ * A Containerfile definition - either single-stage (instructions) or multi-stage (stages)
+ */
+export type Containerfile =
+  | { readonly instructions: ReadonlyArray<Instruction> }
+  | { readonly stages: ReadonlyArray<Stage> };
 
 /**
  * Options for the from() factory function

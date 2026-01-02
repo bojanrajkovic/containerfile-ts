@@ -15,6 +15,7 @@ export type {
   ArgInstruction,
   LabelInstruction,
   Containerfile,
+  Stage,
   FromOptions,
   CopyOptions,
   AddOptions,
@@ -36,5 +37,7 @@ export {
   label,
   containerfile,
 } from './instructions.js';
+
+export { stage } from './stage.js';
 
 export { render } from './render.js';

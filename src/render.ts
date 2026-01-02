@@ -3,6 +3,7 @@
 import type {
   Instruction,
   Containerfile,
+  Stage,
   FromInstruction,
   RunInstruction,
   CopyInstruction,
@@ -138,10 +139,35 @@ export function renderInstruction(instruction: Instruction): string {
 }
 
 /**
- * Renders a Containerfile to its Dockerfile string representation
+ * Renders a Stage to its Dockerfile string representation
  */
-export function render(containerfile: Containerfile): string {
-  return containerfile.instructions
+function renderStage(stageToRender: Stage): string {
+  return stageToRender.instructions
     .map(renderInstruction)
     .join('\n');
+}
+
+/**
+ * Type guard for single-stage containerfile
+ */
+function isSingleStage(
+  containerfile: Containerfile
+): containerfile is { readonly instructions: ReadonlyArray<Instruction> } {
+  return 'instructions' in containerfile;
+}
+
+/**
+ * Renders a Containerfile to its Dockerfile string representation
+ * Handles both single-stage and multi-stage builds
+ */
+export function render(containerfile: Containerfile): string {
+  if (isSingleStage(containerfile)) {
+    return containerfile.instructions
+      .map(renderInstruction)
+      .join('\n');
+  }
+
+  return containerfile.stages
+    .map(renderStage)
+    .join('\n\n');
 }

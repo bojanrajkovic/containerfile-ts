@@ -27,8 +27,9 @@ This library follows the Functional Core, Imperative Shell pattern:
 ```
 src/
   index.ts        # Public API exports
-  types.ts        # All instruction types and option types
+  types.ts        # All instruction types, Stage, option types
   instructions.ts # Factory functions for creating instructions
+  stage.ts        # Factory function for creating multi-stage stages
   render.ts       # Rendering functions for Dockerfile output
 tests/
   generation.test.ts  # Fixture-based generation tests
@@ -61,6 +62,27 @@ All instruction types use:
 - `null` for absent optional values (not `undefined`)
 - `ReadonlyArray<T>` for array fields
 
+### Stage Type
+
+For multi-stage builds:
+
+```typescript
+type Stage = {
+  readonly name: string;
+  readonly instructions: ReadonlyArray<Instruction>;
+};
+```
+
+### Containerfile Type
+
+Unified discriminated union supporting both single-stage and multi-stage:
+
+```typescript
+type Containerfile =
+  | { readonly instructions: ReadonlyArray<Instruction> }  // Single-stage
+  | { readonly stages: ReadonlyArray<Stage> };              // Multi-stage
+```
+
 ### Factory Functions
 
 Factory functions create instruction objects with optional parameters via option objects:
@@ -79,6 +101,7 @@ Factory functions create instruction objects with optional parameters via option
 | `arg` | `(name: string, options?: ArgOptions)` | `defaultValue` option |
 | `label` | `(key: string, value: string)` | |
 | `containerfile` | `(def: Containerfile)` | Identity function for type safety |
+| `stage` | `(name: string, instructions: ReadonlyArray<Instruction>)` | Creates a named stage for multi-stage builds |
 
 ### Render Functions
 
@@ -87,7 +110,8 @@ Factory functions create instruction objects with optional parameters via option
 | `render` | `(containerfile: Containerfile): string` | Renders full Containerfile to Dockerfile string |
 
 Rendering behavior:
-- Instructions joined with newlines (no trailing newline)
+- Single-stage: Instructions joined with newlines (no trailing newline)
+- Multi-stage: Stages joined with double newlines (blank line separator)
 - RUN with array uses exec form `["cmd", "arg"]`
 - EXPOSE omits `/tcp` suffix (default protocol)
 - LABEL values are quoted
@@ -129,7 +153,7 @@ To add a new test fixture:
 - Phase 2: Core Instruction Types - Complete
 - Phase 3: Factory Functions - Complete
 - Phase 4: Rendering Logic - Complete
-- Phase 5: Multi-Stage Support - Not started
+- Phase 5: Multi-Stage Support - Complete
 - Phase 6: Testing Infrastructure - Complete
 - Phase 7: Linting and Git Hooks - Not started
 - Phase 8: Documentation - In progress

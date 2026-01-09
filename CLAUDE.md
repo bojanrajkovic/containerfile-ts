@@ -216,6 +216,55 @@ Husky manages git hooks:
 - **pre-commit**: Runs `pnpm lint:fix` to auto-fix lint issues
 - **pre-push**: Runs `pnpm typecheck && pnpm test` to verify before push
 
+## npm OIDC Trusted Publishing
+
+This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-lived npm tokens. GitHub Actions authenticates directly with npm using short-lived tokens.
+
+### Setup Instructions
+
+**Initial setup (one-time, requires npm account owner):**
+
+1. **Configure trusted publisher on npmjs.com:**
+   - Go to https://www.npmjs.com/package/containerfile-ts/access
+   - Click "Publishing access" → "Automation tokens" → "Configure trusted publishers"
+   - Add GitHub Actions as trusted publisher:
+     - Repository: `bojanrajkovic/containerfile-ts`
+     - Workflow: `release.yml`
+     - Environment: (leave blank)
+   - Save configuration
+
+2. **Verify OIDC is configured:**
+   - Check package settings show "GitHub Actions" as trusted publisher
+   - No NPM_TOKEN secret is needed in GitHub repository secrets
+
+3. **How it works:**
+   - GitHub Actions workflow requests OIDC token from GitHub
+   - npm validates token against trusted publisher configuration
+   - If valid, npm grants temporary publish permissions
+   - Token expires after workflow completes (short-lived, secure)
+
+### Benefits
+
+- **No long-lived secrets:** npm tokens can't be stolen or leaked
+- **Automatic provenance:** npm automatically generates provenance attestations
+- **Audit trail:** All publishes linked to specific GitHub Actions runs
+- **Zero maintenance:** No token rotation or expiration management needed
+
+### Official Documentation
+
+- npm trusted publishing: https://docs.npmjs.com/generating-provenance-statements
+- GitHub OIDC for npm: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
+- Provenance attestations: https://github.blog/2023-04-19-introducing-npm-package-provenance/
+
+### Troubleshooting
+
+If publishing fails with authentication error:
+1. Verify trusted publisher is configured on npmjs.com
+2. Verify repository name matches exactly: `bojanrajkovic/containerfile-ts`
+3. Verify workflow name matches exactly: `release.yml`
+4. Check workflow has `id-token: write` permission
+5. Check `NPM_CONFIG_PROVENANCE: true` is set in workflow
+
 ## ADRs
 
 Architecture Decision Records go in `adrs/` with sequential filenames:

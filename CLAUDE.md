@@ -1,6 +1,6 @@
 # containerfile-ts
 
-> Freshness: 2026-01-01
+> Freshness: 2026-01-09
 
 Type-safe Dockerfile/Containerfile generation with declarative TypeScript.
 
@@ -30,6 +30,7 @@ tests/
 docs/
   design-plans/     # Design documents
   implementation-plans/  # Implementation task plans
+.github/workflows/  # CI/CD automation (see CI/CD Workflows section)
 adrs/               # Architecture Decision Records
 ```
 
@@ -213,7 +214,8 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 
 Husky manages git hooks:
 
-- **pre-commit**: Runs `pnpm lint:fix` to auto-fix lint issues
+- **commit-msg**: Validates conventional commit format via commitlint
+- **pre-commit**: Runs lint-staged (`pnpm lint:fix` on staged files)
 - **pre-push**: Runs `pnpm typecheck && pnpm test` to verify before push
 
 ## CI/CD Workflows

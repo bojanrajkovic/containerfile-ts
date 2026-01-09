@@ -216,6 +216,89 @@ Husky manages git hooks:
 - **pre-commit**: Runs `pnpm lint:fix` to auto-fix lint issues
 - **pre-push**: Runs `pnpm typecheck && pnpm test` to verify before push
 
+## CI/CD Workflows
+
+This project uses GitHub Actions for automated testing, publishing, and releases.
+
+### Workflows
+
+**CI Testing (`ci.yml`)**
+- **Triggers:** All branches and pull requests
+- **Purpose:** Quality validation before merge or publish
+- **Steps:** Lint → Typecheck → Test → Build → Security audit
+- **Required:** Must pass before PRs can merge (branch protection)
+
+**Alpha Publishing (`publish-alpha.yml`)**
+- **Triggers:** After CI passes on `feat/*` and `fix/*` branches
+- **Purpose:** Per-branch pre-release packages for testing
+- **Publishes to:** GitHub Package Registry as `@bojanrajkovic/containerfile-ts`
+- **Versioning:** `1.0.0-branch-name.1`, `1.0.0-branch-name.2`, etc.
+- **Usage:** `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-branch-name.1`
+
+**Release Publishing (`release.yml`)**
+- **Triggers:** After CI passes on `main` branch
+- **Purpose:** Automated production releases to npm
+- **Uses:** semantic-release to analyze conventional commits
+- **Versioning:** `feat:` → minor, `fix:` → patch, `BREAKING CHANGE:` → major
+- **Publishes to:** npm public registry as `containerfile-ts`
+- **Generates:** CHANGELOG.md, git tags, GitHub releases
+
+**PR Title Validation (`pr-title.yml`)**
+- **Triggers:** PR opened, edited, synchronized, reopened
+- **Purpose:** Enforce conventional commits on PR titles
+- **Required:** Must pass before PRs can merge (branch protection)
+- **Why:** Squash merge uses PR title as commit message on main
+
+**Dependency Review (`dependency-review.yml`)**
+- **Triggers:** Pull requests to main
+- **Purpose:** Block vulnerable dependencies (moderate+ severity)
+- **Action:** Comments on PR with security analysis
+
+### Publishing Strategy
+
+**Alpha packages (testing):**
+- Push to `feat/user-auth` or `fix/validation-bug` branch
+- CI runs and passes
+- Alpha package published: `@bojanrajkovic/containerfile-ts@1.0.0-user-auth.1`
+- Install with: `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.1`
+
+**Release packages (production):**
+- Merge PR with `feat:` or `fix:` title to main
+- CI runs and passes
+- semantic-release analyzes commits and determines version
+- Package published to npm: `containerfile-ts@0.x.x`
+- CHANGELOG.md updated, git tag created, GitHub release published
+- Install with: `pnpm add containerfile-ts`
+
+### Conventional Commits
+
+All commits and PR titles must follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+**Format:** `<type>[optional scope]: <description>`
+
+**Types:**
+- `feat:` - New feature (triggers minor version bump)
+- `fix:` - Bug fix (triggers patch version bump)
+- `docs:` - Documentation only changes
+- `chore:` - Maintenance tasks, dependencies, tooling
+- `test:` - Adding or updating tests
+- `refactor:` - Code change that neither fixes a bug nor adds a feature
+- `perf:` - Performance improvements
+- `ci:` - CI/CD configuration changes
+- `revert:` - Reverts a previous commit
+
+**Enforcement:**
+- Local: `commit-msg` git hook validates commit messages
+- CI: PR title validation workflow validates PR titles
+- Required: PR titles must be valid (becomes commit message on squash merge)
+
+**Examples:**
+- `feat: add HEALTHCHECK instruction support`
+- `fix: correct EXPOSE port range validation`
+- `docs: update API documentation for multi-stage builds`
+- `chore: upgrade vitest to 3.0.0`
+- `feat(render): add comment support in Dockerfile output`
+
 ## npm OIDC Trusted Publishing
 
 This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-lived npm tokens. GitHub Actions authenticates directly with npm using short-lived tokens.

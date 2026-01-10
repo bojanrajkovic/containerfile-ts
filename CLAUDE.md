@@ -246,7 +246,7 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 - **Installation:** `pnpm add @bojanrajkovic/containerfile-ts@alpha` (latest alpha)
 - **Specific version:** `pnpm add @bojanrajkovic/containerfile-ts@1.1.0-user-auth.1`
 
-**Release Publishing (`release-please.yml`)**
+**Release Publishing (`publish-release.yml`)**
 - **Triggers:** Push to `main` branch
 - **Purpose:** PR-based production releases to npm
 - **Uses:** release-please to create/update release PRs based on conventional commits
@@ -330,7 +330,7 @@ npm OIDC allows **only one trusted workflow per package**. To support multiple p
 
 ```
 publish-switch.yml (OIDC-trusted entry point)
-  ├─> release-please.yml (production releases)
+  ├─> publish-release.yml (production releases)
   └─> publish-alpha.yml (alpha releases)
 ```
 
@@ -348,7 +348,7 @@ The `publish-switch.yml` workflow:
    - Click "Publishing access" → "Automation tokens" → "Configure trusted publishers"
    - Add GitHub Actions as trusted publisher:
      - Repository: `bojanrajkovic/containerfile-ts`
-     - Workflow: `publish-switch.yml` **(not release-please.yml or publish-alpha.yml)**
+     - Workflow: `publish-switch.yml` **(not publish-release.yml or publish-alpha.yml)**
      - Environment: (leave blank)
    - Save configuration
 
@@ -382,7 +382,7 @@ The `publish-switch.yml` workflow:
 If publishing fails with authentication error:
 1. Verify trusted publisher is configured on npmjs.com
 2. Verify repository name matches exactly: `bojanrajkovic/containerfile-ts`
-3. Verify workflow name matches exactly: `publish-switch.yml` (not release-please.yml or publish-alpha.yml)
+3. Verify workflow name matches exactly: `publish-switch.yml` (not publish-release.yml or publish-alpha.yml)
 4. Check `publish-switch.yml` has `id-token: write` permission
 5. Check `NPM_CONFIG_PROVENANCE: true` is set in publishing workflows
 

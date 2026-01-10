@@ -1,4 +1,4 @@
-name: Release Please
+name: Publish Release
 
 # Reusable workflow called by publish-switch.yml
 # Permissions are inherited from the calling workflow
@@ -6,7 +6,7 @@ on:
   workflow_call:
 
 jobs:
-  release-please:
+  publish-release:
     name: Create Release PR or Publish
     runs-on: ubuntu-latest
 

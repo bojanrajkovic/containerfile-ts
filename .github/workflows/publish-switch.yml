@@ -26,23 +26,19 @@ permissions:
   id-token: write
 
 jobs:
-  # Route to production release workflow (release-please)
-  publish-production:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/release-please.yml
-    permissions:
-      contents: write
-      pull-requests: write
-      id-token: write
-    secrets: inherit
-
-  # Route to alpha publishing workflow
   publish-alpha:
     if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
     uses: ./.github/workflows/publish-alpha.yml
     permissions:
-      contents: read
       id-token: write
-    secrets: inherit
+      contents: read
     with:
       head_branch: ${{ github.event.workflow_run.head_branch }}
+
+  publish-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/publish-release.yml
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write

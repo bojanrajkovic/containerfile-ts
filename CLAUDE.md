@@ -233,11 +233,18 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 **Alpha Publishing (`publish-alpha.yml`)**
 - **Triggers:** After CI passes on `feat/*` and `fix/*` branches
 - **Purpose:** Per-branch pre-release packages for testing
-- **Publishes to:** GitHub Package Registry as `@bojanrajkovic/containerfile-ts`
-- **Versioning:** `1.0.0-branch-name.N` where N = commit count since main
-- **Algorithm:** Extracts branch name (feat/fix prefix removed), counts commits, generates version
-- **Example:** feat/user-auth with 5 commits → `1.0.0-user-auth.5`
-- **Usage:** `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.5`
+- **Publishes to:** npm public registry with `alpha` dist-tag
+- **Tool:** commit-and-tag-version (analyzes conventional commits)
+- **Versioning:** Semantic version bump + branch name + auto-increment
+  - Analyzes conventional commits to determine version bump
+  - Uses branch name as prerelease identifier
+  - Auto-increments prerelease number if tag exists
+- **Example:**
+  - feat/user-auth with feat: commits → `1.1.0-user-auth.0`
+  - Next push → `1.1.0-user-auth.1`
+  - fix/validation on 1.1.0 → `1.1.1-validation.0`
+- **Installation:** `pnpm add @bojanrajkovic/containerfile-ts@alpha` (latest alpha)
+- **Specific version:** `pnpm add @bojanrajkovic/containerfile-ts@1.1.0-user-auth.1`
 
 **Release Publishing (`release-please.yml`)**
 - **Triggers:** Push to `main` branch
@@ -264,11 +271,13 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 **Alpha packages (testing):**
 - Push commits to `feat/user-auth` or `fix/validation-bug` branch
 - CI runs and passes
-- Alpha package published with version based on commit count:
-  - 1st commit: `@bojanrajkovic/containerfile-ts@1.0.0-user-auth.1`
-  - 2nd commit: `@bojanrajkovic/containerfile-ts@1.0.0-user-auth.2`
-  - And so on...
-- Install with: `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.5`
+- commit-and-tag-version analyzes conventional commits and determines version:
+  - `feat:` commit on branch → `1.1.0-user-auth.0`
+  - Another push → `1.1.0-user-auth.1` (auto-incremented)
+  - `fix:` commit → `1.1.1-user-auth.0` (patch bump)
+- Package published to npm with `alpha` dist-tag
+- Install latest alpha: `pnpm add @bojanrajkovic/containerfile-ts@alpha`
+- Install specific version: `pnpm add @bojanrajkovic/containerfile-ts@1.1.0-user-auth.5`
 
 **Release packages (production):**
 - Merge PR with `feat:` or `fix:` title to main

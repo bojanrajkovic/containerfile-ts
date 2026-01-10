@@ -234,16 +234,19 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 - **Triggers:** After CI passes on `feat/*` and `fix/*` branches
 - **Purpose:** Per-branch pre-release packages for testing
 - **Publishes to:** GitHub Package Registry as `@bojanrajkovic/containerfile-ts`
-- **Versioning:** `1.0.0-branch-name.1`, `1.0.0-branch-name.2`, etc.
-- **Usage:** `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-branch-name.1`
+- **Versioning:** `1.0.0-branch-name.N` where N = commit count since main
+- **Algorithm:** Extracts branch name (feat/fix prefix removed), counts commits, generates version
+- **Example:** feat/user-auth with 5 commits → `1.0.0-user-auth.5`
+- **Usage:** `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.5`
 
-**Release Publishing (`release.yml`)**
-- **Triggers:** After CI passes on `main` branch
-- **Purpose:** Automated production releases to npm
-- **Uses:** semantic-release to analyze conventional commits
+**Release Publishing (`release-please.yml`)**
+- **Triggers:** Push to `main` branch
+- **Purpose:** PR-based production releases to npm
+- **Uses:** release-please to create/update release PRs based on conventional commits
 - **Versioning:** `feat:` → minor, `fix:` → patch, `BREAKING CHANGE:` → major
+- **Workflow:** Creates release PR → Review/merge PR → Publishes to npm
 - **Publishes to:** npm public registry as `@bojanrajkovic/containerfile-ts`
-- **Generates:** CHANGELOG.md, git tags, GitHub releases
+- **Updates:** package.json version, CHANGELOG.md, git tags, GitHub releases
 
 **PR Title Validation (`pr-title.yml`)**
 - **Triggers:** PR opened, edited, synchronized, reopened
@@ -259,17 +262,24 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 ### Publishing Strategy
 
 **Alpha packages (testing):**
-- Push to `feat/user-auth` or `fix/validation-bug` branch
+- Push commits to `feat/user-auth` or `fix/validation-bug` branch
 - CI runs and passes
-- Alpha package published: `@bojanrajkovic/containerfile-ts@1.0.0-user-auth.1`
-- Install with: `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.1`
+- Alpha package published with version based on commit count:
+  - 1st commit: `@bojanrajkovic/containerfile-ts@1.0.0-user-auth.1`
+  - 2nd commit: `@bojanrajkovic/containerfile-ts@1.0.0-user-auth.2`
+  - And so on...
+- Install with: `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.5`
 
 **Release packages (production):**
 - Merge PR with `feat:` or `fix:` title to main
-- CI runs and passes
-- semantic-release analyzes commits and determines version
-- Package published to npm: `@bojanrajkovic/containerfile-ts@0.x.x`
-- CHANGELOG.md updated, git tag created, GitHub release published
+- release-please creates/updates a "Release PR" with:
+  - Version bump in package.json (e.g., 0.0.1 → 0.1.0)
+  - Updated CHANGELOG.md with commit history
+- Review and merge the Release PR
+- Merging Release PR triggers:
+  - Git tag creation
+  - GitHub Release publication
+  - npm package publication: `@bojanrajkovic/containerfile-ts@0.x.x`
 - Install with: `pnpm add @bojanrajkovic/containerfile-ts`
 
 ### Conventional Commits
@@ -314,7 +324,7 @@ This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-liv
    - Click "Publishing access" → "Automation tokens" → "Configure trusted publishers"
    - Add GitHub Actions as trusted publisher:
      - Repository: `bojanrajkovic/containerfile-ts`
-     - Workflow: `release.yml`
+     - Workflow: `release-please.yml`
      - Environment: (leave blank)
    - Save configuration
 
@@ -346,7 +356,7 @@ This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-liv
 If publishing fails with authentication error:
 1. Verify trusted publisher is configured on npmjs.com
 2. Verify repository name matches exactly: `bojanrajkovic/containerfile-ts`
-3. Verify workflow name matches exactly: `release.yml`
+3. Verify workflow name matches exactly: `release-please.yml`
 4. Check workflow has `id-token: write` permission
 5. Check `NPM_CONFIG_PROVENANCE: true` is set in workflow
 

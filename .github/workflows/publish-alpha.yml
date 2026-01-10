@@ -58,9 +58,22 @@ jobs:
       - name: Build package
         run: pnpm build
 
-      - name: Publish alpha package
+      - name: Calculate alpha version
+        id: version
+        run: |
+          # Extract branch name and sanitize for version string
+          BRANCH_NAME=$(echo "${{ github.event.workflow_run.head_branch }}" | sed 's/feat\///' | sed 's/fix\///' | sed 's/\//-/g')
+          # Count commits on this branch since main
+          COMMIT_COUNT=$(git rev-list --count HEAD ^origin/main || echo "0")
+          ALPHA_VERSION="1.0.0-${BRANCH_NAME}.${COMMIT_COUNT}"
+          echo "alpha_version=${ALPHA_VERSION}" >> $GITHUB_OUTPUT
+          echo "Publishing alpha version: ${ALPHA_VERSION}"
+
+      - name: Set package version
+        run: pnpm version ${{ steps.version.outputs.alpha_version }} --no-git-tag-version
+
+      - name: Publish alpha package to GitHub Packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_REGISTRY: https://npm.pkg.github.com
-        run: npx semantic-release
+        run: pnpm publish --tag alpha --no-git-checks --access public

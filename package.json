@@ -1,5 +1,5 @@
 {
-  "name": "containerfile-ts",
+  "name": "@bojanrajkovic/containerfile-ts",
   "version": "0.0.1",
   "description": "Type-safe Dockerfile/Containerfile generation with declarative TypeScript",
   "type": "module",
@@ -23,6 +23,9 @@
     "lint:fix": "oxlint --fix",
     "prepare": "husky"
   },
+  "lint-staged": {
+    "*.ts": ["oxlint --fix"]
+  },
   "keywords": [
     "dockerfile",
     "containerfile",
@@ -37,13 +40,27 @@
     "type": "git",
     "url": "https://github.com/brajkovic/containerfile-ts.git"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.1.0",
+    "@semantic-release/changelog": "^6.0.0",
+    "@semantic-release/commit-analyzer": "^11.0.0",
+    "@semantic-release/git": "^10.0.0",
+    "@semantic-release/github": "^9.0.0",
+    "@semantic-release/npm": "^11.0.0",
+    "@semantic-release/release-notes-generator": "^12.0.0",
+    "conventional-changelog-conventionalcommits": "^8.0.0",
     "husky": "^9.1.0",
+    "lint-staged": "^15.2.0",
     "oxlint": "^0.15.0",
+    "semantic-release": "^25.0.0",
     "typescript": "^5.7.0",
-    "vitest": "^2.1.0"
+    "vitest": "^4.0.16"
   }
 }

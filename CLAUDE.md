@@ -1,6 +1,6 @@
 # containerfile-ts
 
-> Freshness: 2026-01-01
+> Freshness: 2026-01-09
 
 Type-safe Dockerfile/Containerfile generation with declarative TypeScript.
 
@@ -30,6 +30,7 @@ tests/
 docs/
   design-plans/     # Design documents
   implementation-plans/  # Implementation task plans
+.github/workflows/  # CI/CD automation (see CI/CD Workflows section)
 adrs/               # Architecture Decision Records
 ```
 
@@ -213,8 +214,141 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 
 Husky manages git hooks:
 
-- **pre-commit**: Runs `pnpm lint:fix` to auto-fix lint issues
+- **commit-msg**: Validates conventional commit format via commitlint
+- **pre-commit**: Runs lint-staged (`pnpm lint:fix` on staged files)
 - **pre-push**: Runs `pnpm typecheck && pnpm test` to verify before push
+
+## CI/CD Workflows
+
+This project uses GitHub Actions for automated testing, publishing, and releases.
+
+### Workflows
+
+**CI Testing (`ci.yml`)**
+- **Triggers:** All branches and pull requests
+- **Purpose:** Quality validation before merge or publish
+- **Steps:** Lint → Typecheck → Test → Build → Security audit
+- **Required:** Must pass before PRs can merge (branch protection)
+
+**Alpha Publishing (`publish-alpha.yml`)**
+- **Triggers:** After CI passes on `feat/*` and `fix/*` branches
+- **Purpose:** Per-branch pre-release packages for testing
+- **Publishes to:** GitHub Package Registry as `@bojanrajkovic/containerfile-ts`
+- **Versioning:** `1.0.0-branch-name.1`, `1.0.0-branch-name.2`, etc.
+- **Usage:** `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-branch-name.1`
+
+**Release Publishing (`release.yml`)**
+- **Triggers:** After CI passes on `main` branch
+- **Purpose:** Automated production releases to npm
+- **Uses:** semantic-release to analyze conventional commits
+- **Versioning:** `feat:` → minor, `fix:` → patch, `BREAKING CHANGE:` → major
+- **Publishes to:** npm public registry as `@bojanrajkovic/containerfile-ts`
+- **Generates:** CHANGELOG.md, git tags, GitHub releases
+
+**PR Title Validation (`pr-title.yml`)**
+- **Triggers:** PR opened, edited, synchronized, reopened
+- **Purpose:** Enforce conventional commits on PR titles
+- **Required:** Must pass before PRs can merge (branch protection)
+- **Why:** Squash merge uses PR title as commit message on main
+
+**Dependency Review (`dependency-review.yml`)**
+- **Triggers:** Pull requests to main
+- **Purpose:** Block vulnerable dependencies (moderate+ severity)
+- **Action:** Comments on PR with security analysis
+
+### Publishing Strategy
+
+**Alpha packages (testing):**
+- Push to `feat/user-auth` or `fix/validation-bug` branch
+- CI runs and passes
+- Alpha package published: `@bojanrajkovic/containerfile-ts@1.0.0-user-auth.1`
+- Install with: `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.1`
+
+**Release packages (production):**
+- Merge PR with `feat:` or `fix:` title to main
+- CI runs and passes
+- semantic-release analyzes commits and determines version
+- Package published to npm: `@bojanrajkovic/containerfile-ts@0.x.x`
+- CHANGELOG.md updated, git tag created, GitHub release published
+- Install with: `pnpm add @bojanrajkovic/containerfile-ts`
+
+### Conventional Commits
+
+All commits and PR titles must follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+**Format:** `<type>[optional scope]: <description>`
+
+**Types:**
+- `feat:` - New feature (triggers minor version bump)
+- `fix:` - Bug fix (triggers patch version bump)
+- `docs:` - Documentation only changes
+- `chore:` - Maintenance tasks, dependencies, tooling
+- `test:` - Adding or updating tests
+- `refactor:` - Code change that neither fixes a bug nor adds a feature
+- `perf:` - Performance improvements
+- `ci:` - CI/CD configuration changes
+- `revert:` - Reverts a previous commit
+
+**Enforcement:**
+- Local: `commit-msg` git hook validates commit messages
+- CI: PR title validation workflow validates PR titles
+- Required: PR titles must be valid (becomes commit message on squash merge)
+
+**Examples:**
+- `feat: add HEALTHCHECK instruction support`
+- `fix: correct EXPOSE port range validation`
+- `docs: update API documentation for multi-stage builds`
+- `chore: upgrade vitest to 3.0.0`
+- `feat(render): add comment support in Dockerfile output`
+
+## npm OIDC Trusted Publishing
+
+This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-lived npm tokens. GitHub Actions authenticates directly with npm using short-lived tokens.
+
+### Setup Instructions
+
+**Initial setup (one-time, requires npm account owner):**
+
+1. **Configure trusted publisher on npmjs.com:**
+   - Go to https://www.npmjs.com/package/containerfile-ts/access
+   - Click "Publishing access" → "Automation tokens" → "Configure trusted publishers"
+   - Add GitHub Actions as trusted publisher:
+     - Repository: `bojanrajkovic/containerfile-ts`
+     - Workflow: `release.yml`
+     - Environment: (leave blank)
+   - Save configuration
+
+2. **Verify OIDC is configured:**
+   - Check package settings show "GitHub Actions" as trusted publisher
+   - No NPM_TOKEN secret is needed in GitHub repository secrets
+
+3. **How it works:**
+   - GitHub Actions workflow requests OIDC token from GitHub
+   - npm validates token against trusted publisher configuration
+   - If valid, npm grants temporary publish permissions
+   - Token expires after workflow completes (short-lived, secure)
+
+### Benefits
+
+- **No long-lived secrets:** npm tokens can't be stolen or leaked
+- **Automatic provenance:** npm automatically generates provenance attestations
+- **Audit trail:** All publishes linked to specific GitHub Actions runs
+- **Zero maintenance:** No token rotation or expiration management needed
+
+### Official Documentation
+
+- npm trusted publishing: https://docs.npmjs.com/generating-provenance-statements
+- GitHub OIDC for npm: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
+- Provenance attestations: https://github.blog/2023-04-19-introducing-npm-package-provenance/
+
+### Troubleshooting
+
+If publishing fails with authentication error:
+1. Verify trusted publisher is configured on npmjs.com
+2. Verify repository name matches exactly: `bojanrajkovic/containerfile-ts`
+3. Verify workflow name matches exactly: `release.yml`
+4. Check workflow has `id-token: write` permission
+5. Check `NPM_CONFIG_PROVENANCE: true` is set in workflow
 
 ## ADRs
 

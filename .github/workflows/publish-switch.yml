@@ -1,0 +1,44 @@
+name: Publish Switch
+
+# This is the OIDC-trusted entry point workflow for npm publishing.
+# npm trusts THIS workflow, which then routes to specific publishing workflows.
+# Configure npm trusted publisher with workflow: "publish-switch.yml"
+
+on:
+  # Trigger for production releases (release-please on main)
+  push:
+    branches:
+      - main
+
+  # Trigger for alpha releases (after CI on feature branches)
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+
+# CRITICAL: id-token permission must be in THIS file for OIDC to work
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  publish-alpha:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    uses: ./.github/workflows/publish-alpha.yml
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      head_branch: ${{ github.event.workflow_run.head_branch }}
+
+  publish-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/publish-release.yml
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write

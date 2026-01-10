@@ -233,13 +233,20 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 **Alpha Publishing (`publish-alpha.yml`)**
 - **Triggers:** After CI passes on `feat/*` and `fix/*` branches
 - **Purpose:** Per-branch pre-release packages for testing
-- **Publishes to:** GitHub Package Registry as `@bojanrajkovic/containerfile-ts`
-- **Versioning:** `1.0.0-branch-name.N` where N = commit count since main
-- **Algorithm:** Extracts branch name (feat/fix prefix removed), counts commits, generates version
-- **Example:** feat/user-auth with 5 commits → `1.0.0-user-auth.5`
-- **Usage:** `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.5`
+- **Publishes to:** npm public registry with `alpha` dist-tag
+- **Tool:** commit-and-tag-version (analyzes conventional commits)
+- **Versioning:** Semantic version bump + branch name + auto-increment
+  - Analyzes conventional commits to determine version bump
+  - Uses branch name as prerelease identifier
+  - Auto-increments prerelease number if tag exists
+- **Example:**
+  - feat/user-auth with feat: commits → `1.1.0-user-auth.0`
+  - Next push → `1.1.0-user-auth.1`
+  - fix/validation on 1.1.0 → `1.1.1-validation.0`
+- **Installation:** `pnpm add @bojanrajkovic/containerfile-ts@alpha` (latest alpha)
+- **Specific version:** `pnpm add @bojanrajkovic/containerfile-ts@1.1.0-user-auth.1`
 
-**Release Publishing (`release-please.yml`)**
+**Release Publishing (`publish-release.yml`)**
 - **Triggers:** Push to `main` branch
 - **Purpose:** PR-based production releases to npm
 - **Uses:** release-please to create/update release PRs based on conventional commits
@@ -264,11 +271,13 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 **Alpha packages (testing):**
 - Push commits to `feat/user-auth` or `fix/validation-bug` branch
 - CI runs and passes
-- Alpha package published with version based on commit count:
-  - 1st commit: `@bojanrajkovic/containerfile-ts@1.0.0-user-auth.1`
-  - 2nd commit: `@bojanrajkovic/containerfile-ts@1.0.0-user-auth.2`
-  - And so on...
-- Install with: `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.5`
+- commit-and-tag-version analyzes conventional commits and determines version:
+  - `feat:` commit on branch → `1.1.0-user-auth.0`
+  - Another push → `1.1.0-user-auth.1` (auto-incremented)
+  - `fix:` commit → `1.1.1-user-auth.0` (patch bump)
+- Package published to npm with `alpha` dist-tag
+- Install latest alpha: `pnpm add @bojanrajkovic/containerfile-ts@alpha`
+- Install specific version: `pnpm add @bojanrajkovic/containerfile-ts@1.1.0-user-auth.5`
 
 **Release packages (production):**
 - Merge PR with `feat:` or `fix:` title to main
@@ -315,26 +324,43 @@ All commits and PR titles must follow [Conventional Commits](https://www.convent
 
 This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-lived npm tokens. GitHub Actions authenticates directly with npm using short-lived tokens.
 
+### Reusable Workflow Pattern
+
+npm OIDC allows **only one trusted workflow per package**. To support multiple publishing workflows (alpha and production), we use a "switch workflow" pattern:
+
+```
+publish-switch.yml (OIDC-trusted entry point)
+  ├─> publish-release.yml (production releases)
+  └─> publish-alpha.yml (alpha releases)
+```
+
+The `publish-switch.yml` workflow:
+- Has the `id-token: write` permission required for OIDC
+- Routes to different workflows based on triggers (push to main vs CI completion)
+- Is the only workflow npm validates against
+
 ### Setup Instructions
 
 **Initial setup (one-time, requires npm account owner):**
 
 1. **Configure trusted publisher on npmjs.com:**
-   - Go to https://www.npmjs.com/package/containerfile-ts/access
+   - Go to https://www.npmjs.com/package/@bojanrajkovic/containerfile-ts/access
    - Click "Publishing access" → "Automation tokens" → "Configure trusted publishers"
    - Add GitHub Actions as trusted publisher:
      - Repository: `bojanrajkovic/containerfile-ts`
-     - Workflow: `release-please.yml`
+     - Workflow: `publish-switch.yml` **(not publish-release.yml or publish-alpha.yml)**
      - Environment: (leave blank)
    - Save configuration
 
 2. **Verify OIDC is configured:**
    - Check package settings show "GitHub Actions" as trusted publisher
+   - Workflow filename should be `publish-switch.yml`
    - No NPM_TOKEN secret is needed in GitHub repository secrets
 
 3. **How it works:**
    - GitHub Actions workflow requests OIDC token from GitHub
-   - npm validates token against trusted publisher configuration
+   - npm validates token against `publish-switch.yml` workflow configuration
+   - Switch workflow routes to appropriate publishing workflow
    - If valid, npm grants temporary publish permissions
    - Token expires after workflow completes (short-lived, secure)
 
@@ -356,9 +382,9 @@ This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-liv
 If publishing fails with authentication error:
 1. Verify trusted publisher is configured on npmjs.com
 2. Verify repository name matches exactly: `bojanrajkovic/containerfile-ts`
-3. Verify workflow name matches exactly: `release-please.yml`
-4. Check workflow has `id-token: write` permission
-5. Check `NPM_CONFIG_PROVENANCE: true` is set in workflow
+3. Verify workflow name matches exactly: `publish-switch.yml` (not publish-release.yml or publish-alpha.yml)
+4. Check `publish-switch.yml` has `id-token: write` permission
+5. Check `NPM_CONFIG_PROVENANCE: true` is set in publishing workflows
 
 ## ADRs
 

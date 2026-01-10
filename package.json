@@ -1,6 +1,6 @@
 {
   "name": "@bojanrajkovic/containerfile-ts",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Type-safe Dockerfile/Containerfile generation with declarative TypeScript",
   "type": "module",
   "main": "./dist/index.js",

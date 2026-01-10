@@ -1,5 +1,5 @@
 {
-  "name": "containerfile-ts",
+  "name": "@bojanrajkovic/containerfile-ts",
   "version": "0.0.1",
   "description": "Type-safe Dockerfile/Containerfile generation with declarative TypeScript",
   "type": "module",
@@ -39,6 +39,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/brajkovic/containerfile-ts.git"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=20"

@@ -1,7 +1,7 @@
 # containerfile-ts
 
 [![CI](https://github.com/bojanrajkovic/containerfile-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/bojanrajkovic/containerfile-ts/actions/workflows/ci.yml)
-[![npm version](https://badge.fury.io/js/containerfile-ts.svg)](https://www.npmjs.com/package/containerfile-ts)
+[![npm version](https://badge.fury.io/js/%40bojanrajkovic%2Fcontainerfile-ts.svg)](https://www.npmjs.com/package/@bojanrajkovic/containerfile-ts)
 
 Type-safe Dockerfile/Containerfile generation with declarative TypeScript, inspired by [gha-ts](https://github.com/JLarky/gha-ts).
 
@@ -12,11 +12,11 @@ Type-safe Dockerfile/Containerfile generation with declarative TypeScript, inspi
 **Stable release (npm):**
 
 ```bash
-npm install containerfile-ts
+npm install @bojanrajkovic/containerfile-ts
 # or
-pnpm add containerfile-ts
+pnpm add @bojanrajkovic/containerfile-ts
 # or
-yarn add containerfile-ts
+yarn add @bojanrajkovic/containerfile-ts
 ```
 
 **Alpha releases (GitHub Packages):**
@@ -38,7 +38,7 @@ pnpm add @bojanrajkovic/containerfile-ts@1.0.0-branch-name.1
 ### Simple Dockerfile
 
 ```typescript
-import { containerfile, from, workdir, copy, run, expose, cmd, render } from 'containerfile-ts';
+import { containerfile, from, workdir, copy, run, expose, cmd, render } from '@bojanrajkovic/containerfile-ts';
 
 const dockerfile = containerfile({
   instructions: [
@@ -70,7 +70,7 @@ CMD ["node", "dist/index.js"]
 ### Multi-Stage Build
 
 ```typescript
-import { containerfile, stage, from, workdir, copy, run, cmd, render } from 'containerfile-ts';
+import { containerfile, stage, from, workdir, copy, run, cmd, render } from '@bojanrajkovic/containerfile-ts';
 
 const dockerfile = containerfile({
   stages: [

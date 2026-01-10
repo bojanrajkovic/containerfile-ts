@@ -242,7 +242,7 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 - **Purpose:** Automated production releases to npm
 - **Uses:** semantic-release to analyze conventional commits
 - **Versioning:** `feat:` → minor, `fix:` → patch, `BREAKING CHANGE:` → major
-- **Publishes to:** npm public registry as `containerfile-ts`
+- **Publishes to:** npm public registry as `@bojanrajkovic/containerfile-ts`
 - **Generates:** CHANGELOG.md, git tags, GitHub releases
 
 **PR Title Validation (`pr-title.yml`)**
@@ -268,9 +268,9 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 - Merge PR with `feat:` or `fix:` title to main
 - CI runs and passes
 - semantic-release analyzes commits and determines version
-- Package published to npm: `containerfile-ts@0.x.x`
+- Package published to npm: `@bojanrajkovic/containerfile-ts@0.x.x`
 - CHANGELOG.md updated, git tag created, GitHub release published
-- Install with: `pnpm add containerfile-ts`
+- Install with: `pnpm add @bojanrajkovic/containerfile-ts`
 
 ### Conventional Commits
 

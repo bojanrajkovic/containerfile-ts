@@ -1,14 +1,9 @@
 name: Release Please
 
+# Reusable workflow called by publish-switch.yml
+# Permissions are inherited from the calling workflow
 on:
-  push:
-    branches:
-      - main
-
-permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
+  workflow_call:
 
 jobs:
   release-please:

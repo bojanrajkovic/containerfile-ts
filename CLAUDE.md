@@ -324,26 +324,43 @@ All commits and PR titles must follow [Conventional Commits](https://www.convent
 
 This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-lived npm tokens. GitHub Actions authenticates directly with npm using short-lived tokens.
 
+### Reusable Workflow Pattern
+
+npm OIDC allows **only one trusted workflow per package**. To support multiple publishing workflows (alpha and production), we use a "switch workflow" pattern:
+
+```
+publish-switch.yml (OIDC-trusted entry point)
+  ├─> release-please.yml (production releases)
+  └─> publish-alpha.yml (alpha releases)
+```
+
+The `publish-switch.yml` workflow:
+- Has the `id-token: write` permission required for OIDC
+- Routes to different workflows based on triggers (push to main vs CI completion)
+- Is the only workflow npm validates against
+
 ### Setup Instructions
 
 **Initial setup (one-time, requires npm account owner):**
 
 1. **Configure trusted publisher on npmjs.com:**
-   - Go to https://www.npmjs.com/package/containerfile-ts/access
+   - Go to https://www.npmjs.com/package/@bojanrajkovic/containerfile-ts/access
    - Click "Publishing access" → "Automation tokens" → "Configure trusted publishers"
    - Add GitHub Actions as trusted publisher:
      - Repository: `bojanrajkovic/containerfile-ts`
-     - Workflow: `release-please.yml`
+     - Workflow: `publish-switch.yml` **(not release-please.yml or publish-alpha.yml)**
      - Environment: (leave blank)
    - Save configuration
 
 2. **Verify OIDC is configured:**
    - Check package settings show "GitHub Actions" as trusted publisher
+   - Workflow filename should be `publish-switch.yml`
    - No NPM_TOKEN secret is needed in GitHub repository secrets
 
 3. **How it works:**
    - GitHub Actions workflow requests OIDC token from GitHub
-   - npm validates token against trusted publisher configuration
+   - npm validates token against `publish-switch.yml` workflow configuration
+   - Switch workflow routes to appropriate publishing workflow
    - If valid, npm grants temporary publish permissions
    - Token expires after workflow completes (short-lived, secure)
 
@@ -365,9 +382,9 @@ This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-liv
 If publishing fails with authentication error:
 1. Verify trusted publisher is configured on npmjs.com
 2. Verify repository name matches exactly: `bojanrajkovic/containerfile-ts`
-3. Verify workflow name matches exactly: `release-please.yml`
-4. Check workflow has `id-token: write` permission
-5. Check `NPM_CONFIG_PROVENANCE: true` is set in workflow
+3. Verify workflow name matches exactly: `publish-switch.yml` (not release-please.yml or publish-alpha.yml)
+4. Check `publish-switch.yml` has `id-token: write` permission
+5. Check `NPM_CONFIG_PROVENANCE: true` is set in publishing workflows
 
 ## ADRs
 

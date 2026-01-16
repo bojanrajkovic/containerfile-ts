@@ -7,12 +7,14 @@ Type-safe Dockerfile/Containerfile generation with declarative TypeScript.
 ## Quick Start
 
 ```bash
-pnpm install    # Install dependencies
-pnpm build      # Compile TypeScript
-pnpm test       # Run tests
-pnpm test:watch # Run tests in watch mode
-pnpm lint       # Run linter
-pnpm lint:fix   # Run linter with auto-fix
+pnpm install      # Install dependencies
+pnpm build        # Compile TypeScript
+pnpm test         # Run tests
+pnpm test:watch   # Run tests in watch mode
+pnpm lint         # Run linter
+pnpm lint:fix     # Run linter with auto-fix
+pnpm format       # Format code
+pnpm format:check # Check formatting without changes
 ```
 
 ## Project Structure
@@ -27,9 +29,12 @@ src/
 tests/
   fixtures/         # Expected Dockerfiles + generators
   generation.test.ts
+scripts/
+  generate-changeset.ts  # Converts conventional commits to changesets
 docs/
   design-plans/     # Design documents
   implementation-plans/  # Implementation task plans
+.changeset/         # Changesets configuration and pending changesets
 .github/workflows/  # CI/CD automation (see CI/CD Workflows section)
 adrs/               # Architecture Decision Records
 ```
@@ -335,49 +340,40 @@ All commits and PR titles must follow [Conventional Commits](https://www.convent
 - `chore: upgrade vitest to 3.0.0`
 - `feat(render): add comment support in Dockerfile output`
 
-## npm OIDC Trusted Publishing
+## npm Publishing Configuration
 
-This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-lived npm tokens. GitHub Actions authenticates directly with npm using short-lived tokens.
+This project uses npm token authentication with provenance attestation enabled.
 
-### Setup Instructions
+### Required Secrets
 
-**Initial setup (one-time, requires npm account owner):**
+**GitHub repository secret:**
 
-1. **Configure trusted publisher on npmjs.com:**
-   - Go to https://www.npmjs.com/package/@bojanrajkovic/containerfile-ts/access
-   - Click "Publishing access" → "Automation tokens" → "Configure trusted publishers"
-   - Add GitHub Actions as trusted publisher:
-     - Repository: `bojanrajkovic/containerfile-ts`
-     - Workflow: `publish-switch.yml`
-     - Environment: (leave blank)
-   - Save configuration
+- `NPM_TOKEN` - npm automation token with publish permissions for `@bojanrajkovic/containerfile-ts`
 
-2. **Verify OIDC is configured:**
-   - Check package settings show "GitHub Actions" as trusted publisher
-   - No NPM_TOKEN secret is needed in GitHub repository secrets
+### Provenance Attestation
 
-3. **How it works:**
-   - GitHub Actions workflow requests OIDC token from GitHub
-   - npm validates token against trusted publisher configuration
-   - If valid, npm grants temporary publish permissions
-   - Token expires after workflow completes (short-lived, secure)
+Both publish workflows set `NPM_CONFIG_PROVENANCE: true` to generate provenance attestations. This provides:
 
-### Benefits
-
-- **No long-lived secrets:** npm tokens can't be stolen or leaked
-- **Automatic provenance:** npm automatically generates provenance attestations
 - **Audit trail:** All publishes linked to specific GitHub Actions runs
-- **Zero maintenance:** No token rotation or expiration management needed
+- **Supply chain security:** npm verifies packages were built from this repository
+- **Transparency:** Users can verify package authenticity
+
+### Workflow Permissions
+
+The `publish-switch.yml` workflow (OIDC entry point) passes permissions to reusable workflows:
+
+- `id-token: write` - Required for provenance attestation
+- `contents: write` - Required for creating release commits and tags
+- `pull-requests: write` - Required for creating "Version Packages" PRs
 
 ### Troubleshooting
 
 If publishing fails with authentication error:
 
-1. Verify trusted publisher is configured on npmjs.com
-2. Verify repository name matches exactly: `bojanrajkovic/containerfile-ts`
-3. Verify workflow name matches exactly: `publish-switch.yml`
-4. Check workflow has `id-token: write` permission
-5. Check `NPM_CONFIG_PROVENANCE: true` is set in workflow
+1. Verify `NPM_TOKEN` secret is configured in GitHub repository settings
+2. Verify token has publish permissions for `@bojanrajkovic/containerfile-ts`
+3. Check workflow has `id-token: write` permission for provenance
+4. Check `NPM_CONFIG_PROVENANCE: true` is set in workflow
 
 ## ADRs
 

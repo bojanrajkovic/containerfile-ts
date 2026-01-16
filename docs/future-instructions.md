@@ -15,7 +15,7 @@ USER <UID>[:<GID>]
 
 ```typescript
 export type UserInstruction = {
-  readonly type: 'USER';
+  readonly type: "USER";
   readonly user: string;
   readonly group: string | null;
 };
@@ -34,7 +34,7 @@ VOLUME /data /logs
 
 ```typescript
 export type VolumeInstruction = {
-  readonly type: 'VOLUME';
+  readonly type: "VOLUME";
   readonly paths: ReadonlyArray<string>;
 };
 ```
@@ -52,7 +52,7 @@ SHELL ["/bin/bash", "-c"]
 
 ```typescript
 export type ShellInstruction = {
-  readonly type: 'SHELL';
+  readonly type: "SHELL";
   readonly command: ReadonlyArray<string>;
 };
 ```
@@ -95,13 +95,14 @@ The `ExposeInstruction` port range type allows `start > end` which would be sema
 ```typescript
 // Currently allowed but invalid
 const expose: ExposeInstruction = {
-  type: 'EXPOSE',
+  type: "EXPOSE",
   port: { start: 9000, end: 8000 }, // start > end - invalid
-  protocol: 'tcp'
+  protocol: "tcp",
 };
 ```
 
 Future enhancement options:
+
 1. **Validation functions** - Runtime validation when constructing instructions
 2. **Branded types** - Compile-time enforcement using TypeScript branded types
 
@@ -110,11 +111,11 @@ Future enhancement options:
 type ValidPortRange = {
   readonly start: number;
   readonly end: number;
-  readonly __brand: 'ValidPortRange';
+  readonly __brand: "ValidPortRange";
 };
 
 function portRange(start: number, end: number): ValidPortRange {
-  if (start > end) throw new Error('start must be <= end');
+  if (start > end) throw new Error("start must be <= end");
   return { start, end } as ValidPortRange;
 }
 ```

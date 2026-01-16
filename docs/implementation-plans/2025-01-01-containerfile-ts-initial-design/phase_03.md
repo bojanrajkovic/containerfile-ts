@@ -17,6 +17,7 @@
 ## Task 3.1: Create factory function option types
 
 **Files:**
+
 - Modify: `src/types.ts`
 
 **Step 1: Add option types for factory functions**
@@ -53,7 +54,7 @@ export type AddOptions = {
  * Options for the expose() factory function
  */
 export type ExposeOptions = {
-  readonly protocol?: 'tcp' | 'udp';
+  readonly protocol?: "tcp" | "udp";
 };
 
 /**
@@ -81,6 +82,7 @@ git commit -m "feat: add option types for factory functions"
 ## Task 3.2: Create factory functions
 
 **Files:**
+
 - Create: `src/instructions.ts`
 
 **Step 1: Create instructions.ts with all factory functions**
@@ -106,14 +108,14 @@ import type {
   AddOptions,
   ExposeOptions,
   ArgOptions,
-} from './types.js';
+} from "./types.js";
 
 /**
  * Creates a FROM instruction
  */
 export function from(image: string, options?: FromOptions): FromInstruction {
   return {
-    type: 'FROM',
+    type: "FROM",
     image,
     as: options?.as ?? null,
     platform: options?.platform ?? null,
@@ -125,7 +127,7 @@ export function from(image: string, options?: FromOptions): FromInstruction {
  */
 export function run(command: string | ReadonlyArray<string>): RunInstruction {
   return {
-    type: 'RUN',
+    type: "RUN",
     command,
   };
 }
@@ -135,7 +137,7 @@ export function run(command: string | ReadonlyArray<string>): RunInstruction {
  */
 export function copy(src: string, dest: string, options?: CopyOptions): CopyInstruction {
   return {
-    type: 'COPY',
+    type: "COPY",
     src,
     dest,
     from: options?.from ?? null,
@@ -149,7 +151,7 @@ export function copy(src: string, dest: string, options?: CopyOptions): CopyInst
  */
 export function add(src: string, dest: string, options?: AddOptions): AddInstruction {
   return {
-    type: 'ADD',
+    type: "ADD",
     src,
     dest,
     chown: options?.chown ?? null,
@@ -162,7 +164,7 @@ export function add(src: string, dest: string, options?: AddOptions): AddInstruc
  */
 export function workdir(path: string): WorkdirInstruction {
   return {
-    type: 'WORKDIR',
+    type: "WORKDIR",
     path,
   };
 }
@@ -172,7 +174,7 @@ export function workdir(path: string): WorkdirInstruction {
  */
 export function env(key: string, value: string): EnvInstruction {
   return {
-    type: 'ENV',
+    type: "ENV",
     key,
     value,
   };
@@ -186,9 +188,9 @@ export function expose(port: number, options?: ExposeOptions): ExposeInstruction
     throw new Error(`invalid port number: ${port} (must be 0-65535)`);
   }
   return {
-    type: 'EXPOSE',
+    type: "EXPOSE",
     port,
-    protocol: options?.protocol ?? 'tcp',
+    protocol: options?.protocol ?? "tcp",
   };
 }
 
@@ -197,7 +199,7 @@ export function expose(port: number, options?: ExposeOptions): ExposeInstruction
  */
 export function cmd(command: ReadonlyArray<string>): CmdInstruction {
   return {
-    type: 'CMD',
+    type: "CMD",
     command,
   };
 }
@@ -207,7 +209,7 @@ export function cmd(command: ReadonlyArray<string>): CmdInstruction {
  */
 export function entrypoint(command: ReadonlyArray<string>): EntrypointInstruction {
   return {
-    type: 'ENTRYPOINT',
+    type: "ENTRYPOINT",
     command,
   };
 }
@@ -217,7 +219,7 @@ export function entrypoint(command: ReadonlyArray<string>): EntrypointInstructio
  */
 export function arg(name: string, options?: ArgOptions): ArgInstruction {
   return {
-    type: 'ARG',
+    type: "ARG",
     name,
     defaultValue: options?.defaultValue ?? null,
   };
@@ -228,7 +230,7 @@ export function arg(name: string, options?: ArgOptions): ArgInstruction {
  */
 export function label(key: string, value: string): LabelInstruction {
   return {
-    type: 'LABEL',
+    type: "LABEL",
     key,
     value,
   };
@@ -260,6 +262,7 @@ git commit -m "feat: add factory functions for all instructions"
 ## Task 3.3: Export factory functions from index.ts
 
 **Files:**
+
 - Modify: `src/index.ts`
 
 **Step 1: Update index.ts to export factory functions**
@@ -289,7 +292,7 @@ export type {
   AddOptions,
   ExposeOptions,
   ArgOptions,
-} from './types.js';
+} from "./types.js";
 
 export {
   from,
@@ -304,7 +307,7 @@ export {
   arg,
   label,
   containerfile,
-} from './instructions.js';
+} from "./instructions.js";
 ```
 
 **Step 2: Verify build succeeds**

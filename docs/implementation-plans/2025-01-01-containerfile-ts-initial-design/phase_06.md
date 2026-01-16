@@ -17,6 +17,7 @@
 ## Task 6.1: Add vitest dependency and configuration
 
 **Files:**
+
 - Modify: `package.json`
 - Create: `vitest.config.ts`
 
@@ -45,11 +46,11 @@ Add test script to scripts:
 **Step 2: Create vitest.config.ts**
 
 ```typescript
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    include: ['tests/**/*.test.ts'],
+    include: ["tests/**/*.test.ts"],
   },
 });
 ```
@@ -71,6 +72,7 @@ git commit -m "chore: add vitest for testing"
 ## Task 6.2: Create simple-node fixture
 
 **Files:**
+
 - Create: `tests/fixtures/simple-node/expected.Dockerfile`
 - Create: `tests/fixtures/simple-node/generator.ts`
 
@@ -91,17 +93,17 @@ CMD ["node", "dist/index.js"]
 ```typescript
 // pattern: Functional Core
 
-import { containerfile, from, workdir, copy, run, expose, cmd } from '../../../src/index.js';
+import { containerfile, from, workdir, copy, run, expose, cmd } from "../../../src/index.js";
 
 export const fixture = containerfile({
   instructions: [
-    from('node:20-alpine'),
-    workdir('/app'),
-    copy('package*.json', '.'),
-    run('npm ci'),
-    copy('.', '.'),
+    from("node:20-alpine"),
+    workdir("/app"),
+    copy("package*.json", "."),
+    run("npm ci"),
+    copy(".", "."),
     expose(3000),
-    cmd(['node', 'dist/index.js']),
+    cmd(["node", "dist/index.js"]),
   ],
 });
 ```
@@ -118,6 +120,7 @@ git commit -m "test: add simple-node fixture"
 ## Task 6.3: Create multi-stage-node fixture
 
 **Files:**
+
 - Create: `tests/fixtures/multi-stage-node/expected.Dockerfile`
 - Create: `tests/fixtures/multi-stage-node/generator.ts`
 
@@ -143,24 +146,24 @@ CMD ["node", "dist/index.js"]
 ```typescript
 // pattern: Functional Core
 
-import { containerfile, stage, from, workdir, copy, run, cmd } from '../../../src/index.js';
+import { containerfile, stage, from, workdir, copy, run, cmd } from "../../../src/index.js";
 
 export const fixture = containerfile({
   stages: [
-    stage('builder', [
-      from('node:20', { as: 'builder' }),
-      workdir('/app'),
-      copy('package*.json', '.'),
-      run('npm ci'),
-      copy('.', '.'),
-      run('npm run build'),
+    stage("builder", [
+      from("node:20", { as: "builder" }),
+      workdir("/app"),
+      copy("package*.json", "."),
+      run("npm ci"),
+      copy(".", "."),
+      run("npm run build"),
     ]),
-    stage('runtime', [
-      from('node:20-alpine', { as: 'runtime' }),
-      workdir('/app'),
-      copy('/app/dist', './dist', { from: 'builder' }),
-      copy('/app/node_modules', './node_modules', { from: 'builder' }),
-      cmd(['node', 'dist/index.js']),
+    stage("runtime", [
+      from("node:20-alpine", { as: "runtime" }),
+      workdir("/app"),
+      copy("/app/dist", "./dist", { from: "builder" }),
+      copy("/app/node_modules", "./node_modules", { from: "builder" }),
+      cmd(["node", "dist/index.js"]),
     ]),
   ],
 });
@@ -178,6 +181,7 @@ git commit -m "test: add multi-stage-node fixture"
 ## Task 6.4: Create fixture discovery test
 
 **Files:**
+
 - Create: `tests/generation.test.ts`
 
 **Step 1: Create generation.test.ts with fixture discovery and comparison**
@@ -185,20 +189,20 @@ git commit -m "test: add multi-stage-node fixture"
 ```typescript
 // pattern: Imperative Shell
 
-import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { render } from '../src/index.js';
+import { describe, it, expect } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { render } from "../src/index.js";
 
-const fixturesDir = join(import.meta.dirname, 'fixtures');
+const fixturesDir = join(import.meta.dirname, "fixtures");
 
 function getFixtureDirs(): Array<string> {
   return readdirSync(fixturesDir, { withFileTypes: true })
-    .filter(dirent => dirent.isDirectory())
-    .map(dirent => dirent.name);
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name);
 }
 
-describe('Dockerfile generation', () => {
+describe("Dockerfile generation", () => {
   const fixtures = getFixtureDirs();
 
   for (const fixtureName of fixtures) {
@@ -206,12 +210,12 @@ describe('Dockerfile generation', () => {
       const fixtureDir = join(fixturesDir, fixtureName);
 
       // Load the generator
-      const generatorPath = join(fixtureDir, 'generator.ts');
+      const generatorPath = join(fixtureDir, "generator.ts");
       const { fixture } = await import(generatorPath);
 
       // Load the expected output
-      const expectedPath = join(fixtureDir, 'expected.Dockerfile');
-      const expected = readFileSync(expectedPath, 'utf-8').trim();
+      const expectedPath = join(fixtureDir, "expected.Dockerfile");
+      const expected = readFileSync(expectedPath, "utf-8").trim();
 
       // Generate and compare
       const generated = render(fixture);

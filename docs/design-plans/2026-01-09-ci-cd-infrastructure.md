@@ -5,6 +5,7 @@
 Automated testing, publishing, and release infrastructure for containerfile-ts using GitHub Actions, semantic-release, and OIDC trusted publishing.
 
 **Goals:**
+
 - Run automated tests on all branches and pull requests
 - Publish alpha packages from feature branches to GitHub Package Registry
 - Automate releases to npm based on conventional commits
@@ -25,22 +26,26 @@ Triggers on pushes to `feat/*` and `fix/*` branches after CI passes. Uses semant
 Triggers on pushes to `main` branch after CI passes. semantic-release analyzes conventional commits and creates releases (`feat:` → minor, `fix:` → patch). Publishes to npm, generates CHANGELOG.md, creates git tags and GitHub releases.
 
 **Conventional commit enforcement:**
+
 - Local: commitlint hook blocks invalid commit messages
 - Local: lint-staged runs oxlint on staged files only
 - CI: PR title validation (critical for squash merge workflow)
 
 **Security:**
+
 - npm audit and signature verification on every CI run
 - GitHub Dependency Review Action blocks vulnerable dependencies in PRs
 - OIDC trusted publishing eliminates NPM_TOKEN secrets
 - Automatic npm provenance attestations
 
 **Publishing strategy:**
+
 - Alpha: `@bojanrajkovic/containerfile-ts@1.0.0-feature-name.N` → GitHub Package Registry
 - Release: `containerfile-ts@0.x.x` → npm public registry
 - No beta channel (simplified from initial requirements)
 
 **Versioning:**
+
 - Currently at 0.0.1, stays in 0.x range until ready for 1.0.0
 - `feat:` commits create minor bumps (0.1.0, 0.2.0)
 - `fix:` commits create patch bumps (0.0.2, 0.0.3)
@@ -49,6 +54,7 @@ Triggers on pushes to `main` branch after CI passes. semantic-release analyzes c
 ## Existing Patterns
 
 Investigation found:
+
 - Existing git hooks: `.husky/pre-commit` (lint), `.husky/pre-push` (typecheck + test)
 - Trunk-based development with squash merges to main
 - Conventional commit types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`
@@ -64,6 +70,7 @@ This design extends the existing git hook pattern and follows the established co
 **Goal:** Install required packages and create semantic-release configuration
 
 **Components:**
+
 - Update `package.json` devDependencies:
   - `@commitlint/cli@^20.1.0`
   - `@commitlint/config-conventional@^20.1.0`
@@ -89,6 +96,7 @@ This design extends the existing git hook pattern and follows the established co
 **Goal:** Configure local git hooks for commit validation and fast linting
 
 **Components:**
+
 - Create `.husky/commit-msg` hook running commitlint
 - Update `.husky/pre-commit` to use lint-staged instead of `pnpm lint:fix`
 - Add lint-staged configuration to `package.json`:
@@ -103,6 +111,7 @@ This design extends the existing git hook pattern and follows the established co
 **Dependencies:** Phase 1 (packages installed)
 
 **Done when:**
+
 - Commit with invalid message is rejected locally
 - Commit with valid message succeeds
 - Pre-commit hook only lints staged files (verify by staging one file and committing)
@@ -113,6 +122,7 @@ This design extends the existing git hook pattern and follows the established co
 **Goal:** Automated quality checks on all branches and PRs
 
 **Components:**
+
 - Create `.github/workflows/ci.yml`:
   - Triggers: `push` to all branches, `pull_request` events
   - Node version: 24.x
@@ -122,6 +132,7 @@ This design extends the existing git hook pattern and follows the established co
 **Dependencies:** Phase 1 (package.json scripts exist)
 
 **Done when:**
+
 - Push to any branch triggers workflow
 - Pull request triggers workflow
 - All steps pass on main branch
@@ -132,6 +143,7 @@ This design extends the existing git hook pattern and follows the established co
 **Goal:** Publish per-branch pre-releases to GitHub Package Registry
 
 **Components:**
+
 - Create `.github/workflows/publish-alpha.yml`:
   - Triggers: `workflow_run` for CI on `feat/*` and `fix/*` branches
   - Permissions: `contents: write`, `packages: write`, `id-token: write`
@@ -140,10 +152,12 @@ This design extends the existing git hook pattern and follows the established co
   - Environment: `NPM_CONFIG_REGISTRY` set to GitHub Package Registry for scoped packages
 
 **Dependencies:**
+
 - Phase 1 (.releaserc.json configured)
 - Phase 3 (CI workflow exists)
 
 **Done when:**
+
 - Push to `feat/test-feature` branch publishes `@bojanrajkovic/containerfile-ts@1.0.0-test-feature.1`
 - Package appears in GitHub Package Registry
 - Workflow skipped for `chore/*` or other non-feat/fix branches
@@ -154,6 +168,7 @@ This design extends the existing git hook pattern and follows the established co
 **Goal:** Automated releases to npm from main branch
 
 **Components:**
+
 - Create `.github/workflows/release.yml`:
   - Triggers: `workflow_run` for CI on `main` branch
   - Permissions: `contents: write`, `issues: write`, `pull-requests: write`, `id-token: write`
@@ -162,10 +177,12 @@ This design extends the existing git hook pattern and follows the established co
   - Uses OIDC for npm authentication (no NPM_TOKEN secret)
 
 **Dependencies:**
+
 - Phase 1 (.releaserc.json configured)
 - Phase 3 (CI workflow exists)
 
 **Done when:**
+
 - Merge PR with `feat:` commit to main creates 0.1.0 release
 - Release published to npm (verify on npmjs.com)
 - Git tag created (v0.1.0)
@@ -178,6 +195,7 @@ This design extends the existing git hook pattern and follows the established co
 **Goal:** Enforce conventional commits on PR titles for squash merges
 
 **Components:**
+
 - Create `.github/workflows/pr-title.yml`:
   - Triggers: `pull_request` events (opened, edited, synchronize, reopened)
   - Uses: `amannn/action-semantic-pull-request@v5`
@@ -187,6 +205,7 @@ This design extends the existing git hook pattern and follows the established co
 **Dependencies:** None (standalone validation)
 
 **Done when:**
+
 - PR with valid title (`feat: add healthcheck`) passes check
 - PR with invalid title (`Add healthcheck`) fails check
 - Editing PR title re-runs validation
@@ -197,6 +216,7 @@ This design extends the existing git hook pattern and follows the established co
 **Goal:** Configure trusted publishing and enforce CI checks
 
 **Components:**
+
 - Document npm OIDC setup steps in CLAUDE.md:
   1. Configure trusted publisher on npmjs.com
   2. Link GitHub Actions workflow (release.yml)
@@ -207,10 +227,12 @@ This design extends the existing git hook pattern and follows the established co
   - Require linear history (enforces squash merges)
 
 **Dependencies:**
+
 - Phase 3 (CI workflow for quality check)
 - Phase 6 (PR title workflow for semantic-pr-title check)
 
 **Done when:**
+
 - npm package settings show GitHub Actions as trusted publisher
 - Cannot merge PR without CI passing
 - Cannot merge PR with invalid title
@@ -221,6 +243,7 @@ This design extends the existing git hook pattern and follows the established co
 **Goal:** Update documentation and verify complete pipeline
 
 **Components:**
+
 - Update `CLAUDE.md` with:
   - CI/CD workflow descriptions
   - Publishing strategy (alpha vs release)
@@ -239,6 +262,7 @@ This design extends the existing git hook pattern and follows the established co
 **Dependencies:** Phases 1-7 (complete pipeline)
 
 **Done when:**
+
 - Documentation updated and committed
 - Test PR merged successfully
 - Alpha package published during PR
@@ -257,6 +281,7 @@ Each workflow includes concurrency groups (`${{ github.workflow }}-${{ github.re
 semantic-release groups changes by type (Features, Bug Fixes, Documentation, Code Refactoring). Hides non-user-facing changes (tests, chores, CI). Links to commits and PRs automatically. Commits CHANGELOG.md back to repository with `[skip ci]` to prevent infinite loops.
 
 **Future enhancements:**
+
 - Renovate integration for automated dependency updates
 - Code coverage reporting (Codecov or Coveralls)
 - Performance benchmarking suite

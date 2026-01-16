@@ -17,6 +17,7 @@
 ## Task 7.1: Add oxlint dependency and configuration
 
 **Files:**
+
 - Modify: `package.json`
 - Create: `oxlint.json`
 
@@ -71,6 +72,7 @@ git commit -m "chore: add oxlint for code quality"
 ## Task 7.2: Add husky for git hooks
 
 **Files:**
+
 - Modify: `package.json`
 - Create: `.husky/pre-commit`
 - Create: `.husky/pre-push`

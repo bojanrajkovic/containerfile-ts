@@ -17,6 +17,7 @@
 ## Task 2.1: Create Dockerfile instruction types
 
 **Files:**
+
 - Create: `src/types.ts`
 
 **Step 1: Create types.ts with all instruction types**
@@ -28,7 +29,7 @@
  * FROM instruction - specifies base image
  */
 export type FromInstruction = {
-  readonly type: 'FROM';
+  readonly type: "FROM";
   readonly image: string;
   readonly as: string | null;
   readonly platform: string | null;
@@ -38,7 +39,7 @@ export type FromInstruction = {
  * RUN instruction - executes commands
  */
 export type RunInstruction = {
-  readonly type: 'RUN';
+  readonly type: "RUN";
   readonly command: string | ReadonlyArray<string>;
 };
 
@@ -46,7 +47,7 @@ export type RunInstruction = {
  * COPY instruction - copies files from build context or other stages
  */
 export type CopyInstruction = {
-  readonly type: 'COPY';
+  readonly type: "COPY";
   readonly src: string;
   readonly dest: string;
   readonly from: string | null;
@@ -58,7 +59,7 @@ export type CopyInstruction = {
  * ADD instruction - copies files with URL/archive support
  */
 export type AddInstruction = {
-  readonly type: 'ADD';
+  readonly type: "ADD";
   readonly src: string;
   readonly dest: string;
   readonly chown: string | null;
@@ -69,7 +70,7 @@ export type AddInstruction = {
  * WORKDIR instruction - sets working directory
  */
 export type WorkdirInstruction = {
-  readonly type: 'WORKDIR';
+  readonly type: "WORKDIR";
   readonly path: string;
 };
 
@@ -77,7 +78,7 @@ export type WorkdirInstruction = {
  * ENV instruction - sets environment variables
  */
 export type EnvInstruction = {
-  readonly type: 'ENV';
+  readonly type: "ENV";
   readonly key: string;
   readonly value: string;
 };
@@ -86,16 +87,16 @@ export type EnvInstruction = {
  * EXPOSE instruction - documents exposed ports
  */
 export type ExposeInstruction = {
-  readonly type: 'EXPOSE';
+  readonly type: "EXPOSE";
   readonly port: number;
-  readonly protocol: 'tcp' | 'udp';
+  readonly protocol: "tcp" | "udp";
 };
 
 /**
  * CMD instruction - default command
  */
 export type CmdInstruction = {
-  readonly type: 'CMD';
+  readonly type: "CMD";
   readonly command: ReadonlyArray<string>;
 };
 
@@ -103,7 +104,7 @@ export type CmdInstruction = {
  * ENTRYPOINT instruction - container entrypoint
  */
 export type EntrypointInstruction = {
-  readonly type: 'ENTRYPOINT';
+  readonly type: "ENTRYPOINT";
   readonly command: ReadonlyArray<string>;
 };
 
@@ -111,7 +112,7 @@ export type EntrypointInstruction = {
  * ARG instruction - build-time variable
  */
 export type ArgInstruction = {
-  readonly type: 'ARG';
+  readonly type: "ARG";
   readonly name: string;
   readonly defaultValue: string | null;
 };
@@ -120,7 +121,7 @@ export type ArgInstruction = {
  * LABEL instruction - metadata
  */
 export type LabelInstruction = {
-  readonly type: 'LABEL';
+  readonly type: "LABEL";
   readonly key: string;
   readonly value: string;
 };
@@ -166,6 +167,7 @@ git commit -m "feat: add core Dockerfile instruction types"
 ## Task 2.2: Export types from index.ts
 
 **Files:**
+
 - Modify: `src/index.ts`
 
 **Step 1: Update index.ts to export types**
@@ -188,7 +190,7 @@ export type {
   ArgInstruction,
   LabelInstruction,
   Containerfile,
-} from './types.js';
+} from "./types.js";
 ```
 
 **Step 2: Verify build succeeds**

@@ -17,11 +17,12 @@
 ## Task 8.1: Create CLAUDE.md
 
 **Files:**
+
 - Create: `CLAUDE.md`
 
 **Step 1: Create CLAUDE.md with project conventions**
 
-```markdown
+````markdown
 # containerfile-ts
 
 Type-safe Dockerfile/Containerfile generation with declarative TypeScript.
@@ -34,6 +35,7 @@ pnpm build      # Compile TypeScript
 pnpm test       # Run tests
 pnpm lint       # Run linter
 ```
+````
 
 ## Project Structure
 
@@ -57,6 +59,7 @@ docs/
 ### FCIS Pattern
 
 This project follows Functional Core, Imperative Shell:
+
 - **Functional Core:** All src/ files are pure - types, factory functions, rendering
 - **Imperative Shell:** Tests perform I/O (file reading, dynamic imports)
 
@@ -72,6 +75,7 @@ Mark all files with pattern comment: `// pattern: Functional Core` or `// patter
 ## Testing
 
 Fixture-based testing:
+
 1. Create `tests/fixtures/<name>/expected.Dockerfile`
 2. Create `tests/fixtures/<name>/generator.ts` exporting `fixture`
 3. Run `pnpm test` - generator output compared to expected
@@ -89,6 +93,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 ```
 
 **Types:**
+
 - `feat:` - New feature
 - `fix:` - Bug fix
 - `chore:` - Maintenance tasks, dependencies, tooling
@@ -107,22 +112,25 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 ## ADRs
 
 Architecture Decision Records go in `adrs/` with sequential filenames:
+
 - `00-use-discriminated-unions.md`
 - `01-fixture-based-testing.md`
-```
+
+````
 
 **Step 2: Commit**
 
 ```bash
 git add CLAUDE.md
 git commit -m "docs: add CLAUDE.md with project conventions"
-```
+````
 
 ---
 
 ## Task 8.2: Create ADRs directory
 
 **Files:**
+
 - Create: `adrs/.gitkeep`
 
 **Step 1: Create adrs directory with .gitkeep**
@@ -144,11 +152,12 @@ git commit -m "chore: add adrs directory"
 ## Task 8.3: Create README.md
 
 **Files:**
+
 - Create: `README.md`
 
 **Step 1: Create README.md with usage documentation**
 
-```markdown
+````markdown
 # containerfile-ts
 
 Type-safe Dockerfile/Containerfile generation with declarative TypeScript, inspired by [gha-ts](https://github.com/JLarky/gha-ts).
@@ -160,23 +169,24 @@ npm install containerfile-ts
 # or
 pnpm add containerfile-ts
 ```
+````
 
 ## Usage
 
 ### Simple Dockerfile
 
 ```typescript
-import { containerfile, from, workdir, copy, run, expose, cmd, render } from 'containerfile-ts';
+import { containerfile, from, workdir, copy, run, expose, cmd, render } from "containerfile-ts";
 
 const dockerfile = containerfile({
   instructions: [
-    from('node:20-alpine'),
-    workdir('/app'),
-    copy('package*.json', '.'),
-    run('npm ci'),
-    copy('.', '.'),
+    from("node:20-alpine"),
+    workdir("/app"),
+    copy("package*.json", "."),
+    run("npm ci"),
+    copy(".", "."),
     expose(3000),
-    cmd(['node', 'dist/index.js']),
+    cmd(["node", "dist/index.js"]),
   ],
 });
 
@@ -198,23 +208,23 @@ CMD ["node", "dist/index.js"]
 ### Multi-Stage Build
 
 ```typescript
-import { containerfile, stage, from, workdir, copy, run, cmd, render } from 'containerfile-ts';
+import { containerfile, stage, from, workdir, copy, run, cmd, render } from "containerfile-ts";
 
 const dockerfile = containerfile({
   stages: [
-    stage('builder', [
-      from('node:20', { as: 'builder' }),
-      workdir('/app'),
-      copy('package*.json', '.'),
-      run('npm ci'),
-      copy('.', '.'),
-      run('npm run build'),
+    stage("builder", [
+      from("node:20", { as: "builder" }),
+      workdir("/app"),
+      copy("package*.json", "."),
+      run("npm ci"),
+      copy(".", "."),
+      run("npm run build"),
     ]),
-    stage('runtime', [
-      from('node:20-alpine', { as: 'runtime' }),
-      workdir('/app'),
-      copy('/app/dist', './dist', { from: 'builder' }),
-      cmd(['node', 'dist/index.js']),
+    stage("runtime", [
+      from("node:20-alpine", { as: "runtime" }),
+      workdir("/app"),
+      copy("/app/dist", "./dist", { from: "builder" }),
+      cmd(["node", "dist/index.js"]),
     ]),
   ],
 });
@@ -226,28 +236,28 @@ console.log(render(dockerfile));
 
 ### Factory Functions
 
-| Function | Description |
-|----------|-------------|
-| `from(image, options?)` | FROM instruction |
-| `run(command)` | RUN instruction (string or exec form) |
-| `copy(src, dest, options?)` | COPY instruction |
-| `add(src, dest, options?)` | ADD instruction |
-| `workdir(path)` | WORKDIR instruction |
-| `env(key, value)` | ENV instruction |
-| `expose(port, options?)` | EXPOSE instruction |
-| `cmd(command)` | CMD instruction (exec form) |
-| `entrypoint(command)` | ENTRYPOINT instruction (exec form) |
-| `arg(name, options?)` | ARG instruction |
-| `label(key, value)` | LABEL instruction |
-| `stage(name, instructions)` | Named stage for multi-stage builds |
-| `containerfile(def)` | Create containerfile definition |
+| Function                    | Description                           |
+| --------------------------- | ------------------------------------- |
+| `from(image, options?)`     | FROM instruction                      |
+| `run(command)`              | RUN instruction (string or exec form) |
+| `copy(src, dest, options?)` | COPY instruction                      |
+| `add(src, dest, options?)`  | ADD instruction                       |
+| `workdir(path)`             | WORKDIR instruction                   |
+| `env(key, value)`           | ENV instruction                       |
+| `expose(port, options?)`    | EXPOSE instruction                    |
+| `cmd(command)`              | CMD instruction (exec form)           |
+| `entrypoint(command)`       | ENTRYPOINT instruction (exec form)    |
+| `arg(name, options?)`       | ARG instruction                       |
+| `label(key, value)`         | LABEL instruction                     |
+| `stage(name, instructions)` | Named stage for multi-stage builds    |
+| `containerfile(def)`        | Create containerfile definition       |
 
 ### Rendering
 
-| Function | Description |
-|----------|-------------|
-| `render(containerfile)` | Render to Dockerfile string |
-| `renderInstruction(instruction)` | Render single instruction |
+| Function                         | Description                 |
+| -------------------------------- | --------------------------- |
+| `render(containerfile)`          | Render to Dockerfile string |
+| `renderInstruction(instruction)` | Render single instruction   |
 
 ## Options
 
@@ -273,14 +283,15 @@ console.log(render(dockerfile));
 ## License
 
 MIT
-```
+
+````
 
 **Step 2: Commit**
 
 ```bash
 git add README.md
 git commit -m "docs: add README with usage documentation"
-```
+````
 
 ---
 

@@ -17,6 +17,7 @@
 ## Task 5.1: Update Containerfile type for unified API
 
 **Files:**
+
 - Modify: `src/types.ts`
 
 **Step 1: Replace Containerfile type with unified definition**
@@ -57,6 +58,7 @@ git commit -m "feat: unify Containerfile type for single and multi-stage builds"
 ## Task 5.2: Create stage factory function
 
 **Files:**
+
 - Create: `src/stage.ts`
 
 **Step 1: Create stage.ts with stage factory**
@@ -64,7 +66,7 @@ git commit -m "feat: unify Containerfile type for single and multi-stage builds"
 ```typescript
 // pattern: Functional Core
 
-import type { Instruction, Stage } from './types.js';
+import type { Instruction, Stage } from "./types.js";
 
 /**
  * Creates a named stage for multi-stage builds
@@ -94,6 +96,7 @@ git commit -m "feat: add stage factory function"
 ## Task 5.3: Update render for unified Containerfile
 
 **Files:**
+
 - Modify: `src/render.ts`
 
 **Step 1: Update imports in render.ts**
@@ -114,7 +117,7 @@ import type {
   EntrypointInstruction,
   ArgInstruction,
   LabelInstruction,
-} from './types.js';
+} from "./types.js";
 ```
 
 **Step 2: Add stage rendering helper and update render function**
@@ -126,18 +129,16 @@ Add after renderInstruction:
  * Renders a Stage to its Dockerfile string representation
  */
 function renderStage(stageToRender: Stage): string {
-  return stageToRender.instructions
-    .map(renderInstruction)
-    .join('\n');
+  return stageToRender.instructions.map(renderInstruction).join("\n");
 }
 
 /**
  * Type guard for single-stage containerfile
  */
 function isSingleStage(
-  containerfile: Containerfile
+  containerfile: Containerfile,
 ): containerfile is { readonly instructions: ReadonlyArray<Instruction> } {
-  return 'instructions' in containerfile;
+  return "instructions" in containerfile;
 }
 
 /**
@@ -146,14 +147,10 @@ function isSingleStage(
  */
 export function render(containerfile: Containerfile): string {
   if (isSingleStage(containerfile)) {
-    return containerfile.instructions
-      .map(renderInstruction)
-      .join('\n');
+    return containerfile.instructions.map(renderInstruction).join("\n");
   }
 
-  return containerfile.stages
-    .map(renderStage)
-    .join('\n\n');
+  return containerfile.stages.map(renderStage).join("\n\n");
 }
 ```
 
@@ -174,6 +171,7 @@ git commit -m "feat: update render to handle both single and multi-stage builds"
 ## Task 5.4: Export stage from index.ts
 
 **Files:**
+
 - Modify: `src/index.ts`
 
 **Step 1: Update index.ts with stage exports**
@@ -201,13 +199,13 @@ export type {
   AddOptions,
   ExposeOptions,
   ArgOptions,
-} from './types.js';
+} from "./types.js";
 ```
 
 Add stage export:
 
 ```typescript
-export { stage } from './stage.js';
+export { stage } from "./stage.js";
 ```
 
 **Step 2: Verify build succeeds**

@@ -1,3 +1,42 @@
+## Phase 2: Changeset Generation Script
+
+**Goal:** Automate changeset creation from conventional commits
+
+**Dependencies:** Phase 1 (Changesets must be configured)
+
+### Task 1: Create scripts directory
+
+**Files:**
+
+- Create: `/Users/brajkovic/Code/containerfile-ts/.worktrees/changesets-ci-cd-migration/scripts/` (directory)
+
+**Step 1: Create the scripts directory**
+
+```bash
+mkdir -p scripts
+```
+
+**Step 2: Verify directory exists**
+
+```bash
+ls -la scripts/
+```
+
+Expected: Empty directory listing
+
+---
+
+### Task 2: Create generate-changeset.ts script
+
+**Files:**
+
+- Create: `/Users/brajkovic/Code/containerfile-ts/.worktrees/changesets-ci-cd-migration/scripts/generate-changeset.ts`
+
+**Step 1: Create the script**
+
+Create `scripts/generate-changeset.ts` with this content:
+
+```typescript
 /*
 MIT License
 
@@ -22,30 +61,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-// pattern: Imperative Shell
-
 // Adapted from grounds project, simplified for single-package repository
 
 import { execSync } from "node:child_process";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { CommitParser } from "conventional-commits-parser";
+import commitParser, { type Commit } from "conventional-commits-parser";
 
 type UpgradeType = "major" | "minor" | "patch" | "none";
 
-type CommitMessage = {
-  readonly type: string | null;
-  readonly scope: string | null;
-  readonly subject: string;
-  readonly body: string | null;
-  readonly footer: string | null;
-};
-
 type CommitInfo = {
-  readonly sha: string;
-  readonly commitMessage: CommitMessage;
-  readonly isBreakingChange: boolean;
-  readonly upgradeType: UpgradeType;
+  sha: string;
+  commitMessage: Commit;
+  isBreakingChange: boolean;
+  upgradeType: UpgradeType;
 };
 
 // Pattern to identify breaking changes in commit messages
@@ -107,7 +136,7 @@ function getVersionBumpCommitsSinceMain({
 }: {
   productionBranch: string;
   integrationBranch: string;
-}): Array<CommitInfo> {
+}): CommitInfo[] {
   const delimiter = "<!--|COMMIT|-->";
 
   let commitRange: string;
@@ -145,8 +174,7 @@ function parseCommit(commitText: string): CommitInfo {
   const commit = commitText.trim();
   const sha = commit.substring(0, 40);
   const message = commit.substring(40).trim();
-  const parser = new CommitParser();
-  const commitMessage = parser.parse(message);
+  const commitMessage = commitParser.sync(message);
   const isBreakingChange = Boolean(
     commitMessage.body?.includes(BREAKING_PATTERN) ??
     commitMessage.footer?.includes(BREAKING_PATTERN),
@@ -155,13 +183,7 @@ function parseCommit(commitText: string): CommitInfo {
 
   return {
     sha,
-    commitMessage: {
-      type: commitMessage.type,
-      scope: commitMessage.scope,
-      subject: commitMessage.subject,
-      body: commitMessage.body,
-      footer: commitMessage.footer,
-    },
+    commitMessage,
     isBreakingChange,
     upgradeType,
   };
@@ -170,10 +192,7 @@ function parseCommit(commitText: string): CommitInfo {
 /**
  * Creates changeset files for the given commits.
  */
-async function createChangesets(
-  commits: ReadonlyArray<CommitInfo>,
-  packageName: string,
-): Promise<void> {
+async function createChangesets(commits: CommitInfo[], packageName: string): Promise<void> {
   const changesetDir = join(process.cwd(), ".changeset");
   await mkdir(changesetDir, { recursive: true });
   await Promise.all(commits.map((commit) => createChangeset(commit, changesetDir, packageName)));
@@ -218,41 +237,23 @@ ${message}
 /**
  * Parse command line arguments
  */
-function parseArgs(args: ReadonlyArray<string>): {
+function parseArgs(args: string[]): {
   productionBranch: string;
   integrationBranch: string;
 } {
-  type ParseState = {
-    readonly index: number;
-    readonly productionBranch: string;
-    readonly integrationBranch: string;
-  };
+  let productionBranch = "main";
+  let integrationBranch = "HEAD";
 
-  const reduce = (state: ParseState): ParseState => {
-    if (state.index >= args.length) {
-      return state;
-    }
-
-    const arg = args[state.index];
-    switch (arg) {
+  for (let i = 0; i < args.length; i++) {
+    switch (args[i]) {
       case "-p":
-      case "--production": {
-        const value = args[state.index + 1] ?? "main";
-        return reduce({
-          ...state,
-          productionBranch: value,
-          index: state.index + 2,
-        });
-      }
+      case "--production":
+        productionBranch = args[++i] ?? "main";
+        break;
       case "-i":
-      case "--integration": {
-        const value = args[state.index + 1] ?? "develop";
-        return reduce({
-          ...state,
-          integrationBranch: value,
-          index: state.index + 2,
-        });
-      }
+      case "--integration":
+        integrationBranch = args[++i] ?? "develop";
+        break;
       case "--help":
       case "-h":
         console.log(`
@@ -275,21 +276,10 @@ Examples:
   generate-changeset -p main -i develop
 `);
         process.exit(0);
-      default:
-        return reduce({ ...state, index: state.index + 1 });
     }
-  };
+  }
 
-  const finalState = reduce({
-    index: 0,
-    productionBranch: "main",
-    integrationBranch: "HEAD",
-  });
-
-  return {
-    productionBranch: finalState.productionBranch,
-    integrationBranch: finalState.integrationBranch,
-  };
+  return { productionBranch, integrationBranch };
 }
 
 /**
@@ -301,6 +291,48 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error("failed to generate changeset:", error);
+  console.error("Error:", error);
   process.exit(1);
 });
+```
+
+**Step 2: Verify script syntax is correct**
+
+Run: `pnpm typecheck`
+
+Expected: No TypeScript errors
+
+**Step 3: Test the script runs**
+
+Run: `pnpm exec tsx scripts/generate-changeset.ts --help`
+
+Expected: Help output showing usage information
+
+**Step 4: Commit**
+
+```bash
+git add scripts/
+git commit -m "$(cat <<'EOF'
+feat: add generate-changeset script for conventional commits
+
+Creates changesets automatically from conventional commit messages.
+Adapted from grounds project, simplified for single-package repo.
+
+Commit type mapping:
+- feat: minor bump
+- fix/refactor/perf: patch bump
+- BREAKING CHANGE: major bump
+- chore/docs/test/ci: ignored (no changeset)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
+**Phase 2 Complete When:**
+
+- `scripts/generate-changeset.ts` exists
+- `pnpm exec tsx scripts/generate-changeset.ts --help` shows usage
+- TypeScript compilation succeeds

@@ -18,14 +18,14 @@ import type {
   AddOptions,
   ExposeOptions,
   ArgOptions,
-} from './types.js';
+} from "./types.js";
 
 /**
  * Creates a FROM instruction
  */
 export function from(image: string, options?: FromOptions): FromInstruction {
   return {
-    type: 'FROM',
+    type: "FROM",
     image,
     as: options?.as ?? null,
     platform: options?.platform ?? null,
@@ -37,7 +37,7 @@ export function from(image: string, options?: FromOptions): FromInstruction {
  */
 export function run(command: string | ReadonlyArray<string>): RunInstruction {
   return {
-    type: 'RUN',
+    type: "RUN",
     command,
   };
 }
@@ -55,7 +55,7 @@ export function copy(
   options?: CopyOptions,
 ): CopyInstruction {
   return {
-    type: 'COPY',
+    type: "COPY",
     src,
     dest,
     from: options?.from ?? null,
@@ -77,7 +77,7 @@ export function add(
   options?: AddOptions,
 ): AddInstruction {
   return {
-    type: 'ADD',
+    type: "ADD",
     src,
     dest,
     chown: options?.chown ?? null,
@@ -90,7 +90,7 @@ export function add(
  */
 export function workdir(path: string): WorkdirInstruction {
   return {
-    type: 'WORKDIR',
+    type: "WORKDIR",
     path,
   };
 }
@@ -100,7 +100,7 @@ export function workdir(path: string): WorkdirInstruction {
  */
 export function env(key: string, value: string): EnvInstruction {
   return {
-    type: 'ENV',
+    type: "ENV",
     key,
     value,
   };
@@ -128,21 +128,19 @@ export function expose(
   port: number | { readonly start: number; readonly end: number },
   options?: ExposeOptions,
 ): ExposeInstruction {
-  if (typeof port === 'number') {
-    validatePort(port, 'port number');
+  if (typeof port === "number") {
+    validatePort(port, "port number");
   } else {
-    validatePort(port.start, 'port range start');
-    validatePort(port.end, 'port range end');
+    validatePort(port.start, "port range start");
+    validatePort(port.end, "port range end");
     if (port.start > port.end) {
-      throw new Error(
-        `invalid port range: start (${port.start}) must be <= end (${port.end})`,
-      );
+      throw new Error(`invalid port range: start (${port.start}) must be <= end (${port.end})`);
     }
   }
   return {
-    type: 'EXPOSE',
+    type: "EXPOSE",
     port,
-    protocol: options?.protocol ?? 'tcp',
+    protocol: options?.protocol ?? "tcp",
   };
 }
 
@@ -151,7 +149,7 @@ export function expose(
  */
 export function cmd(command: ReadonlyArray<string>): CmdInstruction {
   return {
-    type: 'CMD',
+    type: "CMD",
     command,
   };
 }
@@ -161,7 +159,7 @@ export function cmd(command: ReadonlyArray<string>): CmdInstruction {
  */
 export function entrypoint(command: ReadonlyArray<string>): EntrypointInstruction {
   return {
-    type: 'ENTRYPOINT',
+    type: "ENTRYPOINT",
     command,
   };
 }
@@ -171,7 +169,7 @@ export function entrypoint(command: ReadonlyArray<string>): EntrypointInstructio
  */
 export function arg(name: string, options?: ArgOptions): ArgInstruction {
   return {
-    type: 'ARG',
+    type: "ARG",
     name,
     defaultValue: options?.defaultValue ?? null,
   };
@@ -182,7 +180,7 @@ export function arg(name: string, options?: ArgOptions): ArgInstruction {
  */
 export function label(key: string, value: string): LabelInstruction {
   return {
-    type: 'LABEL',
+    type: "LABEL",
     key,
     value,
   };

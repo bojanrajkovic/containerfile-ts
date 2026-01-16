@@ -39,6 +39,7 @@ adrs/               # Architecture Decision Records
 ### FCIS Pattern
 
 This project follows Functional Core, Imperative Shell:
+
 - **Functional Core:** All src/ files are pure - types, factory functions, rendering. Currently all production code is Functional Core.
 - **Imperative Shell:** Tests perform I/O (file reading, dynamic imports)
 
@@ -89,6 +90,7 @@ type Instruction =
 ```
 
 All instruction types use:
+
 - `readonly` fields for immutability
 - `null` for absent optional values (not `undefined`)
 - `ReadonlyArray<T>` for array fields
@@ -110,37 +112,38 @@ Unified discriminated union supporting both single-stage and multi-stage:
 
 ```typescript
 type Containerfile =
-  | { readonly instructions: ReadonlyArray<Instruction> }  // Single-stage
-  | { readonly stages: ReadonlyArray<Stage> };              // Multi-stage
+  | { readonly instructions: ReadonlyArray<Instruction> } // Single-stage
+  | { readonly stages: ReadonlyArray<Stage> }; // Multi-stage
 ```
 
 ### Factory Functions
 
 Factory functions create instruction objects with optional parameters via option objects:
 
-| Function | Signature | Notes |
-|----------|-----------|-------|
-| `from` | `(image: string, options?: FromOptions)` | `as`, `platform` options |
-| `run` | `(command: string \| ReadonlyArray<string>)` | Shell or exec form |
-| `copy` | `(src: string \| ReadonlyArray<string>, dest: string, options?: CopyOptions)` | `from`, `chown`, `chmod` options |
-| `add` | `(src: string \| ReadonlyArray<string>, dest: string, options?: AddOptions)` | `chown`, `chmod` options |
-| `workdir` | `(path: string)` | |
-| `env` | `(key: string, value: string)` | |
-| `expose` | `(port: number \| {start, end}, options?: ExposeOptions)` | Validates port range 0-65535, `protocol` option |
-| `cmd` | `(command: ReadonlyArray<string>)` | Exec form only |
-| `entrypoint` | `(command: ReadonlyArray<string>)` | Exec form only |
-| `arg` | `(name: string, options?: ArgOptions)` | `defaultValue` option |
-| `label` | `(key: string, value: string)` | |
-| `containerfile` | `(def: Containerfile)` | Identity function for type safety |
-| `stage` | `(name: string, instructions: ReadonlyArray<Instruction>)` | Creates a named stage for multi-stage builds |
+| Function        | Signature                                                                     | Notes                                           |
+| --------------- | ----------------------------------------------------------------------------- | ----------------------------------------------- |
+| `from`          | `(image: string, options?: FromOptions)`                                      | `as`, `platform` options                        |
+| `run`           | `(command: string \| ReadonlyArray<string>)`                                  | Shell or exec form                              |
+| `copy`          | `(src: string \| ReadonlyArray<string>, dest: string, options?: CopyOptions)` | `from`, `chown`, `chmod` options                |
+| `add`           | `(src: string \| ReadonlyArray<string>, dest: string, options?: AddOptions)`  | `chown`, `chmod` options                        |
+| `workdir`       | `(path: string)`                                                              |                                                 |
+| `env`           | `(key: string, value: string)`                                                |                                                 |
+| `expose`        | `(port: number \| {start, end}, options?: ExposeOptions)`                     | Validates port range 0-65535, `protocol` option |
+| `cmd`           | `(command: ReadonlyArray<string>)`                                            | Exec form only                                  |
+| `entrypoint`    | `(command: ReadonlyArray<string>)`                                            | Exec form only                                  |
+| `arg`           | `(name: string, options?: ArgOptions)`                                        | `defaultValue` option                           |
+| `label`         | `(key: string, value: string)`                                                |                                                 |
+| `containerfile` | `(def: Containerfile)`                                                        | Identity function for type safety               |
+| `stage`         | `(name: string, instructions: ReadonlyArray<Instruction>)`                    | Creates a named stage for multi-stage builds    |
 
 ### Render Functions
 
-| Function | Signature | Notes |
-|----------|-----------|-------|
+| Function | Signature                                | Notes                                           |
+| -------- | ---------------------------------------- | ----------------------------------------------- |
 | `render` | `(containerfile: Containerfile): string` | Renders full Containerfile to Dockerfile string |
 
 Rendering behavior:
+
 - Single-stage: Instructions joined with newlines (no trailing newline)
 - Multi-stage: Stages joined with double newlines (blank line separator)
 - RUN with array uses exec form `["cmd", "arg"]`
@@ -151,6 +154,7 @@ Rendering behavior:
 ### Validation
 
 The `expose()` function validates:
+
 - Port numbers are integers
 - Port numbers are in range 0-65535
 - Port range start <= end
@@ -160,6 +164,7 @@ Throws `Error` with descriptive message on invalid input.
 ## Testing
 
 Fixture-based testing:
+
 1. Create `tests/fixtures/<name>/expected.Dockerfile`
 2. Create `tests/fixtures/<name>/generator.ts` exporting `fixture`
 3. Run `pnpm test` - generator output compared to expected
@@ -171,6 +176,7 @@ Tests use Vitest with a fixture-based approach:
 - Tests dynamically discover fixtures and verify generation matches expected output
 
 To add a new test fixture:
+
 1. Create `tests/fixtures/<fixture-name>/generator.ts`
 2. Create `tests/fixtures/<fixture-name>/expected.Dockerfile`
 3. Export `fixture` from the generator file
@@ -188,6 +194,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 ```
 
 **Types:**
+
 - `feat:` - New feature
 - `fix:` - Bug fix
 - `chore:` - Maintenance tasks, dependencies, tooling
@@ -225,12 +232,14 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 ### Workflows
 
 **CI Testing (`ci.yml`)**
+
 - **Triggers:** All branches and pull requests
 - **Purpose:** Quality validation before merge or publish
 - **Steps:** Lint → Typecheck → Test → Build → Security audit
 - **Required:** Must pass before PRs can merge (branch protection)
 
 **Alpha Publishing (`publish-alpha.yml`)**
+
 - **Triggers:** After CI passes on `feat/*` and `fix/*` branches
 - **Purpose:** Per-branch pre-release packages for testing
 - **Publishes to:** GitHub Package Registry as `@bojanrajkovic/containerfile-ts`
@@ -240,6 +249,7 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 - **Usage:** `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.5`
 
 **Release Publishing (`release-please.yml`)**
+
 - **Triggers:** Push to `main` branch
 - **Purpose:** PR-based production releases to npm
 - **Uses:** release-please to create/update release PRs based on conventional commits
@@ -249,12 +259,14 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 - **Updates:** package.json version, CHANGELOG.md, git tags, GitHub releases
 
 **PR Title Validation (`pr-title.yml`)**
+
 - **Triggers:** PR opened, edited, synchronized, reopened
 - **Purpose:** Enforce conventional commits on PR titles
 - **Required:** Must pass before PRs can merge (branch protection)
 - **Why:** Squash merge uses PR title as commit message on main
 
 **Dependency Review (`dependency-review.yml`)**
+
 - **Triggers:** Pull requests to main
 - **Purpose:** Block vulnerable dependencies (moderate+ severity)
 - **Action:** Comments on PR with security analysis
@@ -262,6 +274,7 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 ### Publishing Strategy
 
 **Alpha packages (testing):**
+
 - Push commits to `feat/user-auth` or `fix/validation-bug` branch
 - CI runs and passes
 - Alpha package published with version based on commit count:
@@ -271,6 +284,7 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 - Install with: `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.5`
 
 **Release packages (production):**
+
 - Merge PR with `feat:` or `fix:` title to main
 - release-please creates/updates a "Release PR" with:
   - Version bump in package.json (e.g., 0.0.1 → 0.1.0)
@@ -289,6 +303,7 @@ All commits and PR titles must follow [Conventional Commits](https://www.convent
 **Format:** `<type>[optional scope]: <description>`
 
 **Types:**
+
 - `feat:` - New feature (triggers minor version bump)
 - `fix:` - Bug fix (triggers patch version bump)
 - `docs:` - Documentation only changes
@@ -300,11 +315,13 @@ All commits and PR titles must follow [Conventional Commits](https://www.convent
 - `revert:` - Reverts a previous commit
 
 **Enforcement:**
+
 - Local: `commit-msg` git hook validates commit messages
 - CI: PR title validation workflow validates PR titles
 - Required: PR titles must be valid (becomes commit message on squash merge)
 
 **Examples:**
+
 - `feat: add HEALTHCHECK instruction support`
 - `fix: correct EXPOSE port range validation`
 - `docs: update API documentation for multi-stage builds`
@@ -354,6 +371,7 @@ This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-liv
 ### Troubleshooting
 
 If publishing fails with authentication error:
+
 1. Verify trusted publisher is configured on npmjs.com
 2. Verify repository name matches exactly: `bojanrajkovic/containerfile-ts`
 3. Verify workflow name matches exactly: `release-please.yml`
@@ -363,6 +381,7 @@ If publishing fails with authentication error:
 ## ADRs
 
 Architecture Decision Records go in `adrs/` with sequential filenames:
+
 - `00-use-discriminated-unions.md`
 - `01-fixture-based-testing.md`
 

@@ -17,6 +17,7 @@
 ## Task 1.1: Create mise configuration
 
 **Files:**
+
 - Create: `.mise.toml`
 
 **Step 1: Create mise.toml with Node.js LTS and pnpm**
@@ -49,6 +50,7 @@ git commit -m "chore: add mise configuration for Node.js and pnpm"
 ## Task 1.2: Create package.json
 
 **Files:**
+
 - Create: `package.json`
 
 **Step 1: Create package.json with project metadata**
@@ -67,21 +69,12 @@ git commit -m "chore: add mise configuration for Node.js and pnpm"
       "import": "./dist/index.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": [
-    "dockerfile",
-    "containerfile",
-    "docker",
-    "container",
-    "typescript",
-    "type-safe"
-  ],
+  "keywords": ["dockerfile", "containerfile", "docker", "container", "typescript", "type-safe"],
   "author": "Bojan Rajkovic",
   "license": "MIT",
   "repository": {
@@ -109,6 +102,7 @@ git commit -m "chore: add package.json with project metadata"
 ## Task 1.3: Create tsconfig.json
 
 **Files:**
+
 - Create: `tsconfig.json`
 
 **Step 1: Create strict TypeScript configuration**
@@ -160,6 +154,7 @@ git commit -m "chore: add strict TypeScript configuration"
 ## Task 1.4: Create empty entry point and install dependencies
 
 **Files:**
+
 - Create: `src/index.ts`
 
 **Step 1: Create src directory and empty entry point**

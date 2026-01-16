@@ -21,7 +21,10 @@
     "test:watch": "vitest",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "prepare": "husky"
+    "prepare": "husky",
+    "changeset": "changeset",
+    "changeset-version": "changeset version",
+    "release": "pnpm build && pnpm publish --access public --no-git-checks"
   },
   "lint-staged": {
     "*.ts": ["oxlint --fix"]

@@ -22,6 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+// pattern: Imperative Shell
+
 // Adapted from grounds project, simplified for single-package repository
 
 import { execSync } from "node:child_process";
@@ -40,10 +42,10 @@ type CommitMessage = {
 };
 
 type CommitInfo = {
-  sha: string;
-  commitMessage: CommitMessage;
-  isBreakingChange: boolean;
-  upgradeType: UpgradeType;
+  readonly sha: string;
+  readonly commitMessage: CommitMessage;
+  readonly isBreakingChange: boolean;
+  readonly upgradeType: UpgradeType;
 };
 
 // Pattern to identify breaking changes in commit messages
@@ -109,7 +111,7 @@ function getVersionBumpCommitsSinceMain({
 }: {
   productionBranch: string;
   integrationBranch: string;
-}): CommitInfo[] {
+}): Array<CommitInfo> {
   const delimiter = "<!--|COMMIT|-->";
 
   let commitRange: string;
@@ -179,7 +181,7 @@ function parseCommit(commitText: string): CommitInfo {
  * Creates changeset files for the given commits.
  */
 async function createChangesets(
-  commits: CommitInfo[],
+  commits: ReadonlyArray<CommitInfo>,
   packageName: string
 ): Promise<void> {
   const changesetDir = join(process.cwd(), ".changeset");
@@ -228,23 +230,41 @@ ${message}
 /**
  * Parse command line arguments
  */
-function parseArgs(args: string[]): {
+function parseArgs(args: ReadonlyArray<string>): {
   productionBranch: string;
   integrationBranch: string;
 } {
-  let productionBranch = "main";
-  let integrationBranch = "HEAD";
+  type ParseState = {
+    readonly index: number;
+    readonly productionBranch: string;
+    readonly integrationBranch: string;
+  };
 
-  for (let i = 0; i < args.length; i++) {
-    switch (args[i]) {
+  const reduce = (state: ParseState): ParseState => {
+    if (state.index >= args.length) {
+      return state;
+    }
+
+    const arg = args[state.index];
+    switch (arg) {
       case "-p":
-      case "--production":
-        productionBranch = args[++i] ?? "main";
-        break;
+      case "--production": {
+        const value = args[state.index + 1] ?? "main";
+        return reduce({
+          ...state,
+          productionBranch: value,
+          index: state.index + 2,
+        });
+      }
       case "-i":
-      case "--integration":
-        integrationBranch = args[++i] ?? "develop";
-        break;
+      case "--integration": {
+        const value = args[state.index + 1] ?? "develop";
+        return reduce({
+          ...state,
+          integrationBranch: value,
+          index: state.index + 2,
+        });
+      }
       case "--help":
       case "-h":
         console.log(`
@@ -267,10 +287,21 @@ Examples:
   generate-changeset -p main -i develop
 `);
         process.exit(0);
+      default:
+        return reduce({ ...state, index: state.index + 1 });
     }
-  }
+  };
 
-  return { productionBranch, integrationBranch };
+  const finalState = reduce({
+    index: 0,
+    productionBranch: "main",
+    integrationBranch: "HEAD",
+  });
+
+  return {
+    productionBranch: finalState.productionBranch,
+    integrationBranch: finalState.integrationBranch,
+  };
 }
 
 /**
@@ -282,6 +313,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error("Error:", error);
+  console.error("failed to generate changeset:", error);
   process.exit(1);
 });

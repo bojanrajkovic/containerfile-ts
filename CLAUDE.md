@@ -235,28 +235,37 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 
 - **Triggers:** All branches and pull requests
 - **Purpose:** Quality validation before merge or publish
-- **Steps:** Lint → Typecheck → Test → Build → Security audit
+- **Steps:** Format check → Lint → Typecheck → Test → Build → Security audit
 - **Required:** Must pass before PRs can merge (branch protection)
+
+**Publish Switch (`publish-switch.yml`)**
+
+- **Triggers:** CI passes on `feat/*` or `fix/*` branches, or push to main
+- **Purpose:** Single OIDC entry point routing to alpha or release workflows
+- **Routes to:**
+  - `publish-alpha.yml` for feat/fix branches
+  - `publish-release.yml` for main branch
 
 **Alpha Publishing (`publish-alpha.yml`)**
 
-- **Triggers:** After CI passes on `feat/*` and `fix/*` branches
+- **Triggers:** Called by publish-switch after CI passes on `feat/*` or `fix/*` branches
 - **Purpose:** Per-branch pre-release packages for testing
-- **Publishes to:** GitHub Package Registry as `@bojanrajkovic/containerfile-ts`
-- **Versioning:** `1.0.0-branch-name.N` where N = commit count since main
-- **Algorithm:** Extracts branch name (feat/fix prefix removed), counts commits, generates version
-- **Example:** feat/user-auth with 5 commits → `1.0.0-user-auth.5`
-- **Usage:** `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.5`
+- **Publishes to:** npm with `@alpha` tag
+- **Versioning:** Changesets snapshot: `{version}-{branch}-{sha}`
+- **Example:** `@bojanrajkovic/containerfile-ts@1.0.0-add-healthcheck-abc1234`
+- **Usage:** `pnpm add @bojanrajkovic/containerfile-ts@alpha`
 
-**Release Publishing (`release-please.yml`)**
+**Release Publishing (`publish-release.yml`)**
 
-- **Triggers:** Push to `main` branch
+- **Triggers:** Called by publish-switch on push to main
 - **Purpose:** PR-based production releases to npm
-- **Uses:** release-please to create/update release PRs based on conventional commits
+- **Uses:** Changesets with custom `generate-changeset.ts` script
 - **Versioning:** `feat:` → minor, `fix:` → patch, `BREAKING CHANGE:` → major
-- **Workflow:** Creates release PR → Review/merge PR → Publishes to npm
+- **Workflow:**
+  1. Generates changesets from conventional commits since last tag
+  2. Creates "Version Packages" PR (if releasable changes exist)
+  3. On PR merge: publishes to npm with `@latest` tag
 - **Publishes to:** npm public registry as `@bojanrajkovic/containerfile-ts`
-- **Updates:** package.json version, CHANGELOG.md, git tags, GitHub releases
 
 **PR Title Validation (`pr-title.yml`)**
 
@@ -277,23 +286,21 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 
 - Push commits to `feat/user-auth` or `fix/validation-bug` branch
 - CI runs and passes
-- Alpha package published with version based on commit count:
-  - 1st commit: `@bojanrajkovic/containerfile-ts@1.0.0-user-auth.1`
-  - 2nd commit: `@bojanrajkovic/containerfile-ts@1.0.0-user-auth.2`
-  - And so on...
-- Install with: `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.5`
+- Alpha package published with snapshot version:
+  - `@bojanrajkovic/containerfile-ts@1.0.0-user-auth-abc1234`
+- Install with: `pnpm add @bojanrajkovic/containerfile-ts@alpha`
 
 **Release packages (production):**
 
 - Merge PR with `feat:` or `fix:` title to main
-- release-please creates/updates a "Release PR" with:
-  - Version bump in package.json (e.g., 0.0.1 → 0.1.0)
+- `generate-changeset.ts` creates changesets from conventional commits
+- changesets/action creates "Version Packages" PR with:
+  - Version bump in package.json
   - Updated CHANGELOG.md with commit history
-- Review and merge the Release PR
-- Merging Release PR triggers:
-  - Git tag creation
-  - GitHub Release publication
-  - npm package publication: `@bojanrajkovic/containerfile-ts@0.x.x`
+- Review and merge the "Version Packages" PR
+- Merging triggers:
+  - npm package publication: `@bojanrajkovic/containerfile-ts@x.x.x`
+  - Git tag and GitHub Release creation
 - Install with: `pnpm add @bojanrajkovic/containerfile-ts`
 
 ### Conventional Commits
@@ -337,11 +344,11 @@ This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-liv
 **Initial setup (one-time, requires npm account owner):**
 
 1. **Configure trusted publisher on npmjs.com:**
-   - Go to https://www.npmjs.com/package/containerfile-ts/access
+   - Go to https://www.npmjs.com/package/@bojanrajkovic/containerfile-ts/access
    - Click "Publishing access" → "Automation tokens" → "Configure trusted publishers"
    - Add GitHub Actions as trusted publisher:
      - Repository: `bojanrajkovic/containerfile-ts`
-     - Workflow: `release-please.yml`
+     - Workflow: `publish-switch.yml`
      - Environment: (leave blank)
    - Save configuration
 
@@ -362,19 +369,13 @@ This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-liv
 - **Audit trail:** All publishes linked to specific GitHub Actions runs
 - **Zero maintenance:** No token rotation or expiration management needed
 
-### Official Documentation
-
-- npm trusted publishing: https://docs.npmjs.com/generating-provenance-statements
-- GitHub OIDC for npm: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
-- Provenance attestations: https://github.blog/2023-04-19-introducing-npm-package-provenance/
-
 ### Troubleshooting
 
 If publishing fails with authentication error:
 
 1. Verify trusted publisher is configured on npmjs.com
 2. Verify repository name matches exactly: `bojanrajkovic/containerfile-ts`
-3. Verify workflow name matches exactly: `release-please.yml`
+3. Verify workflow name matches exactly: `publish-switch.yml`
 4. Check workflow has `id-token: write` permission
 5. Check `NPM_CONFIG_PROVENANCE: true` is set in workflow
 

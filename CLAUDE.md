@@ -1,6 +1,6 @@
 # containerfile-ts
 
-> Freshness: 2026-01-09
+> Freshness: 2026-01-15
 
 Type-safe Dockerfile/Containerfile generation with declarative TypeScript.
 

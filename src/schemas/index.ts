@@ -15,4 +15,6 @@ export {
   validateImageName,
   validateDockerPath,
   validatePortRange,
+  validateNonEmptyString,
+  validateStringArray,
 } from "./primitives.js";

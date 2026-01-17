@@ -7,6 +7,8 @@ import {
   validateDockerPath,
   validatePortRange,
   type PortRange,
+  validateNonEmptyString,
+  validateStringArray,
 } from "../../src/schemas/primitives.js";
 
 describe("validatePort", () => {
@@ -150,6 +152,60 @@ describe("validatePortRange", () => {
     if (result.isErr()) {
       // Should have errors for both start and end
       expect(result.error.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+});
+
+describe("validateNonEmptyString", () => {
+  it("accepts non-empty strings", () => {
+    expect(validateNonEmptyString("hello").isOk()).toBe(true);
+    expect(validateNonEmptyString(" ").isOk()).toBe(true);
+    expect(validateNonEmptyString("a").isOk()).toBe(true);
+  });
+
+  it("rejects empty strings", () => {
+    const result = validateNonEmptyString("");
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("rejects non-strings", () => {
+    expect(validateNonEmptyString(123).isErr()).toBe(true);
+    expect(validateNonEmptyString(null).isErr()).toBe(true);
+  });
+});
+
+describe("validateStringArray", () => {
+  it("accepts arrays of non-empty strings", () => {
+    expect(validateStringArray(["a", "b", "c"]).isOk()).toBe(true);
+    expect(validateStringArray(["single"]).isOk()).toBe(true);
+  });
+
+  it("rejects empty arrays", () => {
+    const result = validateStringArray([]);
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("rejects arrays with empty strings", () => {
+    const result = validateStringArray(["valid", "", "also-valid"]);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].field).toContain("[1]");
+    }
+  });
+
+  it("collects all errors for multiple invalid elements", () => {
+    const result = validateStringArray(["", "", ""]);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error.length).toBe(3);
+    }
+  });
+
+  it("uses custom field name", () => {
+    const result = validateStringArray([""], "command");
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].field).toBe("command[0]");
     }
   });
 });

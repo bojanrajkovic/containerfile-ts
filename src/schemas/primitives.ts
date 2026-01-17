@@ -190,3 +190,58 @@ export function validatePortRange(
     end: value.end as Port,
   });
 }
+
+// ============================================================================
+// String Validation
+// ============================================================================
+
+/**
+ * Schema for non-empty strings.
+ */
+const NonEmptyStringSchema = Type.String({ minLength: 1 });
+const CompiledNonEmptyStringValidator = TypeCompiler.Compile(NonEmptyStringSchema);
+
+/**
+ * Validate that a value is a non-empty string.
+ */
+export function validateNonEmptyString(
+  value: unknown,
+  field: string = "value",
+): Result<string, Array<ValidationError>> {
+  if (!CompiledNonEmptyStringValidator.Check(value)) {
+    return err([validationError(field, "must be a non-empty string", value)]);
+  }
+  return ok(value as string);
+}
+
+/**
+ * Validate an array of non-empty strings.
+ * Array must have at least one element.
+ * Collects all element-level errors.
+ */
+export function validateStringArray(
+  value: ReadonlyArray<unknown>,
+  field: string = "values",
+): Result<Array<string>, Array<ValidationError>> {
+  if (!Array.isArray(value) || value.length === 0) {
+    return err([validationError(field, "must be a non-empty array", value)]);
+  }
+
+  const errors: Array<ValidationError> = [];
+  const validated: Array<string> = [];
+
+  for (let i = 0; i < value.length; i++) {
+    const result = validateNonEmptyString(value[i], `${field}[${i}]`);
+    if (result.isErr()) {
+      errors.push(...result.error);
+    } else {
+      validated.push(result.value);
+    }
+  }
+
+  if (errors.length > 0) {
+    return err(errors);
+  }
+
+  return ok(validated);
+}

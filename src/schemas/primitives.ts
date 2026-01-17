@@ -43,16 +43,18 @@ export const PortSchema = Type.Unsafe<Port>(PortSchemaBase);
 /**
  * Schema for Docker image names.
  * Supports: simple names (nginx), registry paths (ghcr.io/user/app),
- * tags (node:18), and digests (nginx@sha256:abc...).
+ * tags (node:18), digests (nginx@sha256:abc...), and variable substitution (node:${VERSION}).
  *
  * Pattern breakdown:
  * - Optional registry: (hostname:port/ or hostname/)
  * - Image path: one or more path segments separated by /
- * - Optional tag: :tagname
+ * - Optional tag: :tagname (supports ${VARIABLE} syntax)
  * - Optional digest: @algorithm:hash
+ *
+ * Note: Allows $ character for Docker/Buildkit variable substitution like ${VAR}
  */
 const ImageNamePattern =
-  "^(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?::[0-9]+)?/)?[a-z0-9]+(?:[._-][a-z0-9]+)*(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)*(?::[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127})?(?:@[a-z0-9]+:[a-f0-9]+)?$";
+  "^(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?::[0-9]+)?/)?[a-z0-9]+(?:[._-][a-z0-9]+)*(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)*(?::(?:[a-zA-Z0-9_][a-zA-Z0-9._${}\\-]{0,127}|\\$\\{[a-zA-Z_][a-zA-Z0-9_]*\\}(?:[a-zA-Z0-9._\\-${}-]*)?))?(?:@[a-z0-9]+:[a-f0-9]+)?$";
 
 const ImageNameSchemaBase = Type.String({
   minLength: 1,

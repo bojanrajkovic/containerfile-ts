@@ -39,6 +39,7 @@ export function stage(
 
   for (let i = 0; i < instructions.length; i++) {
     const result = instructions[i];
+    if (result === undefined) continue;
     if (result.isErr()) {
       errors.push(...prefixErrors(`instructions[${i}]`, result.error));
     } else {

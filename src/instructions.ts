@@ -402,6 +402,7 @@ function isInstructionArray(
 ): arr is ReadonlyArray<Result<Instruction, Array<ValidationError>>> {
   if (arr.length === 0) return true;
   const first = arr[0];
+  if (first === undefined) return true;
   if (first.isOk()) {
     return "type" in first.value;
   }

@@ -28,56 +28,60 @@ import {
  * - ENTRYPOINT instruction
  * - CMD instruction
  */
-export const fixture = containerfile({
-  instructions: [
-    // ARG without default (build-time variable)
-    arg("NODE_VERSION"),
+const result = containerfile([
+  // ARG without default (build-time variable)
+  arg("NODE_VERSION"),
 
-    // ARG with default value
-    arg("APP_ENV", { defaultValue: "production" }),
+  // ARG with default value
+  arg("APP_ENV", { defaultValue: "production" }),
 
-    // FROM with platform and alias
-    from("node:${NODE_VERSION}-alpine", { platform: "linux/amd64", as: "builder" }),
+  // FROM with platform and alias
+  from("node:${NODE_VERSION}-alpine", { platform: "linux/amd64", as: "builder" }),
 
-    // LABEL for metadata
-    label("maintainer", "team@example.com"),
-    label("version", "1.0.0"),
+  // LABEL for metadata
+  label("maintainer", "team@example.com"),
+  label("version", "1.0.0"),
 
-    // ENV for runtime configuration
-    env("NODE_ENV", "${APP_ENV}"),
-    env("PORT", "8080"),
+  // ENV for runtime configuration
+  env("NODE_ENV", "${APP_ENV}"),
+  env("PORT", "8080"),
 
-    // WORKDIR
-    workdir("/app"),
+  // WORKDIR
+  workdir("/app"),
 
-    // ADD with chown and chmod options
-    add("https://example.com/config.tar.gz", "/app/config/", {
-      chown: "node:node",
-      chmod: "755",
-    }),
+  // ADD with chown and chmod options
+  add("https://example.com/config.tar.gz", "/app/config/", {
+    chown: "node:node",
+    chmod: "755",
+  }),
 
-    // COPY with array sources and all options
-    copy(["package.json", "package-lock.json", "tsconfig.json"], "/app/", {
-      chown: "node:node",
-      chmod: "644",
-    }),
+  // COPY with array sources and all options
+  copy(["package.json", "package-lock.json", "tsconfig.json"], "/app/", {
+    chown: "node:node",
+    chmod: "644",
+  }),
 
-    // RUN with exec form (array)
-    run(["npm", "ci", "--production"]),
+  // RUN with exec form (array)
+  run(["npm", "ci", "--production"]),
 
-    // COPY from another stage
-    copy("dist/", "/app/dist/", { from: "builder" }),
+  // COPY from another stage
+  copy("dist/", "/app/dist/", { from: "builder" }),
 
-    // EXPOSE with port range and UDP protocol
-    expose({ start: 5000, end: 5010 }, { protocol: "udp" }),
+  // EXPOSE with port range and UDP protocol
+  expose({ start: 5000, end: 5010 }, { protocol: "udp" }),
 
-    // EXPOSE with single port (TCP is default, omitted in output)
-    expose(8080),
+  // EXPOSE with single port (TCP is default, omitted in output)
+  expose(8080),
 
-    // ENTRYPOINT instruction
-    entrypoint(["node", "--experimental-specifier-resolution=node"]),
+  // ENTRYPOINT instruction
+  entrypoint(["node", "--experimental-specifier-resolution=node"]),
 
-    // CMD instruction
-    cmd(["dist/server.js"]),
-  ],
-});
+  // CMD instruction
+  cmd(["dist/server.js"]),
+]);
+
+if (result.isErr()) {
+  throw new Error(`Fixture generation failed: ${JSON.stringify(result.error)}`);
+}
+
+export const fixture = result.value;

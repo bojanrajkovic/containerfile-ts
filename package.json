@@ -65,5 +65,9 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.47",
+    "neverthrow": "^8.2.0"
   }
 }

@@ -1,18 +1,20 @@
 # containerfile-ts
 
-> Freshness: 2026-01-09
+> Freshness: 2026-01-15
 
 Type-safe Dockerfile/Containerfile generation with declarative TypeScript.
 
 ## Quick Start
 
 ```bash
-pnpm install    # Install dependencies
-pnpm build      # Compile TypeScript
-pnpm test       # Run tests
-pnpm test:watch # Run tests in watch mode
-pnpm lint       # Run linter
-pnpm lint:fix   # Run linter with auto-fix
+pnpm install      # Install dependencies
+pnpm build        # Compile TypeScript
+pnpm test         # Run tests
+pnpm test:watch   # Run tests in watch mode
+pnpm lint         # Run linter
+pnpm lint:fix     # Run linter with auto-fix
+pnpm format       # Format code
+pnpm format:check # Check formatting without changes
 ```
 
 ## Project Structure
@@ -27,9 +29,12 @@ src/
 tests/
   fixtures/         # Expected Dockerfiles + generators
   generation.test.ts
+scripts/
+  generate-changeset.ts  # Converts conventional commits to changesets
 docs/
   design-plans/     # Design documents
   implementation-plans/  # Implementation task plans
+.changeset/         # Changesets configuration and pending changesets
 .github/workflows/  # CI/CD automation (see CI/CD Workflows section)
 adrs/               # Architecture Decision Records
 ```
@@ -39,6 +44,7 @@ adrs/               # Architecture Decision Records
 ### FCIS Pattern
 
 This project follows Functional Core, Imperative Shell:
+
 - **Functional Core:** All src/ files are pure - types, factory functions, rendering. Currently all production code is Functional Core.
 - **Imperative Shell:** Tests perform I/O (file reading, dynamic imports)
 
@@ -89,6 +95,7 @@ type Instruction =
 ```
 
 All instruction types use:
+
 - `readonly` fields for immutability
 - `null` for absent optional values (not `undefined`)
 - `ReadonlyArray<T>` for array fields
@@ -110,37 +117,38 @@ Unified discriminated union supporting both single-stage and multi-stage:
 
 ```typescript
 type Containerfile =
-  | { readonly instructions: ReadonlyArray<Instruction> }  // Single-stage
-  | { readonly stages: ReadonlyArray<Stage> };              // Multi-stage
+  | { readonly instructions: ReadonlyArray<Instruction> } // Single-stage
+  | { readonly stages: ReadonlyArray<Stage> }; // Multi-stage
 ```
 
 ### Factory Functions
 
 Factory functions create instruction objects with optional parameters via option objects:
 
-| Function | Signature | Notes |
-|----------|-----------|-------|
-| `from` | `(image: string, options?: FromOptions)` | `as`, `platform` options |
-| `run` | `(command: string \| ReadonlyArray<string>)` | Shell or exec form |
-| `copy` | `(src: string \| ReadonlyArray<string>, dest: string, options?: CopyOptions)` | `from`, `chown`, `chmod` options |
-| `add` | `(src: string \| ReadonlyArray<string>, dest: string, options?: AddOptions)` | `chown`, `chmod` options |
-| `workdir` | `(path: string)` | |
-| `env` | `(key: string, value: string)` | |
-| `expose` | `(port: number \| {start, end}, options?: ExposeOptions)` | Validates port range 0-65535, `protocol` option |
-| `cmd` | `(command: ReadonlyArray<string>)` | Exec form only |
-| `entrypoint` | `(command: ReadonlyArray<string>)` | Exec form only |
-| `arg` | `(name: string, options?: ArgOptions)` | `defaultValue` option |
-| `label` | `(key: string, value: string)` | |
-| `containerfile` | `(def: Containerfile)` | Identity function for type safety |
-| `stage` | `(name: string, instructions: ReadonlyArray<Instruction>)` | Creates a named stage for multi-stage builds |
+| Function        | Signature                                                                     | Notes                                           |
+| --------------- | ----------------------------------------------------------------------------- | ----------------------------------------------- |
+| `from`          | `(image: string, options?: FromOptions)`                                      | `as`, `platform` options                        |
+| `run`           | `(command: string \| ReadonlyArray<string>)`                                  | Shell or exec form                              |
+| `copy`          | `(src: string \| ReadonlyArray<string>, dest: string, options?: CopyOptions)` | `from`, `chown`, `chmod` options                |
+| `add`           | `(src: string \| ReadonlyArray<string>, dest: string, options?: AddOptions)`  | `chown`, `chmod` options                        |
+| `workdir`       | `(path: string)`                                                              |                                                 |
+| `env`           | `(key: string, value: string)`                                                |                                                 |
+| `expose`        | `(port: number \| {start, end}, options?: ExposeOptions)`                     | Validates port range 0-65535, `protocol` option |
+| `cmd`           | `(command: ReadonlyArray<string>)`                                            | Exec form only                                  |
+| `entrypoint`    | `(command: ReadonlyArray<string>)`                                            | Exec form only                                  |
+| `arg`           | `(name: string, options?: ArgOptions)`                                        | `defaultValue` option                           |
+| `label`         | `(key: string, value: string)`                                                |                                                 |
+| `containerfile` | `(def: Containerfile)`                                                        | Identity function for type safety               |
+| `stage`         | `(name: string, instructions: ReadonlyArray<Instruction>)`                    | Creates a named stage for multi-stage builds    |
 
 ### Render Functions
 
-| Function | Signature | Notes |
-|----------|-----------|-------|
+| Function | Signature                                | Notes                                           |
+| -------- | ---------------------------------------- | ----------------------------------------------- |
 | `render` | `(containerfile: Containerfile): string` | Renders full Containerfile to Dockerfile string |
 
 Rendering behavior:
+
 - Single-stage: Instructions joined with newlines (no trailing newline)
 - Multi-stage: Stages joined with double newlines (blank line separator)
 - RUN with array uses exec form `["cmd", "arg"]`
@@ -151,6 +159,7 @@ Rendering behavior:
 ### Validation
 
 The `expose()` function validates:
+
 - Port numbers are integers
 - Port numbers are in range 0-65535
 - Port range start <= end
@@ -160,6 +169,7 @@ Throws `Error` with descriptive message on invalid input.
 ## Testing
 
 Fixture-based testing:
+
 1. Create `tests/fixtures/<name>/expected.Dockerfile`
 2. Create `tests/fixtures/<name>/generator.ts` exporting `fixture`
 3. Run `pnpm test` - generator output compared to expected
@@ -171,6 +181,7 @@ Tests use Vitest with a fixture-based approach:
 - Tests dynamically discover fixtures and verify generation matches expected output
 
 To add a new test fixture:
+
 1. Create `tests/fixtures/<fixture-name>/generator.ts`
 2. Create `tests/fixtures/<fixture-name>/expected.Dockerfile`
 3. Export `fixture` from the generator file
@@ -188,6 +199,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 ```
 
 **Types:**
+
 - `feat:` - New feature
 - `fix:` - Bug fix
 - `chore:` - Maintenance tasks, dependencies, tooling
@@ -225,36 +237,50 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 ### Workflows
 
 **CI Testing (`ci.yml`)**
+
 - **Triggers:** All branches and pull requests
 - **Purpose:** Quality validation before merge or publish
-- **Steps:** Lint → Typecheck → Test → Build → Security audit
+- **Steps:** Format check → Lint → Typecheck → Test → Build → Security audit
 - **Required:** Must pass before PRs can merge (branch protection)
 
-**Alpha Publishing (`publish-alpha.yml`)**
-- **Triggers:** After CI passes on `feat/*` and `fix/*` branches
-- **Purpose:** Per-branch pre-release packages for testing
-- **Publishes to:** GitHub Package Registry as `@bojanrajkovic/containerfile-ts`
-- **Versioning:** `1.0.0-branch-name.N` where N = commit count since main
-- **Algorithm:** Extracts branch name (feat/fix prefix removed), counts commits, generates version
-- **Example:** feat/user-auth with 5 commits → `1.0.0-user-auth.5`
-- **Usage:** `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.5`
+**Publish Switch (`publish-switch.yml`)**
 
-**Release Publishing (`release-please.yml`)**
-- **Triggers:** Push to `main` branch
+- **Triggers:** CI passes on `feat/*` or `fix/*` branches, or push to main
+- **Purpose:** Single OIDC entry point routing to alpha or release workflows
+- **Routes to:**
+  - `publish-alpha.yml` for feat/fix branches
+  - `publish-release.yml` for main branch
+
+**Alpha Publishing (`publish-alpha.yml`)**
+
+- **Triggers:** Called by publish-switch after CI passes on `feat/*` or `fix/*` branches
+- **Purpose:** Per-branch pre-release packages for testing
+- **Publishes to:** npm with `@alpha` tag
+- **Versioning:** Changesets snapshot: `{version}-{branch}-{sha}`
+- **Example:** `@bojanrajkovic/containerfile-ts@1.0.0-add-healthcheck-abc1234`
+- **Usage:** `pnpm add @bojanrajkovic/containerfile-ts@alpha`
+
+**Release Publishing (`publish-release.yml`)**
+
+- **Triggers:** Called by publish-switch on push to main
 - **Purpose:** PR-based production releases to npm
-- **Uses:** release-please to create/update release PRs based on conventional commits
+- **Uses:** Changesets with custom `generate-changeset.ts` script
 - **Versioning:** `feat:` → minor, `fix:` → patch, `BREAKING CHANGE:` → major
-- **Workflow:** Creates release PR → Review/merge PR → Publishes to npm
+- **Workflow:**
+  1. Generates changesets from conventional commits since last tag
+  2. Creates "Version Packages" PR (if releasable changes exist)
+  3. On PR merge: publishes to npm with `@latest` tag
 - **Publishes to:** npm public registry as `@bojanrajkovic/containerfile-ts`
-- **Updates:** package.json version, CHANGELOG.md, git tags, GitHub releases
 
 **PR Title Validation (`pr-title.yml`)**
+
 - **Triggers:** PR opened, edited, synchronized, reopened
 - **Purpose:** Enforce conventional commits on PR titles
 - **Required:** Must pass before PRs can merge (branch protection)
 - **Why:** Squash merge uses PR title as commit message on main
 
 **Dependency Review (`dependency-review.yml`)**
+
 - **Triggers:** Pull requests to main
 - **Purpose:** Block vulnerable dependencies (moderate+ severity)
 - **Action:** Comments on PR with security analysis
@@ -262,24 +288,24 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 ### Publishing Strategy
 
 **Alpha packages (testing):**
+
 - Push commits to `feat/user-auth` or `fix/validation-bug` branch
 - CI runs and passes
-- Alpha package published with version based on commit count:
-  - 1st commit: `@bojanrajkovic/containerfile-ts@1.0.0-user-auth.1`
-  - 2nd commit: `@bojanrajkovic/containerfile-ts@1.0.0-user-auth.2`
-  - And so on...
-- Install with: `pnpm add @bojanrajkovic/containerfile-ts@1.0.0-user-auth.5`
+- Alpha package published with snapshot version:
+  - `@bojanrajkovic/containerfile-ts@1.0.0-user-auth-abc1234`
+- Install with: `pnpm add @bojanrajkovic/containerfile-ts@alpha`
 
 **Release packages (production):**
+
 - Merge PR with `feat:` or `fix:` title to main
-- release-please creates/updates a "Release PR" with:
-  - Version bump in package.json (e.g., 0.0.1 → 0.1.0)
+- `generate-changeset.ts` creates changesets from conventional commits
+- changesets/action creates "Version Packages" PR with:
+  - Version bump in package.json
   - Updated CHANGELOG.md with commit history
-- Review and merge the Release PR
-- Merging Release PR triggers:
-  - Git tag creation
-  - GitHub Release publication
-  - npm package publication: `@bojanrajkovic/containerfile-ts@0.x.x`
+- Review and merge the "Version Packages" PR
+- Merging triggers:
+  - npm package publication: `@bojanrajkovic/containerfile-ts@x.x.x`
+  - Git tag and GitHub Release creation
 - Install with: `pnpm add @bojanrajkovic/containerfile-ts`
 
 ### Conventional Commits
@@ -289,6 +315,7 @@ All commits and PR titles must follow [Conventional Commits](https://www.convent
 **Format:** `<type>[optional scope]: <description>`
 
 **Types:**
+
 - `feat:` - New feature (triggers minor version bump)
 - `fix:` - Bug fix (triggers patch version bump)
 - `docs:` - Documentation only changes
@@ -300,69 +327,58 @@ All commits and PR titles must follow [Conventional Commits](https://www.convent
 - `revert:` - Reverts a previous commit
 
 **Enforcement:**
+
 - Local: `commit-msg` git hook validates commit messages
 - CI: PR title validation workflow validates PR titles
 - Required: PR titles must be valid (becomes commit message on squash merge)
 
 **Examples:**
+
 - `feat: add HEALTHCHECK instruction support`
 - `fix: correct EXPOSE port range validation`
 - `docs: update API documentation for multi-stage builds`
 - `chore: upgrade vitest to 3.0.0`
 - `feat(render): add comment support in Dockerfile output`
 
-## npm OIDC Trusted Publishing
+## npm Publishing Configuration
 
-This project uses OIDC (OpenID Connect) trusted publishing to eliminate long-lived npm tokens. GitHub Actions authenticates directly with npm using short-lived tokens.
+This project uses npm token authentication with provenance attestation enabled.
 
-### Setup Instructions
+### Required Secrets
 
-**Initial setup (one-time, requires npm account owner):**
+**GitHub repository secret:**
 
-1. **Configure trusted publisher on npmjs.com:**
-   - Go to https://www.npmjs.com/package/containerfile-ts/access
-   - Click "Publishing access" → "Automation tokens" → "Configure trusted publishers"
-   - Add GitHub Actions as trusted publisher:
-     - Repository: `bojanrajkovic/containerfile-ts`
-     - Workflow: `release-please.yml`
-     - Environment: (leave blank)
-   - Save configuration
+- `NPM_TOKEN` - npm automation token with publish permissions for `@bojanrajkovic/containerfile-ts`
 
-2. **Verify OIDC is configured:**
-   - Check package settings show "GitHub Actions" as trusted publisher
-   - No NPM_TOKEN secret is needed in GitHub repository secrets
+### Provenance Attestation
 
-3. **How it works:**
-   - GitHub Actions workflow requests OIDC token from GitHub
-   - npm validates token against trusted publisher configuration
-   - If valid, npm grants temporary publish permissions
-   - Token expires after workflow completes (short-lived, secure)
+Both publish workflows set `NPM_CONFIG_PROVENANCE: true` to generate provenance attestations. This provides:
 
-### Benefits
-
-- **No long-lived secrets:** npm tokens can't be stolen or leaked
-- **Automatic provenance:** npm automatically generates provenance attestations
 - **Audit trail:** All publishes linked to specific GitHub Actions runs
-- **Zero maintenance:** No token rotation or expiration management needed
+- **Supply chain security:** npm verifies packages were built from this repository
+- **Transparency:** Users can verify package authenticity
 
-### Official Documentation
+### Workflow Permissions
 
-- npm trusted publishing: https://docs.npmjs.com/generating-provenance-statements
-- GitHub OIDC for npm: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
-- Provenance attestations: https://github.blog/2023-04-19-introducing-npm-package-provenance/
+The `publish-switch.yml` workflow (OIDC entry point) passes permissions to reusable workflows:
+
+- `id-token: write` - Required for provenance attestation
+- `contents: write` - Required for creating release commits and tags
+- `pull-requests: write` - Required for creating "Version Packages" PRs
 
 ### Troubleshooting
 
 If publishing fails with authentication error:
-1. Verify trusted publisher is configured on npmjs.com
-2. Verify repository name matches exactly: `bojanrajkovic/containerfile-ts`
-3. Verify workflow name matches exactly: `release-please.yml`
-4. Check workflow has `id-token: write` permission
-5. Check `NPM_CONFIG_PROVENANCE: true` is set in workflow
+
+1. Verify `NPM_TOKEN` secret is configured in GitHub repository settings
+2. Verify token has publish permissions for `@bojanrajkovic/containerfile-ts`
+3. Check workflow has `id-token: write` permission for provenance
+4. Check `NPM_CONFIG_PROVENANCE: true` is set in workflow
 
 ## ADRs
 
 Architecture Decision Records go in `adrs/` with sequential filenames:
+
 - `00-use-discriminated-unions.md`
 - `01-fixture-based-testing.md`
 

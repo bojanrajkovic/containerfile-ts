@@ -1,6 +1,6 @@
 // pattern: Functional Core
 
-import type { Instruction, Stage } from './types.js';
+import type { Instruction, Stage } from "./types.js";
 
 /**
  * Creates a named stage for multi-stage builds

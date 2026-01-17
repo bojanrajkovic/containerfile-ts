@@ -4,7 +4,7 @@
  * FROM instruction - specifies base image
  */
 export type FromInstruction = {
-  readonly type: 'FROM';
+  readonly type: "FROM";
   readonly image: string;
   readonly as: string | null;
   readonly platform: string | null;
@@ -14,7 +14,7 @@ export type FromInstruction = {
  * RUN instruction - executes commands
  */
 export type RunInstruction = {
-  readonly type: 'RUN';
+  readonly type: "RUN";
   readonly command: string | ReadonlyArray<string>;
 };
 
@@ -29,7 +29,7 @@ export type RunInstruction = {
  * When using an array, the final element in the container must be a directory for correct semantics.
  */
 export type CopyInstruction = {
-  readonly type: 'COPY';
+  readonly type: "COPY";
   readonly src: string | ReadonlyArray<string>;
   readonly dest: string;
   readonly from: string | null;
@@ -49,7 +49,7 @@ export type CopyInstruction = {
  * Sources can be local files or URLs. When using an array, the final destination must be a directory.
  */
 export type AddInstruction = {
-  readonly type: 'ADD';
+  readonly type: "ADD";
   readonly src: string | ReadonlyArray<string>;
   readonly dest: string;
   readonly chown: string | null;
@@ -60,7 +60,7 @@ export type AddInstruction = {
  * WORKDIR instruction - sets working directory
  */
 export type WorkdirInstruction = {
-  readonly type: 'WORKDIR';
+  readonly type: "WORKDIR";
   readonly path: string;
 };
 
@@ -68,7 +68,7 @@ export type WorkdirInstruction = {
  * ENV instruction - sets environment variables
  */
 export type EnvInstruction = {
-  readonly type: 'ENV';
+  readonly type: "ENV";
   readonly key: string;
   readonly value: string;
 };
@@ -88,16 +88,16 @@ export type EnvInstruction = {
  * - Port range with SCTP: `EXPOSE 8080-8090/sctp`
  */
 export type ExposeInstruction = {
-  readonly type: 'EXPOSE';
+  readonly type: "EXPOSE";
   readonly port: number | { readonly start: number; readonly end: number };
-  readonly protocol: 'tcp' | 'udp' | 'sctp';
+  readonly protocol: "tcp" | "udp" | "sctp";
 };
 
 /**
  * CMD instruction - default command
  */
 export type CmdInstruction = {
-  readonly type: 'CMD';
+  readonly type: "CMD";
   readonly command: ReadonlyArray<string>;
 };
 
@@ -105,7 +105,7 @@ export type CmdInstruction = {
  * ENTRYPOINT instruction - container entrypoint
  */
 export type EntrypointInstruction = {
-  readonly type: 'ENTRYPOINT';
+  readonly type: "ENTRYPOINT";
   readonly command: ReadonlyArray<string>;
 };
 
@@ -113,7 +113,7 @@ export type EntrypointInstruction = {
  * ARG instruction - build-time variable
  */
 export type ArgInstruction = {
-  readonly type: 'ARG';
+  readonly type: "ARG";
   readonly name: string;
   readonly defaultValue: string | null;
 };
@@ -122,7 +122,7 @@ export type ArgInstruction = {
  * LABEL instruction - metadata
  */
 export type LabelInstruction = {
-  readonly type: 'LABEL';
+  readonly type: "LABEL";
   readonly key: string;
   readonly value: string;
 };
@@ -187,7 +187,7 @@ export type AddOptions = {
  * Options for the expose() factory function
  */
 export type ExposeOptions = {
-  readonly protocol?: 'tcp' | 'udp' | 'sctp';
+  readonly protocol?: "tcp" | "udp" | "sctp";
 };
 
 /**

@@ -21,7 +21,7 @@ export type {
   AddOptions,
   ExposeOptions,
   ArgOptions,
-} from './types.js';
+} from "./types.js";
 
 export {
   from,
@@ -36,8 +36,8 @@ export {
   arg,
   label,
   containerfile,
-} from './instructions.js';
+} from "./instructions.js";
 
-export { stage } from './stage.js';
+export { stage } from "./stage.js";
 
-export { render } from './render.js';
+export { render } from "./render.js";

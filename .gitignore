@@ -1,6 +1,9 @@
 # Worktrees
 .worktrees/
 
+# Implementation plans (generated, not tracked)
+docs/implementation-plans/
+
 # Dependencies
 node_modules/
 

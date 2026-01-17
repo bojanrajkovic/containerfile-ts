@@ -38,17 +38,26 @@ pnpm add @bojanrajkovic/containerfile-ts@1.0.0-branch-name.1
 ### Simple Dockerfile
 
 ```typescript
-import { containerfile, from, workdir, copy, run, expose, cmd, render } from '@bojanrajkovic/containerfile-ts';
+import {
+  containerfile,
+  from,
+  workdir,
+  copy,
+  run,
+  expose,
+  cmd,
+  render,
+} from "@bojanrajkovic/containerfile-ts";
 
 const dockerfile = containerfile({
   instructions: [
-    from('node:20-alpine'),
-    workdir('/app'),
-    copy('package*.json', '.'),
-    run('npm ci'),
-    copy('.', '.'),
+    from("node:20-alpine"),
+    workdir("/app"),
+    copy("package*.json", "."),
+    run("npm ci"),
+    copy(".", "."),
     expose(3000),
-    cmd(['node', 'dist/index.js']),
+    cmd(["node", "dist/index.js"]),
   ],
 });
 
@@ -70,23 +79,32 @@ CMD ["node", "dist/index.js"]
 ### Multi-Stage Build
 
 ```typescript
-import { containerfile, stage, from, workdir, copy, run, cmd, render } from '@bojanrajkovic/containerfile-ts';
+import {
+  containerfile,
+  stage,
+  from,
+  workdir,
+  copy,
+  run,
+  cmd,
+  render,
+} from "@bojanrajkovic/containerfile-ts";
 
 const dockerfile = containerfile({
   stages: [
-    stage('builder', [
-      from('node:20', { as: 'builder' }),
-      workdir('/app'),
-      copy('package*.json', '.'),
-      run('npm ci'),
-      copy('.', '.'),
-      run('npm run build'),
+    stage("builder", [
+      from("node:20", { as: "builder" }),
+      workdir("/app"),
+      copy("package*.json", "."),
+      run("npm ci"),
+      copy(".", "."),
+      run("npm run build"),
     ]),
-    stage('runtime', [
-      from('node:20-alpine', { as: 'runtime' }),
-      workdir('/app'),
-      copy('/app/dist', './dist', { from: 'builder' }),
-      cmd(['node', 'dist/index.js']),
+    stage("runtime", [
+      from("node:20-alpine", { as: "runtime" }),
+      workdir("/app"),
+      copy("/app/dist", "./dist", { from: "builder" }),
+      cmd(["node", "dist/index.js"]),
     ]),
   ],
 });
@@ -98,26 +116,26 @@ console.log(render(dockerfile));
 
 ### Factory Functions
 
-| Function | Description |
-|----------|-------------|
-| `from(image, options?)` | FROM instruction |
-| `run(command)` | RUN instruction (string or exec form) |
-| `copy(src, dest, options?)` | COPY instruction |
-| `add(src, dest, options?)` | ADD instruction |
-| `workdir(path)` | WORKDIR instruction |
-| `env(key, value)` | ENV instruction |
-| `expose(port, options?)` | EXPOSE instruction |
-| `cmd(command)` | CMD instruction (exec form) |
-| `entrypoint(command)` | ENTRYPOINT instruction (exec form) |
-| `arg(name, options?)` | ARG instruction |
-| `label(key, value)` | LABEL instruction |
-| `stage(name, instructions)` | Named stage for multi-stage builds |
-| `containerfile(def)` | Create containerfile definition |
+| Function                    | Description                           |
+| --------------------------- | ------------------------------------- |
+| `from(image, options?)`     | FROM instruction                      |
+| `run(command)`              | RUN instruction (string or exec form) |
+| `copy(src, dest, options?)` | COPY instruction                      |
+| `add(src, dest, options?)`  | ADD instruction                       |
+| `workdir(path)`             | WORKDIR instruction                   |
+| `env(key, value)`           | ENV instruction                       |
+| `expose(port, options?)`    | EXPOSE instruction                    |
+| `cmd(command)`              | CMD instruction (exec form)           |
+| `entrypoint(command)`       | ENTRYPOINT instruction (exec form)    |
+| `arg(name, options?)`       | ARG instruction                       |
+| `label(key, value)`         | LABEL instruction                     |
+| `stage(name, instructions)` | Named stage for multi-stage builds    |
+| `containerfile(def)`        | Create containerfile definition       |
 
 ### Rendering
 
-| Function | Description |
-|----------|-------------|
+| Function                | Description                 |
+| ----------------------- | --------------------------- |
 | `render(containerfile)` | Render to Dockerfile string |
 
 ## Options

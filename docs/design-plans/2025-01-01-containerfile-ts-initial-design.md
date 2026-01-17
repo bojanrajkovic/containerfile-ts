@@ -5,12 +5,14 @@
 A TypeScript library for generating Containerfiles/Dockerfiles programmatically using type-safe declarative object literals, inspired by [gha-ts](https://github.com/JLarky/gha-ts) for GitHub Actions.
 
 **Goals:**
+
 - Type-safe Dockerfile generation with compile-time validation
 - First-class multi-stage build support with composable stages
 - Declarative API using factory functions (gha-ts pattern)
 - Public npm package with stable API
 
 **Success criteria:**
+
 - All core Dockerfile instructions supported (FROM, RUN, COPY, ADD, WORKDIR, ENV, EXPOSE, CMD, ENTRYPOINT, ARG, LABEL)
 - Multi-stage builds work with type-safe cross-stage references
 - Fixture-based tests compare generated output to expected Dockerfiles
@@ -23,17 +25,17 @@ A TypeScript library for generating Containerfiles/Dockerfiles programmatically 
 Following gha-ts, the library uses typed object literals with factory functions:
 
 ```typescript
-import { containerfile, from, workdir, copy, run, expose, cmd } from 'containerfile-ts';
+import { containerfile, from, workdir, copy, run, expose, cmd } from "containerfile-ts";
 
 const dockerfile = containerfile({
   instructions: [
-    from('node:20-alpine'),
-    workdir('/app'),
-    copy('package*.json', '.'),
-    run('npm ci'),
-    copy('.', '.'),
+    from("node:20-alpine"),
+    workdir("/app"),
+    copy("package*.json", "."),
+    run("npm ci"),
+    copy(".", "."),
     expose(3000),
-    cmd(['node', 'dist/index.js']),
+    cmd(["node", "dist/index.js"]),
   ],
 });
 
@@ -59,7 +61,7 @@ type Instruction =
   | LabelInstruction;
 
 type FromInstruction = {
-  readonly type: 'FROM';
+  readonly type: "FROM";
   readonly image: string;
   readonly as?: string;
   readonly platform?: string;
@@ -73,16 +75,16 @@ Stages group instructions under named stages with type-safe cross-references:
 ```typescript
 const dockerfile = multiStageContainerfile({
   stages: [
-    stage('builder', [
-      from('node:20', { as: 'builder' }),
-      workdir('/app'),
-      copy('.', '.'),
-      run('npm ci && npm run build'),
+    stage("builder", [
+      from("node:20", { as: "builder" }),
+      workdir("/app"),
+      copy(".", "."),
+      run("npm ci && npm run build"),
     ]),
-    stage('runtime', [
-      from('node:20-alpine', { as: 'runtime' }),
-      copy('/app/dist', '.', { from: 'builder' }),
-      cmd(['node', 'index.js']),
+    stage("runtime", [
+      from("node:20-alpine", { as: "runtime" }),
+      copy("/app/dist", ".", { from: "builder" }),
+      cmd(["node", "index.js"]),
     ]),
   ],
 });
@@ -108,6 +110,7 @@ This is a greenfield project with no existing codebase. Patterns are established
 **Goal:** Initialize project with mise, pnpm, TypeScript, and basic tooling.
 
 **Components:**
+
 - Create: `.mise.toml` (Node.js LTS, pnpm)
 - Create: `package.json` (project metadata, scripts)
 - Create: `tsconfig.json` (strict TypeScript config)
@@ -116,6 +119,7 @@ This is a greenfield project with no existing codebase. Patterns are established
 **Dependencies:** None (first phase)
 
 **Testing:**
+
 - `mise install` succeeds
 - `pnpm install` succeeds
 - `pnpm build` produces output
@@ -125,11 +129,13 @@ This is a greenfield project with no existing codebase. Patterns are established
 **Goal:** Define TypeScript types for all supported Dockerfile instructions.
 
 **Components:**
+
 - Create: `src/types.ts` (all instruction types, discriminated union)
 
 **Dependencies:** Phase 1
 
 **Testing:**
+
 - TypeScript compiles without errors
 - Type exports are accessible from `src/index.ts`
 
@@ -138,12 +144,14 @@ This is a greenfield project with no existing codebase. Patterns are established
 **Goal:** Implement factory functions for creating instruction objects.
 
 **Components:**
+
 - Create: `src/instructions.ts` (factory functions: from, run, copy, etc.)
 - Update: `src/index.ts` (export factory functions)
 
 **Dependencies:** Phase 2
 
 **Testing:**
+
 - Factory functions return correctly typed objects
 - TypeScript prevents invalid instruction construction
 
@@ -152,12 +160,14 @@ This is a greenfield project with no existing codebase. Patterns are established
 **Goal:** Implement Dockerfile string rendering from instruction objects.
 
 **Components:**
+
 - Create: `src/render.ts` (render function, instruction formatters)
 - Update: `src/index.ts` (export render function)
 
 **Dependencies:** Phase 3
 
 **Testing:**
+
 - Single instructions render correctly
 - Full containerfile renders complete Dockerfile
 
@@ -166,6 +176,7 @@ This is a greenfield project with no existing codebase. Patterns are established
 **Goal:** Add stage grouping and multi-stage containerfile support.
 
 **Components:**
+
 - Update: `src/types.ts` (Stage type, MultiStageContainerfile type)
 - Create: `src/stage.ts` (stage factory, validation)
 - Update: `src/render.ts` (multi-stage rendering)
@@ -174,6 +185,7 @@ This is a greenfield project with no existing codebase. Patterns are established
 **Dependencies:** Phase 4
 
 **Testing:**
+
 - Stages render with correct AS clauses
 - Cross-stage COPY --from works correctly
 
@@ -182,6 +194,7 @@ This is a greenfield project with no existing codebase. Patterns are established
 **Goal:** Set up vitest with fixture-based testing pattern.
 
 **Components:**
+
 - Create: `vitest.config.ts`
 - Create: `tests/fixtures/simple-node/expected.Dockerfile`
 - Create: `tests/fixtures/simple-node/generator.ts`
@@ -192,6 +205,7 @@ This is a greenfield project with no existing codebase. Patterns are established
 **Dependencies:** Phase 5
 
 **Testing:**
+
 - `pnpm test` runs all fixture tests
 - Tests pass for simple and multi-stage cases
 
@@ -200,6 +214,7 @@ This is a greenfield project with no existing codebase. Patterns are established
 **Goal:** Configure oxlint and Husky for code quality enforcement.
 
 **Components:**
+
 - Create: `oxlint.json` (linter configuration)
 - Create: `.husky/pre-commit` (run oxlint --fix)
 - Create: `.husky/pre-push` (run tests)
@@ -208,6 +223,7 @@ This is a greenfield project with no existing codebase. Patterns are established
 **Dependencies:** Phase 6
 
 **Testing:**
+
 - `pnpm lint` runs without errors
 - Commits trigger lint fixes
 - Pushes blocked if tests fail
@@ -217,6 +233,7 @@ This is a greenfield project with no existing codebase. Patterns are established
 **Goal:** Create project documentation and AI assistant instructions.
 
 **Components:**
+
 - Create: `CLAUDE.md` (house style, ADR workflow, testing, trunk-based development)
 - Create: `adrs/` directory
 - Create: `plans/` directory
@@ -225,6 +242,7 @@ This is a greenfield project with no existing codebase. Patterns are established
 **Dependencies:** Phase 7
 
 **Testing:**
+
 - Documentation accurately describes API
 - CLAUDE.md contains all required sections
 

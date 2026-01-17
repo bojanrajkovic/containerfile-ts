@@ -1,14 +1,6 @@
 // pattern: Functional Core
 
-import {
-  containerfile,
-  stage,
-  from,
-  workdir,
-  copy,
-  run,
-  cmd,
-} from '../../../src/index.js';
+import { containerfile, stage, from, workdir, copy, run, cmd } from "../../../src/index.js";
 
 /**
  * Multi-stage build fixture that exercises:
@@ -20,21 +12,21 @@ import {
  */
 export const fixture = containerfile({
   stages: [
-    stage('builder', [
-      from('node:20-alpine', { as: 'builder' }),
-      workdir('/app'),
-      copy('package*.json', '.'),
-      run('npm ci'),
-      copy('.', '.'),
-      run('npm run build'),
+    stage("builder", [
+      from("node:20-alpine", { as: "builder" }),
+      workdir("/app"),
+      copy("package*.json", "."),
+      run("npm ci"),
+      copy(".", "."),
+      run("npm run build"),
     ]),
-    stage('production', [
-      from('node:20-alpine'),
-      workdir('/app'),
-      copy('package*.json', '.'),
-      run('npm ci --omit=dev'),
-      copy('dist/', './dist/', { from: 'builder' }),
-      cmd(['node', 'dist/index.js']),
+    stage("production", [
+      from("node:20-alpine"),
+      workdir("/app"),
+      copy("package*.json", "."),
+      run("npm ci --omit=dev"),
+      copy("dist/", "./dist/", { from: "builder" }),
+      cmd(["node", "dist/index.js"]),
     ]),
   ],
 });

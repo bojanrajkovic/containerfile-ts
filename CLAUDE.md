@@ -214,19 +214,17 @@ import { containerfile, from, run, render } from "@bojanrajkovic/containerfile-t
 
 const result = containerfile([from("node:18"), run("npm install")]);
 
-// Pattern matching
+// Pattern matching (preferred)
 result.match(
   (cf) => console.log(render(cf)),
   (errors) => console.error("Validation failed:", errors),
 );
 
-// Or check explicitly
-if (result.isOk()) {
-  console.log(render(result.value));
-} else {
-  console.error(result.error);
-}
+// Or use chainable methods
+result.map((cf) => render(cf)).mapErr((errors) => errors.map((e) => e.message).join(", "));
 ```
+
+**Important:** Never use `isOk()`/`isErr()` with manual property access. Always use `.match()` or chainable methods (`.map()`, `.mapErr()`, `.andThen()`) for type-safe Result handling.
 
 ValidationError structure:
 

@@ -1,7 +1,20 @@
 // pattern: Imperative Shell
 
 import { describe, it, expect } from "vitest";
-import { from, workdir, env, label, arg, run, cmd, entrypoint, copy, add, expose, containerfile } from "../src/instructions.js";
+import {
+  from,
+  workdir,
+  env,
+  label,
+  arg,
+  run,
+  cmd,
+  entrypoint,
+  copy,
+  add,
+  expose,
+  containerfile,
+} from "../src/instructions.js";
 import { stage } from "../src/stage.js";
 import { Result } from "neverthrow";
 import type { Stage } from "../src/types.js";
@@ -406,9 +419,9 @@ describe("stage()", () => {
 
   it("collects errors from multiple Err instructions", () => {
     const result = stage("builder", [
-      from(""),              // Err
-      run("npm install"),    // Ok
-      copy("", ""),          // Err with 2 errors
+      from(""), // Err
+      run("npm install"), // Ok
+      copy("", ""), // Err with 2 errors
     ]);
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
@@ -433,11 +446,7 @@ describe("stage()", () => {
 describe("containerfile()", () => {
   describe("single-stage (array of instruction Results)", () => {
     it("returns Ok for all Ok instructions", () => {
-      const result = containerfile([
-        from("node:18"),
-        workdir("/app"),
-        run("npm install"),
-      ]);
+      const result = containerfile([from("node:18"), workdir("/app"), run("npm install")]);
       expect(result.isOk()).toBe(true);
       if (result.isOk()) {
         expect("instructions" in result.value).toBe(true);
@@ -454,9 +463,9 @@ describe("containerfile()", () => {
 
     it("collects all errors from Err instructions", () => {
       const result = containerfile([
-        from(""),           // Err
+        from(""), // Err
         run("npm install"), // Ok
-        expose(-1),         // Err
+        expose(-1), // Err
       ]);
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
@@ -491,7 +500,7 @@ describe("containerfile()", () => {
 
     it("collects all errors from Err stages", () => {
       const result = containerfile([
-        stage("builder", [from("")]),     // Err - invalid from
+        stage("builder", [from("")]), // Err - invalid from
         stage("runner", [from("nginx")]), // Ok
       ]);
       expect(result.isErr()).toBe(true);

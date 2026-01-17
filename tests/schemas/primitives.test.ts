@@ -6,7 +6,6 @@ import {
   validateImageName,
   validateDockerPath,
   validatePortRange,
-  type PortRange,
   validateNonEmptyString,
   validateStringArray,
   validateOptional,

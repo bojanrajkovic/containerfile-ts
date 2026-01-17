@@ -66,6 +66,9 @@
   "lint-staged": {
     "*.ts": [
       "oxlint --fix"
+    ],
+    "*.md": [
+      "oxfmt --write"
     ]
   },
   "engines": {

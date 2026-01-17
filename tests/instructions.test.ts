@@ -1,7 +1,7 @@
 // pattern: Imperative Shell
 
 import { describe, it, expect } from "vitest";
-import { from, workdir, env, label, arg, run, cmd, entrypoint, copy, add } from "../src/instructions.js";
+import { from, workdir, env, label, arg, run, cmd, entrypoint, copy, add, expose } from "../src/instructions.js";
 
 describe("from()", () => {
   it("returns Ok for valid simple image", () => {
@@ -310,5 +310,66 @@ describe("add()", () => {
   it("returns Err for empty source", () => {
     const result = add("", "/app/");
     expect(result.isErr()).toBe(true);
+  });
+});
+
+describe("expose()", () => {
+  it("returns Ok for valid port number", () => {
+    const result = expose(8080);
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.type).toBe("EXPOSE");
+      expect(result.value.port).toBe(8080);
+      expect(result.value.endPort).toBeNull();
+      expect(result.value.protocol).toBeNull();
+    }
+  });
+
+  it("returns Ok for port range", () => {
+    const result = expose({ start: 8080, end: 8090 });
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.port).toBe(8080);
+      expect(result.value.endPort).toBe(8090);
+    }
+  });
+
+  it("accepts protocol option", () => {
+    const result = expose(53, { protocol: "udp" });
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.protocol).toBe("udp");
+    }
+  });
+
+  it("returns Err for invalid port number", () => {
+    const result = expose(70000);
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("returns Err for negative port", () => {
+    const result = expose(-1);
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("returns Err for non-integer port", () => {
+    const result = expose(80.5);
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("returns Err for port range where start > end", () => {
+    const result = expose({ start: 9000, end: 8000 });
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].message).toContain("start");
+    }
+  });
+
+  it("collects all errors for invalid range", () => {
+    const result = expose({ start: -1, end: 70000 });
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error.length).toBeGreaterThanOrEqual(2);
+    }
   });
 });

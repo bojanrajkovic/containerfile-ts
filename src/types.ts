@@ -76,7 +76,6 @@ export type EnvInstruction = {
 /**
  * EXPOSE instruction - documents exposed ports
  *
- * The `port` field supports both single ports and port ranges.
  * Single port: `EXPOSE 8080/tcp`
  * Port range: `EXPOSE 8080-8090/tcp`
  *
@@ -89,8 +88,9 @@ export type EnvInstruction = {
  */
 export type ExposeInstruction = {
   readonly type: "EXPOSE";
-  readonly port: number | { readonly start: number; readonly end: number };
-  readonly protocol: "tcp" | "udp" | "sctp";
+  readonly port: number;
+  readonly endPort: number | null;
+  readonly protocol: "tcp" | "udp" | "sctp" | null;
 };
 
 /**

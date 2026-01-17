@@ -54,6 +54,7 @@
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.1.0",
     "conventional-commits-parser": "^6.2.1",
+    "fast-check": "^4.5.3",
     "husky": "^9.1.0",
     "lint-staged": "^16.0.0",
     "oxfmt": "^0.24.0",

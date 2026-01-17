@@ -436,9 +436,9 @@ export function label(
  * Type guard to check if array contains instruction Results.
  */
 function isInstructionArray(
-  arr: ReadonlyArray<
-    Result<Instruction, Array<ValidationError>> | Result<Stage, Array<ValidationError>>
-  >,
+  arr:
+    | ReadonlyArray<Result<Instruction, Array<ValidationError>>>
+    | ReadonlyArray<Result<Stage, Array<ValidationError>>>,
 ): arr is ReadonlyArray<Result<Instruction, Array<ValidationError>>> {
   if (arr.length === 0) return true;
 
@@ -486,13 +486,15 @@ export function containerfile(
   items: ReadonlyArray<Result<Stage, Array<ValidationError>>>,
 ): Result<Containerfile, Array<ValidationError>>;
 export function containerfile(
-  items: ReadonlyArray<
-    Result<Instruction, Array<ValidationError>> | Result<Stage, Array<ValidationError>>
-  >,
+  items:
+    | ReadonlyArray<Result<Instruction, Array<ValidationError>>>
+    | ReadonlyArray<Result<Stage, Array<ValidationError>>>,
 ): Result<Containerfile, Array<ValidationError>> {
   // Defensive: handle type bypass from JS or casting
   if (!isReadonlyArray(items)) {
-    return err([validationError("items", "must be an array of instruction or stage Results", items)]);
+    return err([
+      validationError("items", "must be an array of instruction or stage Results", items),
+    ]);
   }
 
   if (items.length === 0) {
@@ -523,23 +525,21 @@ export function containerfile(
     }
 
     return ok({ instructions });
+  } else {
+    // Multi-stage: array of stage Results
+    const stages: Array<Stage> = [];
+
+    items.forEach((item, i) => {
+      item.match(
+        (stage) => stages.push(stage),
+        (errs) => errors.push(...prefixErrors(`stages[${i}]`, errs)),
+      );
+    });
+
+    if (errors.length > 0) {
+      return err(errors);
+    }
+
+    return ok({ stages });
   }
-
-  // Multi-stage: array of stage Results
-  // Cast needed because TypeScript can't infer the negation of isInstructionArray
-  const stageItems = items as ReadonlyArray<Result<Stage, Array<ValidationError>>>;
-  const stages: Array<Stage> = [];
-
-  stageItems.forEach((item, i) => {
-    item.match(
-      (stage) => stages.push(stage),
-      (errs) => errors.push(...prefixErrors(`stages[${i}]`, errs)),
-    );
-  });
-
-  if (errors.length > 0) {
-    return err(errors);
-  }
-
-  return ok({ stages });
 }

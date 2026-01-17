@@ -14,11 +14,15 @@ function validateInstructionResults(
 ): Result<Array<Instruction>, Array<ValidationError>> {
   // Defensive: handle type bypass from JS or casting
   if (!isReadonlyArray(instructions)) {
-    return err([validationError("instructions", "must be an array of instruction Results", instructions)]);
+    return err([
+      validationError("instructions", "must be an array of instruction Results", instructions),
+    ]);
   }
 
   if (instructions.length === 0) {
-    return err([validationError("instructions", "stage must have at least one instruction", instructions)]);
+    return err([
+      validationError("instructions", "stage must have at least one instruction", instructions),
+    ]);
   }
 
   // Map each instruction result to prefix errors with index

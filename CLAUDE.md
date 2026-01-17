@@ -26,9 +26,18 @@ src/
   instructions.ts   # Factory functions (Functional Core)
   stage.ts          # Stage factory (Functional Core)
   render.ts         # Dockerfile rendering (Functional Core)
+  errors.ts         # ValidationError type and helpers (Functional Core)
+  schemas/          # TypeBox validation schemas
+    index.ts        # Schema exports
+    primitives.ts   # Branded types and validators (Port, ImageName, etc.)
 tests/
-  fixtures/         # Expected Dockerfiles + generators
-  generation.test.ts
+  fixtures/             # Expected Dockerfiles + generators
+  generation.test.ts    # Fixture-based rendering tests
+  instructions.test.ts  # Instruction factory unit tests
+  instructions.property.test.ts  # Property-based tests for factories
+  schemas/              # Schema validation tests
+    primitives.test.ts  # Unit tests for primitive validators
+    primitives.property.test.ts  # Property-based tests for validators
 scripts/
   generate-changeset.ts  # Converts conventional commits to changesets
 docs/
@@ -68,10 +77,31 @@ src/
   instructions.ts # Factory functions for creating instructions
   stage.ts        # Factory function for creating multi-stage stages
   render.ts       # Rendering functions for Dockerfile output
+  errors.ts       # ValidationError type and helper functions
+  schemas/        # TypeBox validation schemas
+    index.ts      # Re-exports from primitives
+    primitives.ts # Branded types, schemas, and validation functions
 tests/
-  generation.test.ts  # Fixture-based generation tests
-  fixtures/           # Test fixtures with generator.ts and expected.Dockerfile
+  generation.test.ts              # Fixture-based generation tests
+  instructions.test.ts            # Unit tests for instruction factories
+  instructions.property.test.ts   # Property-based tests for factories
+  fixtures/                       # Test fixtures with generator.ts and expected.Dockerfile
+  schemas/                        # Schema validation tests
+    primitives.test.ts            # Unit tests for primitive validators
+    primitives.property.test.ts   # Property-based tests for validators
 ```
+
+### Dependencies
+
+**Runtime dependencies:**
+
+- `@sinclair/typebox` - JSON Schema validation with TypeScript integration, used for branded types and schema validation
+- `neverthrow` - Type-safe Result types for error handling without exceptions
+
+**Dev dependencies (testing):**
+
+- `fast-check` - Property-based testing library for generating random test inputs
+- `vitest` - Test runner
 
 ## Public API Contracts
 
@@ -99,6 +129,24 @@ All instruction types use:
 - `readonly` fields for immutability
 - `null` for absent optional values (not `undefined`)
 - `ReadonlyArray<T>` for array fields
+
+### Branded Types
+
+TypeBox-validated branded types for compile-time and runtime type safety:
+
+```typescript
+type Port = number & { readonly __brand: "Port" };       // Valid port 0-65535
+type ImageName = string & { readonly __brand: "ImageName" }; // Docker image name
+type DockerPath = string & { readonly __brand: "DockerPath" }; // Non-empty path
+type PortRange = { readonly start: Port; readonly end: Port }; // Port range
+```
+
+Validation functions return `Result<T, ValidationError[]>`:
+
+- `validatePort(value, field?)` - Validates port numbers
+- `validateImageName(value, field?)` - Validates Docker image names
+- `validateDockerPath(value, field?)` - Validates non-empty paths
+- `validatePortRange(value, field?)` - Validates port ranges (start <= end)
 
 ### Stage Type
 
@@ -204,7 +252,9 @@ Errors are collected, not short-circuited. A single call may return multiple Val
 
 ## Testing
 
-Fixture-based testing:
+### Fixture-Based Testing
+
+Integration tests verify complete Dockerfile generation:
 
 1. Create `tests/fixtures/<name>/expected.Dockerfile`
 2. Create `tests/fixtures/<name>/generator.ts` exporting `fixture`
@@ -221,6 +271,32 @@ To add a new test fixture:
 1. Create `tests/fixtures/<fixture-name>/generator.ts`
 2. Create `tests/fixtures/<fixture-name>/expected.Dockerfile`
 3. Export `fixture` from the generator file
+
+### Unit Tests
+
+`tests/instructions.test.ts` - Tests each factory function for:
+- Valid input returns `Ok` with correct instruction structure
+- Invalid input returns `Err` with appropriate ValidationErrors
+- Error messages include field names and invalid values
+
+`tests/schemas/primitives.test.ts` - Tests primitive validators for:
+- Valid values return `Ok` with branded types
+- Invalid values return `Err` with ValidationErrors
+- Edge cases (empty strings, boundary values, special characters)
+
+### Property-Based Testing
+
+Uses fast-check to generate random inputs:
+
+`tests/instructions.property.test.ts` - Verifies:
+- All valid inputs produce Ok results (no false negatives)
+- Invalid inputs consistently produce Err results (no false positives)
+- Error messages always include the invalid value
+
+`tests/schemas/primitives.property.test.ts` - Verifies:
+- Port validation accepts 0-65535, rejects others
+- Image name validation handles various registry formats
+- String validation rejects empty strings
 
 ## Git Workflow
 

@@ -560,9 +560,9 @@ function isInstructionArray(
  *   run("npm install"),
  * ]);
  *
- * // Multi-stage
+ * // Multi-stage (note: FROM must have { as: "name" } for --from references to work)
  * const cf2 = containerfile([
- *   stage("builder", [from("node:18"), run("npm install")]),
+ *   stage("builder", [from("node:18", { as: "builder" }), run("npm install")]),
  *   stage("runtime", [from("node:18-alpine"), copy("./dist", "/app", { from: "builder" })]),
  * ]);
  * ```

@@ -9,16 +9,18 @@ import { validateNonEmptyString } from "./schemas/index.js";
  * Create a named stage for multi-stage builds.
  *
  * Accepts an array of instruction Results and combines all errors from validation.
- * Stage names can be used in COPY and RUN instructions with --from=name syntax.
+ * To reference this stage with COPY --from or RUN --from, you must also include
+ * { as: "stagename" } in the stage's FROM instruction.
  *
- * @param name - Stage name (used in --from=name references)
+ * @param name - Stage name (for organization; use FROM's `as` option for --from references)
  * @param instructions - Array of instruction Results from factory functions
  * @returns Result with Stage on success, all ValidationErrors on failure
  *
  * @example
  * ```typescript
+ * // Use { as: "builder" } in FROM to make stage referenceable via --from
  * const builder = stage("builder", [
- *   from("node:18"),
+ *   from("node:18", { as: "builder" }),
  *   workdir("/app"),
  *   copy(["package.json", "package-lock.json"], "/app"),
  *   run("npm install"),

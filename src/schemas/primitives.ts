@@ -222,7 +222,7 @@ export function validateNonEmptyString(
 export function validateStringArray(
   value: ReadonlyArray<unknown>,
   field: string = "values",
-): Result<Array<string>, Array<ValidationError>> {
+): Result<ReadonlyArray<string>, Array<ValidationError>> {
   if (!Array.isArray(value) || value.length === 0) {
     return err([validationError(field, "must be a non-empty array", value)]);
   }

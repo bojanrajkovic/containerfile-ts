@@ -42,8 +42,8 @@ import { ValidationError, prefixErrors, validationError } from "./errors.js";
 function validateDockerPathArray(
   src: string | ReadonlyArray<string>,
   field: string,
-): Result<Array<string>, Array<ValidationError>> {
-  const srcArray = typeof src === "string" ? [src] : [...src];
+): Result<ReadonlyArray<string>, Array<ValidationError>> {
+  const srcArray = typeof src === "string" ? [src] : src;
 
   if (srcArray.length === 0) {
     return err([validationError(field, "must have at least one source", src)]);
@@ -117,7 +117,7 @@ export function run(
   }
 
   // Array form
-  const result = validateStringArray([...command], "command");
+  const result = validateStringArray(command, "command");
   if (result.isErr()) {
     return err(result.error);
   }
@@ -319,7 +319,7 @@ export function expose(
 export function cmd(
   command: ReadonlyArray<string>,
 ): Result<CmdInstruction, Array<ValidationError>> {
-  return validateStringArray([...command], "command").map((validatedCommand) => ({
+  return validateStringArray(command, "command").map((validatedCommand) => ({
     type: "CMD" as const,
     command: validatedCommand,
   }));
@@ -342,7 +342,7 @@ export function cmd(
 export function entrypoint(
   command: ReadonlyArray<string>,
 ): Result<EntrypointInstruction, Array<ValidationError>> {
-  return validateStringArray([...command], "command").map((validatedCommand) => ({
+  return validateStringArray(command, "command").map((validatedCommand) => ({
     type: "ENTRYPOINT" as const,
     command: validatedCommand,
   }));

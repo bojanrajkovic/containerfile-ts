@@ -13,6 +13,8 @@ import type {
   ArgInstruction,
   LabelInstruction,
   Containerfile,
+  Instruction,
+  Stage,
   FromOptions,
   CopyOptions,
   AddOptions,
@@ -29,7 +31,7 @@ import {
   validatePort,
   validatePortRange,
 } from "./schemas/index.js";
-import { ValidationError } from "./errors.js";
+import { ValidationError, prefixErrors } from "./errors.js";
 
 /**
  * Create a FROM instruction.
@@ -393,9 +395,91 @@ export function label(
 }
 
 /**
- * Identity function for creating a Containerfile definition
- * Provides type safety and IDE autocompletion
+ * Type guard to check if array contains instruction Results.
  */
-export function containerfile(def: Containerfile): Containerfile {
-  return def;
+function isInstructionArray(
+  arr: ReadonlyArray<Result<Instruction, Array<ValidationError>> | Result<Stage, Array<ValidationError>>>,
+): arr is ReadonlyArray<Result<Instruction, Array<ValidationError>>> {
+  if (arr.length === 0) return true;
+  const first = arr[0];
+  if (first.isOk()) {
+    return "type" in first.value;
+  }
+  // If first is Err, we can't determine from it alone.
+  // Try to find an Ok result.
+  for (const item of arr) {
+    if (item.isOk()) {
+      return "type" in item.value;
+    }
+  }
+  // All are Err - default to instruction (doesn't matter, will return Err anyway)
+  return true;
+}
+
+/**
+ * Create a Containerfile definition.
+ *
+ * @overload Single-stage: array of instruction Results
+ * @overload Multi-stage: array of stage Results
+ *
+ * Uses Result.combineWithAllErrors pattern to collect all validation errors.
+ */
+export function containerfile(
+  items: ReadonlyArray<Result<Instruction, Array<ValidationError>>>,
+): Result<Containerfile, Array<ValidationError>>;
+export function containerfile(
+  items: ReadonlyArray<Result<Stage, Array<ValidationError>>>,
+): Result<Containerfile, Array<ValidationError>>;
+export function containerfile(
+  items: ReadonlyArray<Result<Instruction, Array<ValidationError>> | Result<Stage, Array<ValidationError>>>,
+): Result<Containerfile, Array<ValidationError>> {
+  if (items.length === 0) {
+    return err([
+      {
+        field: "items",
+        message: "containerfile must have at least one instruction or stage",
+        value: items,
+      },
+    ]);
+  }
+
+  const errors: Array<ValidationError> = [];
+
+  if (isInstructionArray(items)) {
+    // Single-stage: array of instruction Results
+    const instructions: Array<Instruction> = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const result = items[i] as Result<Instruction, Array<ValidationError>>;
+      if (result.isErr()) {
+        errors.push(...prefixErrors(`instructions[${i}]`, result.error));
+      } else {
+        instructions.push(result.value);
+      }
+    }
+
+    if (errors.length > 0) {
+      return err(errors);
+    }
+
+    return ok({ instructions });
+  }
+
+  // Multi-stage: array of stage Results
+  const stages: Array<Stage> = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const result = items[i] as Result<Stage, Array<ValidationError>>;
+    if (result.isErr()) {
+      errors.push(...prefixErrors(`stages[${i}]`, result.error));
+    } else {
+      stages.push(result.value);
+    }
+  }
+
+  if (errors.length > 0) {
+    return err(errors);
+  }
+
+  return ok({ stages });
 }

@@ -1,7 +1,7 @@
 // pattern: Imperative Shell
 
 import { describe, it, expect } from "vitest";
-import { from, workdir, env, label, arg, run, cmd, entrypoint, copy, add, expose } from "../src/instructions.js";
+import { from, workdir, env, label, arg, run, cmd, entrypoint, copy, add, expose, containerfile } from "../src/instructions.js";
 import { stage } from "../src/stage.js";
 import { Result } from "neverthrow";
 import type { Stage } from "../src/types.js";
@@ -427,5 +427,78 @@ describe("stage()", () => {
       // Should have name error and instruction error
       expect(result.error.length).toBeGreaterThanOrEqual(2);
     }
+  });
+});
+
+describe("containerfile()", () => {
+  describe("single-stage (array of instruction Results)", () => {
+    it("returns Ok for all Ok instructions", () => {
+      const result = containerfile([
+        from("node:18"),
+        workdir("/app"),
+        run("npm install"),
+      ]);
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect("instructions" in result.value).toBe(true);
+        if ("instructions" in result.value) {
+          expect(result.value.instructions.length).toBe(3);
+        }
+      }
+    });
+
+    it("returns Err for empty array", () => {
+      const result = containerfile([]);
+      expect(result.isErr()).toBe(true);
+    });
+
+    it("collects all errors from Err instructions", () => {
+      const result = containerfile([
+        from(""),           // Err
+        run("npm install"), // Ok
+        expose(-1),         // Err
+      ]);
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.length).toBeGreaterThanOrEqual(2);
+        // Errors should be prefixed with instruction index
+        expect(result.error.some((e) => e.field.startsWith("instructions[0]"))).toBe(true);
+        expect(result.error.some((e) => e.field.startsWith("instructions[2]"))).toBe(true);
+      }
+    });
+  });
+
+  describe("multi-stage (array of stage Results)", () => {
+    it("returns Ok for all Ok stages", () => {
+      const result = containerfile([
+        stage("builder", [from("node:18"), run("npm install")]),
+        stage("runner", [from("node:18-slim"), copy(".", "/app", { from: "builder" })]),
+      ]);
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect("stages" in result.value).toBe(true);
+        if ("stages" in result.value) {
+          expect(result.value.stages.length).toBe(2);
+        }
+      }
+    });
+
+    it("returns Err for empty stages array", () => {
+      const stagesResult: Array<Result<Stage, Array<ValidationError>>> = [];
+      const result = containerfile(stagesResult);
+      expect(result.isErr()).toBe(true);
+    });
+
+    it("collects all errors from Err stages", () => {
+      const result = containerfile([
+        stage("builder", [from("")]),     // Err - invalid from
+        stage("runner", [from("nginx")]), // Ok
+      ]);
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        // Error should be prefixed with stage index
+        expect(result.error.some((e) => e.field.startsWith("stages[0]"))).toBe(true);
+      }
+    });
   });
 });

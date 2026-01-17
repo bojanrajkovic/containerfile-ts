@@ -19,17 +19,56 @@ import type {
   ExposeOptions,
   ArgOptions,
 } from "./types.js";
+import { Result, ok, err } from "neverthrow";
+import {
+  validateImageName,
+  validateNonEmptyString,
+  validateOptional,
+} from "./schemas/index.js";
+import { ValidationError } from "./errors.js";
 
 /**
- * Creates a FROM instruction
+ * Create a FROM instruction.
+ * @returns Result with FromInstruction on success, ValidationError[] on failure
  */
-export function from(image: string, options?: FromOptions): FromInstruction {
-  return {
-    type: "FROM",
+export function from(
+  image: string,
+  options?: FromOptions,
+): Result<FromInstruction, Array<ValidationError>> {
+  const errors: Array<ValidationError> = [];
+
+  // Validate image name
+  const imageResult = validateImageName(image, "image");
+  if (imageResult.isErr()) {
+    errors.push(...imageResult.error);
+  }
+
+  // Validate optional 'as' if provided
+  const asResult = validateOptional(options?.as, validateNonEmptyString, "as");
+  if (asResult.isErr()) {
+    errors.push(...asResult.error);
+  }
+
+  // Validate optional 'platform' if provided
+  const platformResult = validateOptional(
+    options?.platform,
+    validateNonEmptyString,
+    "platform",
+  );
+  if (platformResult.isErr()) {
+    errors.push(...platformResult.error);
+  }
+
+  if (errors.length > 0) {
+    return err(errors);
+  }
+
+  return ok({
+    type: "FROM" as const,
     image,
-    as: options?.as ?? null,
-    platform: options?.platform ?? null,
-  };
+    as: asResult.isOk() ? asResult.value : null,
+    platform: platformResult.isOk() ? platformResult.value : null,
+  });
 }
 
 /**

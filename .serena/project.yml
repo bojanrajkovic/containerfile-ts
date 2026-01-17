@@ -83,5 +83,5 @@ excluded_tools: []
 # (contrary to the memories, which are loaded on demand).
 initial_prompt: ""
 
-project_name: "changesets-ci-cd-migration"
+project_name: "containerfile-ts"
 included_optional_tools: []

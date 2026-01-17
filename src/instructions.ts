@@ -114,26 +114,17 @@ export function run(
   command: string | ReadonlyArray<string>,
 ): Result<RunInstruction, Array<ValidationError>> {
   if (typeof command === "string") {
-    const result = validateNonEmptyString(command, "command");
-    if (result.isErr()) {
-      return err(result.error);
-    }
-    return ok({
+    return validateNonEmptyString(command, "command").map(() => ({
       type: "RUN" as const,
       command,
-    });
+    }));
   }
 
   // Array form
-  const result = validateStringArray(command, "command");
-  if (result.isErr()) {
-    return err(result.error);
-  }
-
-  return ok({
+  return validateStringArray(command, "command").map((validatedCommand) => ({
     type: "RUN" as const,
-    command: result.value,
-  });
+    command: validatedCommand,
+  }));
 }
 
 /**
@@ -283,17 +274,12 @@ export function expose(
 ): Result<ExposeInstruction, Array<ValidationError>> {
   // Single port
   if (typeof port === "number") {
-    const portResult = validatePort(port, "port");
-    if (portResult.isErr()) {
-      return err(portResult.error);
-    }
-
-    return ok({
+    return validatePort(port, "port").map(() => ({
       type: "EXPOSE" as const,
       port,
       endPort: null,
       protocol: options?.protocol ?? null,
-    });
+    }));
   }
 
   // Defensive: handle type bypass (null, primitives)
@@ -302,17 +288,12 @@ export function expose(
   }
 
   // Port range - validatePortRange handles structure validation
-  const rangeResult = validatePortRange(port, "port");
-  if (rangeResult.isErr()) {
-    return err(rangeResult.error);
-  }
-
-  return ok({
+  return validatePortRange(port, "port").map((range) => ({
     type: "EXPOSE" as const,
-    port: port.start,
-    endPort: port.end,
+    port: range.start,
+    endPort: range.end,
     protocol: options?.protocol ?? null,
-  });
+  }));
 }
 
 /**
@@ -432,16 +413,15 @@ function isInstructionArray(
   >,
 ): arr is ReadonlyArray<Result<Instruction, Array<ValidationError>>> {
   if (arr.length === 0) return true;
-  const first = arr[0];
-  if (first === undefined) return true;
-  if (first.isOk()) {
-    return "type" in first.value;
-  }
-  // If first is Err, we can't determine from it alone.
-  // Try to find an Ok result.
+
+  // Find any Ok result to determine if it's an instruction or stage
   for (const item of arr) {
-    if (item.isOk()) {
-      return "type" in item.value;
+    const isInstruction = item.match(
+      (value) => "type" in value,
+      () => null,
+    );
+    if (isInstruction !== null) {
+      return isInstruction;
     }
   }
   // All are Err - default to instruction (doesn't matter, will return Err anyway)
@@ -503,14 +483,12 @@ export function containerfile(
     // Single-stage: array of instruction Results
     const instructions: Array<Instruction> = [];
 
-    for (let i = 0; i < items.length; i++) {
-      const result = items[i] as Result<Instruction, Array<ValidationError>>;
-      if (result.isErr()) {
-        errors.push(...prefixErrors(`instructions[${i}]`, result.error));
-      } else {
-        instructions.push(result.value);
-      }
-    }
+    items.forEach((item, i) => {
+      item.match(
+        (instruction) => instructions.push(instruction),
+        (errs) => errors.push(...prefixErrors(`instructions[${i}]`, errs)),
+      );
+    });
 
     if (errors.length > 0) {
       return err(errors);
@@ -520,16 +498,16 @@ export function containerfile(
   }
 
   // Multi-stage: array of stage Results
+  // Cast needed because TypeScript can't infer the negation of isInstructionArray
+  const stageItems = items as ReadonlyArray<Result<Stage, Array<ValidationError>>>;
   const stages: Array<Stage> = [];
 
-  for (let i = 0; i < items.length; i++) {
-    const result = items[i] as Result<Stage, Array<ValidationError>>;
-    if (result.isErr()) {
-      errors.push(...prefixErrors(`stages[${i}]`, result.error));
-    } else {
-      stages.push(result.value);
-    }
-  }
+  stageItems.forEach((item, i) => {
+    item.match(
+      (stage) => stages.push(stage),
+      (errs) => errors.push(...prefixErrors(`stages[${i}]`, errs)),
+    );
+  });
 
   if (errors.length > 0) {
     return err(errors);

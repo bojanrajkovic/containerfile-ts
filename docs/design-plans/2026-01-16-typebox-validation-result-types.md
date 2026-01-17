@@ -19,20 +19,20 @@ Layered schema architecture with three tiers:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Public API Layer                      │
+│                    Public API Layer                     │
 │  containerfile(), from(), run(), copy(), expose(), ...  │
 │  Returns: Result<T, ValidationError[]>                  │
 └─────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────┐
-│               Instruction Schema Layer                   │
-│  Composes primitive schemas into instruction validation  │
+│               Instruction Schema Layer                  │
+│  Composes primitive schemas into instruction validation │
 └─────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────┐
-│                Primitive Schema Layer                    │
+│                Primitive Schema Layer                   │
 │  PortSchema, ImageNameSchema, DockerPathSchema          │
 │  Branded types: Port, ImageName, DockerPath             │
 └─────────────────────────────────────────────────────────┘

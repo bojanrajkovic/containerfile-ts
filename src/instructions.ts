@@ -24,6 +24,7 @@ import {
   validateImageName,
   validateNonEmptyString,
   validateOptional,
+  validateDockerPath,
 } from "./schemas/index.js";
 import { ValidationError } from "./errors.js";
 
@@ -125,24 +126,41 @@ export function add(
 }
 
 /**
- * Creates a WORKDIR instruction
+ * Create a WORKDIR instruction.
  */
-export function workdir(path: string): WorkdirInstruction {
-  return {
-    type: "WORKDIR",
+export function workdir(
+  path: string,
+): Result<WorkdirInstruction, Array<ValidationError>> {
+  const pathResult = validateDockerPath(path, "path");
+  if (pathResult.isErr()) {
+    return err(pathResult.error);
+  }
+
+  return ok({
+    type: "WORKDIR" as const,
     path,
-  };
+  });
 }
 
 /**
- * Creates an ENV instruction
+ * Create an ENV instruction.
+ * Value can be empty string.
  */
-export function env(key: string, value: string): EnvInstruction {
-  return {
-    type: "ENV",
+export function env(
+  key: string,
+  value: string,
+): Result<EnvInstruction, Array<ValidationError>> {
+  const keyResult = validateNonEmptyString(key, "key");
+  if (keyResult.isErr()) {
+    return err(keyResult.error);
+  }
+
+  // Value can be empty string (valid in Dockerfile)
+  return ok({
+    type: "ENV" as const,
     key,
     value,
-  };
+  });
 }
 
 /**
@@ -204,25 +222,41 @@ export function entrypoint(command: ReadonlyArray<string>): EntrypointInstructio
 }
 
 /**
- * Creates an ARG instruction
+ * Create an ARG instruction.
  */
-export function arg(name: string, options?: ArgOptions): ArgInstruction {
-  return {
-    type: "ARG",
+export function arg(
+  name: string,
+  options?: ArgOptions,
+): Result<ArgInstruction, Array<ValidationError>> {
+  const nameResult = validateNonEmptyString(name, "name");
+  if (nameResult.isErr()) {
+    return err(nameResult.error);
+  }
+
+  return ok({
+    type: "ARG" as const,
     name,
     defaultValue: options?.defaultValue ?? null,
-  };
+  });
 }
 
 /**
- * Creates a LABEL instruction
+ * Create a LABEL instruction.
  */
-export function label(key: string, value: string): LabelInstruction {
-  return {
-    type: "LABEL",
+export function label(
+  key: string,
+  value: string,
+): Result<LabelInstruction, Array<ValidationError>> {
+  const keyResult = validateNonEmptyString(key, "key");
+  if (keyResult.isErr()) {
+    return err(keyResult.error);
+  }
+
+  return ok({
+    type: "LABEL" as const,
     key,
     value,
-  };
+  });
 }
 
 /**

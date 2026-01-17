@@ -5,6 +5,8 @@ import {
   validatePort,
   validateImageName,
   validateDockerPath,
+  validatePortRange,
+  type PortRange,
 } from "../../src/schemas/primitives.js";
 
 describe("validatePort", () => {
@@ -112,6 +114,42 @@ describe("validateDockerPath", () => {
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
       expect(result.error[0].field).toBe("destination");
+    }
+  });
+});
+
+describe("validatePortRange", () => {
+  it("accepts valid port ranges", () => {
+    expect(validatePortRange({ start: 80, end: 90 }).isOk()).toBe(true);
+    expect(validatePortRange({ start: 8080, end: 8080 }).isOk()).toBe(true);
+    expect(validatePortRange({ start: 0, end: 65535 }).isOk()).toBe(true);
+  });
+
+  it("rejects ranges where start > end", () => {
+    const result = validatePortRange({ start: 100, end: 50 });
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].message).toContain("start");
+      expect(result.error[0].message).toContain("end");
+    }
+  });
+
+  it("rejects invalid start port", () => {
+    const result = validatePortRange({ start: -1, end: 80 });
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("rejects invalid end port", () => {
+    const result = validatePortRange({ start: 80, end: 70000 });
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("collects all errors when both ports invalid", () => {
+    const result = validatePortRange({ start: -1, end: 70000 });
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      // Should have errors for both start and end
+      expect(result.error.length).toBeGreaterThanOrEqual(2);
     }
   });
 });

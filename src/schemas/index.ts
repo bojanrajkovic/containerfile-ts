@@ -5,6 +5,7 @@ export {
   type Port,
   type ImageName,
   type DockerPath,
+  type PortRange,
   // Schemas
   PortSchema,
   ImageNameSchema,
@@ -13,4 +14,5 @@ export {
   validatePort,
   validateImageName,
   validateDockerPath,
+  validatePortRange,
 } from "./primitives.js";

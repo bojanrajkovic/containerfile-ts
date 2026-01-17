@@ -134,3 +134,59 @@ export function validateDockerPath(
   }
   return ok(value as DockerPath);
 }
+
+// ============================================================================
+// Port Range Type and Validation
+// ============================================================================
+
+/**
+ * Validated port range with start <= end guarantee.
+ */
+export type PortRange = {
+  readonly start: Port;
+  readonly end: Port;
+};
+
+/**
+ * Validate a port range object.
+ * Collects all errors: validates both ports, then checks start <= end.
+ */
+export function validatePortRange(
+  value: { readonly start: number; readonly end: number },
+  field: string = "port",
+): Result<PortRange, Array<ValidationError>> {
+  const errors: Array<ValidationError> = [];
+
+  // Validate start port
+  const startResult = validatePort(value.start, `${field}.start`);
+  if (startResult.isErr()) {
+    errors.push(...startResult.error);
+  }
+
+  // Validate end port
+  const endResult = validatePort(value.end, `${field}.end`);
+  if (endResult.isErr()) {
+    errors.push(...endResult.error);
+  }
+
+  // If either port is invalid, return collected errors
+  if (errors.length > 0) {
+    return err(errors);
+  }
+
+  // Both ports valid, check start <= end
+  if (value.start > value.end) {
+    return err([
+      validationError(
+        field,
+        `invalid port range: start (${value.start}) must be <= end (${value.end})`,
+        value,
+      ),
+    ]);
+  }
+
+  return ok({
+    start: value.start as Port,
+    end: value.end as Port,
+  });
+}

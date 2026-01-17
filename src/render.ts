@@ -93,10 +93,16 @@ function renderExpose(instruction: ExposeInstruction): string {
 }
 
 function renderCmd(instruction: CmdInstruction): string {
+  if (typeof instruction.command === "string") {
+    return `CMD ${instruction.command}`;
+  }
   return `CMD ${formatArray(instruction.command)}`;
 }
 
 function renderEntrypoint(instruction: EntrypointInstruction): string {
+  if (typeof instruction.command === "string") {
+    return `ENTRYPOINT ${instruction.command}`;
+  }
   return `ENTRYPOINT ${formatArray(instruction.command)}`;
 }
 

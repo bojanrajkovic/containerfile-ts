@@ -100,7 +100,7 @@ export type ExposeInstruction = {
  */
 export type CmdInstruction = {
   readonly type: "CMD";
-  readonly command: ReadonlyArray<string>;
+  readonly command: string | ReadonlyArray<string>;
 };
 
 /**
@@ -108,7 +108,7 @@ export type CmdInstruction = {
  */
 export type EntrypointInstruction = {
   readonly type: "ENTRYPOINT";
-  readonly command: ReadonlyArray<string>;
+  readonly command: string | ReadonlyArray<string>;
 };
 
 /**

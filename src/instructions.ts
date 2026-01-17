@@ -297,13 +297,20 @@ export function expose(
 }
 
 /**
- * Create a CMD instruction (exec form only).
+ * Create a CMD instruction.
  *
- * @param command - Array of command and arguments
+ * @param command - Shell form (string) or exec form (array of strings)
  * @returns Result with CmdInstruction on success, ValidationError[] on failure
  *
  * @example
  * ```typescript
+ * // Shell form
+ * cmd("npm start").match(
+ *   (instruction) => console.log(instruction),
+ *   (errors) => console.error(errors),
+ * );
+ *
+ * // Exec form
  * cmd(["npm", "start"]).match(
  *   (instruction) => console.log(instruction),
  *   (errors) => console.error(errors),
@@ -311,8 +318,15 @@ export function expose(
  * ```
  */
 export function cmd(
-  command: ReadonlyArray<string>,
+  command: string | ReadonlyArray<string>,
 ): Result<CmdInstruction, Array<ValidationError>> {
+  if (typeof command === "string") {
+    return validateNonEmptyString(command, "command").map(() => ({
+      type: "CMD" as const,
+      command,
+    }));
+  }
+
   return validateStringArray(command, "command").map((validatedCommand) => ({
     type: "CMD" as const,
     command: validatedCommand,
@@ -320,13 +334,20 @@ export function cmd(
 }
 
 /**
- * Create an ENTRYPOINT instruction (exec form only).
+ * Create an ENTRYPOINT instruction.
  *
- * @param command - Array of command and arguments
+ * @param command - Shell form (string) or exec form (array of strings)
  * @returns Result with EntrypointInstruction on success, ValidationError[] on failure
  *
  * @example
  * ```typescript
+ * // Shell form
+ * entrypoint("/entrypoint.sh").match(
+ *   (instruction) => console.log(instruction),
+ *   (errors) => console.error(errors),
+ * );
+ *
+ * // Exec form
  * entrypoint(["node", "server.js"]).match(
  *   (instruction) => console.log(instruction),
  *   (errors) => console.error(errors),
@@ -334,8 +355,15 @@ export function cmd(
  * ```
  */
 export function entrypoint(
-  command: ReadonlyArray<string>,
+  command: string | ReadonlyArray<string>,
 ): Result<EntrypointInstruction, Array<ValidationError>> {
+  if (typeof command === "string") {
+    return validateNonEmptyString(command, "command").map(() => ({
+      type: "ENTRYPOINT" as const,
+      command,
+    }));
+  }
+
   return validateStringArray(command, "command").map((validatedCommand) => ({
     type: "ENTRYPOINT" as const,
     command: validatedCommand,

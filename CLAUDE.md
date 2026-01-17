@@ -1,6 +1,6 @@
 # containerfile-ts
 
-> Freshness: 2026-01-15
+> Freshness: 2026-01-16
 
 Type-safe Dockerfile/Containerfile generation with declarative TypeScript.
 
@@ -123,23 +123,24 @@ type Containerfile =
 
 ### Factory Functions
 
-Factory functions create instruction objects with optional parameters via option objects:
+Factory functions create instruction objects with validation. All return `Result<Instruction, ValidationError[]>`:
 
-| Function        | Signature                                                                     | Notes                                           |
-| --------------- | ----------------------------------------------------------------------------- | ----------------------------------------------- |
-| `from`          | `(image: string, options?: FromOptions)`                                      | `as`, `platform` options                        |
-| `run`           | `(command: string \| ReadonlyArray<string>)`                                  | Shell or exec form                              |
-| `copy`          | `(src: string \| ReadonlyArray<string>, dest: string, options?: CopyOptions)` | `from`, `chown`, `chmod` options                |
-| `add`           | `(src: string \| ReadonlyArray<string>, dest: string, options?: AddOptions)`  | `chown`, `chmod` options                        |
-| `workdir`       | `(path: string)`                                                              |                                                 |
-| `env`           | `(key: string, value: string)`                                                |                                                 |
-| `expose`        | `(port: number \| {start, end}, options?: ExposeOptions)`                     | Validates port range 0-65535, `protocol` option |
-| `cmd`           | `(command: ReadonlyArray<string>)`                                            | Exec form only                                  |
-| `entrypoint`    | `(command: ReadonlyArray<string>)`                                            | Exec form only                                  |
-| `arg`           | `(name: string, options?: ArgOptions)`                                        | `defaultValue` option                           |
-| `label`         | `(key: string, value: string)`                                                |                                                 |
-| `containerfile` | `(def: Containerfile)`                                                        | Identity function for type safety               |
-| `stage`         | `(name: string, instructions: ReadonlyArray<Instruction>)`                    | Creates a named stage for multi-stage builds    |
+| Function        | Signature                                                                                                                 | Notes                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `from`          | `(image: string, options?: FromOptions): Result<FromInstruction, ValidationError[]>`                                      | `as`, `platform` options         |
+| `run`           | `(command: string \| ReadonlyArray<string>): Result<RunInstruction, ValidationError[]>`                                   | Shell or exec form               |
+| `copy`          | `(src: string \| ReadonlyArray<string>, dest: string, options?: CopyOptions): Result<CopyInstruction, ValidationError[]>` | `from`, `chown`, `chmod` options |
+| `add`           | `(src: string \| ReadonlyArray<string>, dest: string, options?: AddOptions): Result<AddInstruction, ValidationError[]>`   | `chown`, `chmod` options         |
+| `workdir`       | `(path: string): Result<WorkdirInstruction, ValidationError[]>`                                                           |                                  |
+| `env`           | `(key: string, value: string): Result<EnvInstruction, ValidationError[]>`                                                 |                                  |
+| `expose`        | `(port: number \| PortRange, options?: ExposeOptions): Result<ExposeInstruction, ValidationError[]>`                      | Validates port range 0-65535     |
+| `cmd`           | `(command: ReadonlyArray<string>): Result<CmdInstruction, ValidationError[]>`                                             | Exec form only                   |
+| `entrypoint`    | `(command: ReadonlyArray<string>): Result<EntrypointInstruction, ValidationError[]>`                                      | Exec form only                   |
+| `arg`           | `(name: string, options?: ArgOptions): Result<ArgInstruction, ValidationError[]>`                                         | `defaultValue` option            |
+| `label`         | `(key: string, value: string): Result<LabelInstruction, ValidationError[]>`                                               |                                  |
+| `containerfile` | `(items: ReadonlyArray<Result<Instruction, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                | Single-stage                     |
+| `containerfile` | `(items: ReadonlyArray<Result<Stage, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                      | Multi-stage                      |
+| `stage`         | `(name: string, instructions: ReadonlyArray<Result<Instruction, ValidationError[]>>): Result<Stage, ValidationError[]>`   | Creates named stage              |
 
 ### Render Functions
 
@@ -156,15 +157,50 @@ Rendering behavior:
 - LABEL values are quoted
 - Options rendered in order: `--platform`, `--from`, `--chown`, `--chmod`
 
+### Error Handling
+
+All factory functions return `Result<T, ValidationError[]>` from neverthrow. Handle results using:
+
+```typescript
+import { containerfile, from, run, render } from "@bojanrajkovic/containerfile-ts";
+
+const result = containerfile([from("node:18"), run("npm install")]);
+
+// Pattern matching
+result.match(
+  (cf) => console.log(render(cf)),
+  (errors) => console.error("Validation failed:", errors),
+);
+
+// Or check explicitly
+if (result.isOk()) {
+  console.log(render(result.value));
+} else {
+  console.error(result.error);
+}
+```
+
+ValidationError structure:
+
+```typescript
+type ValidationError = {
+  readonly field: string; // e.g., "port", "instructions[2].src"
+  readonly message: string; // Human-readable error
+  readonly value: unknown; // The invalid value
+};
+```
+
 ### Validation
 
-The `expose()` function validates:
+All factory functions validate inputs and return Results:
 
-- Port numbers are integers
-- Port numbers are in range 0-65535
-- Port range start <= end
+- **Port numbers**: Must be integers 0-65535
+- **Port ranges**: Start must be <= end
+- **Image names**: Must match Docker registry format
+- **Paths**: Must be non-empty strings
+- **Command arrays**: Must be non-empty with non-empty elements
 
-Throws `Error` with descriptive message on invalid input.
+Errors are collected, not short-circuited. A single call may return multiple ValidationErrors.
 
 ## Testing
 

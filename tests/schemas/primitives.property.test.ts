@@ -121,3 +121,63 @@ describe("validatePortRange property tests", () => {
     );
   });
 });
+
+describe("validateNonEmptyString property tests", () => {
+  it("accepts all non-empty strings", () => {
+    fc.assert(
+      fc.property(
+        fc.string({ minLength: 1 }),
+        (str) => {
+          const result = validateNonEmptyString(str);
+          expect(result.isOk()).toBe(true);
+          if (result.isOk()) {
+            expect(result.value).toBe(str);
+          }
+        }
+      )
+    );
+  });
+
+  it("rejects empty string", () => {
+    const result = validateNonEmptyString("");
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("rejects all non-string values", () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(
+          fc.integer(),
+          fc.double(),
+          fc.boolean(),
+          fc.object(),
+          fc.constant(null),
+          fc.constant(undefined)
+        ),
+        (value) => {
+          const result = validateNonEmptyString(value);
+          expect(result.isErr()).toBe(true);
+        }
+      )
+    );
+  });
+});
+
+describe("validateDockerPath property tests", () => {
+  it("accepts all non-empty strings as paths", () => {
+    fc.assert(
+      fc.property(
+        fc.string({ minLength: 1 }),
+        (path) => {
+          const result = validateDockerPath(path);
+          expect(result.isOk()).toBe(true);
+        }
+      )
+    );
+  });
+
+  it("rejects empty path", () => {
+    const result = validateDockerPath("");
+    expect(result.isErr()).toBe(true);
+  });
+});

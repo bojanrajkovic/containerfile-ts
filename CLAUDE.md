@@ -448,6 +448,7 @@ Breaking changes trigger a major version bump. You MUST mark them explicitly for
 
 - **Option 1:** Add `!` after the type: `feat!: change API to return Result types`
 - **Option 2:** Include `BREAKING CHANGE:` in the commit footer:
+
   ```
   feat: change API to return Result types
 

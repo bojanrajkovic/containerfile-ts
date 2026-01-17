@@ -43,10 +43,10 @@ import { ValidationError, prefixErrors } from "./errors.js";
  *
  * @example
  * ```typescript
- * const result = from("node:18", { as: "builder" });
- * if (result.isOk()) {
- *   console.log(result.value); // FromInstruction
- * }
+ * from("node:18", { as: "builder" }).match(
+ *   (instruction) => console.log(instruction),
+ *   (errors) => console.error(errors),
+ * );
  * ```
  */
 export function from(
@@ -136,10 +136,10 @@ export function run(
  *
  * @example
  * ```typescript
- * const result = copy("package*.json", "/app", { chown: "node:node" });
- * if (result.isOk()) {
- *   console.log(result.value); // CopyInstruction
- * }
+ * copy("package*.json", "/app", { chown: "node:node" }).match(
+ *   (instruction) => console.log(instruction),
+ *   (errors) => console.error(errors),
+ * );
  * ```
  */
 export function copy(
@@ -214,10 +214,10 @@ export function copy(
  *
  * @example
  * ```typescript
- * const result = add("archive.tar.gz", "/app", { chown: "node:node" });
- * if (result.isOk()) {
- *   console.log(result.value); // AddInstruction
- * }
+ * add("archive.tar.gz", "/app", { chown: "node:node" }).match(
+ *   (instruction) => console.log(instruction),
+ *   (errors) => console.error(errors),
+ * );
  * ```
  */
 export function add(
@@ -284,10 +284,10 @@ export function add(
  *
  * @example
  * ```typescript
- * const result = workdir("/app");
- * if (result.isOk()) {
- *   console.log(result.value); // WorkdirInstruction
- * }
+ * workdir("/app").match(
+ *   (instruction) => console.log(instruction),
+ *   (errors) => console.error(errors),
+ * );
  * ```
  */
 export function workdir(path: string): Result<WorkdirInstruction, Array<ValidationError>> {
@@ -311,10 +311,10 @@ export function workdir(path: string): Result<WorkdirInstruction, Array<Validati
  *
  * @example
  * ```typescript
- * const result = env("NODE_ENV", "production");
- * if (result.isOk()) {
- *   console.log(result.value); // EnvInstruction
- * }
+ * env("NODE_ENV", "production").match(
+ *   (instruction) => console.log(instruction),
+ *   (errors) => console.error(errors),
+ * );
  * ```
  */
 export function env(key: string, value: string): Result<EnvInstruction, Array<ValidationError>> {
@@ -393,10 +393,10 @@ export function expose(
  *
  * @example
  * ```typescript
- * const result = cmd(["npm", "start"]);
- * if (result.isOk()) {
- *   console.log(result.value); // CmdInstruction
- * }
+ * cmd(["npm", "start"]).match(
+ *   (instruction) => console.log(instruction),
+ *   (errors) => console.error(errors),
+ * );
  * ```
  */
 export function cmd(
@@ -421,10 +421,10 @@ export function cmd(
  *
  * @example
  * ```typescript
- * const result = entrypoint(["node", "server.js"]);
- * if (result.isOk()) {
- *   console.log(result.value); // EntrypointInstruction
- * }
+ * entrypoint(["node", "server.js"]).match(
+ *   (instruction) => console.log(instruction),
+ *   (errors) => console.error(errors),
+ * );
  * ```
  */
 export function entrypoint(
@@ -450,10 +450,10 @@ export function entrypoint(
  *
  * @example
  * ```typescript
- * const result = arg("NODE_VERSION", { defaultValue: "18" });
- * if (result.isOk()) {
- *   console.log(result.value); // ArgInstruction
- * }
+ * arg("NODE_VERSION", { defaultValue: "18" }).match(
+ *   (instruction) => console.log(instruction),
+ *   (errors) => console.error(errors),
+ * );
  * ```
  */
 export function arg(
@@ -491,10 +491,10 @@ export function arg(
  *
  * @example
  * ```typescript
- * const result = label("version", "1.0.0");
- * if (result.isOk()) {
- *   console.log(result.value); // LabelInstruction
- * }
+ * label("version", "1.0.0").match(
+ *   (instruction) => console.log(instruction),
+ *   (errors) => console.error(errors),
+ * );
  * ```
  */
 export function label(

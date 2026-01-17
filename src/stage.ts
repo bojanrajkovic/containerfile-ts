@@ -19,18 +19,15 @@ import { validateNonEmptyString } from "./schemas/index.js";
  * @example
  * ```typescript
  * // Use { as: "builder" } in FROM to make stage referenceable via --from
- * const builder = stage("builder", [
+ * stage("builder", [
  *   from("node:18", { as: "builder" }),
  *   workdir("/app"),
  *   copy(["package.json", "package-lock.json"], "/app"),
  *   run("npm install"),
- * ]);
- *
- * if (builder.isOk()) {
- *   console.log(builder.value); // Stage
- * } else {
- *   console.error(builder.error); // ValidationError[]
- * }
+ * ]).match(
+ *   (stage) => console.log(stage),
+ *   (errors) => console.error(errors),
+ * );
  * ```
  */
 export function stage(

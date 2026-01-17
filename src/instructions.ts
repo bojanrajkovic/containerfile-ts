@@ -104,46 +104,143 @@ export function run(
 }
 
 /**
- * Creates a COPY instruction
- *
- * @param src - Source file path or array of source file paths
- * @param dest - Destination path in the container
- * @param options - Optional COPY options (from, chown, chmod)
+ * Create a COPY instruction.
  */
 export function copy(
   src: string | ReadonlyArray<string>,
   dest: string,
   options?: CopyOptions,
-): CopyInstruction {
-  return {
-    type: "COPY",
-    src,
+): Result<CopyInstruction, Array<ValidationError>> {
+  const errors: Array<ValidationError> = [];
+
+  // Normalize src to array
+  const srcArray = typeof src === "string" ? [src] : [...src];
+
+  // Validate sources
+  if (srcArray.length === 0) {
+    errors.push({
+      field: "src",
+      message: "must have at least one source",
+      value: src,
+    });
+  } else {
+    for (let i = 0; i < srcArray.length; i++) {
+      const result = validateDockerPath(srcArray[i], `src[${i}]`);
+      if (result.isErr()) {
+        errors.push(...result.error);
+      }
+    }
+  }
+
+  // Validate destination
+  const destResult = validateDockerPath(dest, "dest");
+  if (destResult.isErr()) {
+    errors.push(...destResult.error);
+  }
+
+  // Validate optional fields
+  const fromResult = validateOptional(options?.from, validateNonEmptyString, "from");
+  if (fromResult.isErr()) {
+    errors.push(...fromResult.error);
+  }
+
+  const chownResult = validateOptional(
+    options?.chown,
+    validateNonEmptyString,
+    "chown",
+  );
+  if (chownResult.isErr()) {
+    errors.push(...chownResult.error);
+  }
+
+  const chmodResult = validateOptional(
+    options?.chmod,
+    validateNonEmptyString,
+    "chmod",
+  );
+  if (chmodResult.isErr()) {
+    errors.push(...chmodResult.error);
+  }
+
+  if (errors.length > 0) {
+    return err(errors);
+  }
+
+  return ok({
+    type: "COPY" as const,
+    src: srcArray,
     dest,
-    from: options?.from ?? null,
-    chown: options?.chown ?? null,
-    chmod: options?.chmod ?? null,
-  };
+    from: fromResult.isOk() ? fromResult.value : null,
+    chown: chownResult.isOk() ? chownResult.value : null,
+    chmod: chmodResult.isOk() ? chmodResult.value : null,
+  });
 }
 
 /**
- * Creates an ADD instruction
- *
- * @param src - Source file path, URL, or array of source paths/URLs
- * @param dest - Destination path in the container
- * @param options - Optional ADD options (chown, chmod)
+ * Create an ADD instruction.
  */
 export function add(
   src: string | ReadonlyArray<string>,
   dest: string,
   options?: AddOptions,
-): AddInstruction {
-  return {
-    type: "ADD",
-    src,
+): Result<AddInstruction, Array<ValidationError>> {
+  const errors: Array<ValidationError> = [];
+
+  // Normalize src to array
+  const srcArray = typeof src === "string" ? [src] : [...src];
+
+  // Validate sources
+  if (srcArray.length === 0) {
+    errors.push({
+      field: "src",
+      message: "must have at least one source",
+      value: src,
+    });
+  } else {
+    for (let i = 0; i < srcArray.length; i++) {
+      const result = validateDockerPath(srcArray[i], `src[${i}]`);
+      if (result.isErr()) {
+        errors.push(...result.error);
+      }
+    }
+  }
+
+  // Validate destination
+  const destResult = validateDockerPath(dest, "dest");
+  if (destResult.isErr()) {
+    errors.push(...destResult.error);
+  }
+
+  // Validate optional fields
+  const chownResult = validateOptional(
+    options?.chown,
+    validateNonEmptyString,
+    "chown",
+  );
+  if (chownResult.isErr()) {
+    errors.push(...chownResult.error);
+  }
+
+  const chmodResult = validateOptional(
+    options?.chmod,
+    validateNonEmptyString,
+    "chmod",
+  );
+  if (chmodResult.isErr()) {
+    errors.push(...chmodResult.error);
+  }
+
+  if (errors.length > 0) {
+    return err(errors);
+  }
+
+  return ok({
+    type: "ADD" as const,
+    src: srcArray,
     dest,
-    chown: options?.chown ?? null,
-    chmod: options?.chmod ?? null,
-  };
+    chown: chownResult.isOk() ? chownResult.value : null,
+    chmod: chmodResult.isOk() ? chmodResult.value : null,
+  });
 }
 
 /**

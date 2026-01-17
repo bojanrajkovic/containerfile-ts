@@ -1,7 +1,7 @@
 // pattern: Imperative Shell
 
 import { describe, it, expect } from "vitest";
-import { from, workdir, env, label, arg, run, cmd, entrypoint } from "../src/instructions.js";
+import { from, workdir, env, label, arg, run, cmd, entrypoint, copy, add } from "../src/instructions.js";
 
 describe("from()", () => {
   it("returns Ok for valid simple image", () => {
@@ -217,6 +217,98 @@ describe("entrypoint()", () => {
 
   it("returns Err for empty array", () => {
     const result = entrypoint([]);
+    expect(result.isErr()).toBe(true);
+  });
+});
+
+describe("copy()", () => {
+  it("returns Ok for single source and dest", () => {
+    const result = copy("package.json", "/app/");
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.type).toBe("COPY");
+      expect(result.value.src).toEqual(["package.json"]);
+      expect(result.value.dest).toBe("/app/");
+    }
+  });
+
+  it("returns Ok for multiple sources", () => {
+    const result = copy(["package.json", "package-lock.json"], "/app/");
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.src).toEqual(["package.json", "package-lock.json"]);
+    }
+  });
+
+  it("accepts from option", () => {
+    const result = copy("./dist", "/app/", { from: "builder" });
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.from).toBe("builder");
+    }
+  });
+
+  it("accepts chown option", () => {
+    const result = copy(".", "/app/", { chown: "node:node" });
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.chown).toBe("node:node");
+    }
+  });
+
+  it("accepts chmod option", () => {
+    const result = copy("entrypoint.sh", "/", { chmod: "755" });
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.chmod).toBe("755");
+    }
+  });
+
+  it("returns Err for empty source", () => {
+    const result = copy("", "/app/");
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("returns Err for empty dest", () => {
+    const result = copy("file.txt", "");
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("returns Err for empty source in array", () => {
+    const result = copy(["valid.txt", ""], "/app/");
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("collects multiple errors", () => {
+    const result = copy("", "");
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+});
+
+describe("add()", () => {
+  it("returns Ok for valid source and dest", () => {
+    const result = add("https://example.com/file.tar.gz", "/app/");
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.type).toBe("ADD");
+      expect(result.value.src).toEqual(["https://example.com/file.tar.gz"]);
+      expect(result.value.dest).toBe("/app/");
+    }
+  });
+
+  it("accepts chown option", () => {
+    const result = add("file.tar.gz", "/app/", { chown: "1000:1000" });
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.chown).toBe("1000:1000");
+    }
+  });
+
+  it("returns Err for empty source", () => {
+    const result = add("", "/app/");
     expect(result.isErr()).toBe(true);
   });
 });

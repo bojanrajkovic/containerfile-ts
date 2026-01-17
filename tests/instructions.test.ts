@@ -2,6 +2,10 @@
 
 import { describe, it, expect } from "vitest";
 import { from, workdir, env, label, arg, run, cmd, entrypoint, copy, add, expose } from "../src/instructions.js";
+import { stage } from "../src/stage.js";
+import { Result } from "neverthrow";
+import type { Stage } from "../src/types.js";
+import type { ValidationError } from "../src/errors.js";
 
 describe("from()", () => {
   it("returns Ok for valid simple image", () => {
@@ -369,6 +373,58 @@ describe("expose()", () => {
     const result = expose({ start: -1, end: 70000 });
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
+      expect(result.error.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+});
+
+describe("stage()", () => {
+  it("returns Ok for valid stage with Ok instructions", () => {
+    const result = stage("builder", [from("node:18"), run("npm install")]);
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.name).toBe("builder");
+      expect(result.value.instructions.length).toBe(2);
+    }
+  });
+
+  it("returns Err for empty name", () => {
+    const result = stage("", [from("node:18")]);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].field).toBe("name");
+    }
+  });
+
+  it("returns Err for empty instructions array", () => {
+    const result = stage("builder", []);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].field).toBe("instructions");
+    }
+  });
+
+  it("collects errors from multiple Err instructions", () => {
+    const result = stage("builder", [
+      from(""),              // Err
+      run("npm install"),    // Ok
+      copy("", ""),          // Err with 2 errors
+    ]);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      // Should have errors from from("") and copy("", "")
+      expect(result.error.length).toBeGreaterThanOrEqual(3);
+      // Errors should be prefixed with index
+      expect(result.error.some((e) => e.field.startsWith("instructions[0]"))).toBe(true);
+      expect(result.error.some((e) => e.field.startsWith("instructions[2]"))).toBe(true);
+    }
+  });
+
+  it("collects all errors including name error", () => {
+    const result = stage("", [from("")]);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      // Should have name error and instruction error
       expect(result.error.length).toBeGreaterThanOrEqual(2);
     }
   });

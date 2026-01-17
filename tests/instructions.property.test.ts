@@ -2,7 +2,7 @@
 
 import { describe, it, expect } from "vitest";
 import * as fc from "fast-check";
-import { from, workdir, env, run, expose, containerfile } from "../src/instructions.js";
+import { from, workdir, env, expose, containerfile } from "../src/instructions.js";
 import { render } from "../src/render.js";
 
 // Generator for valid Docker image names

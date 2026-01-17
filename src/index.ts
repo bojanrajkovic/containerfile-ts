@@ -23,6 +23,8 @@ export type {
   ArgOptions,
 } from "./types.js";
 
+export type { ValidationError } from "./errors.js";
+
 export {
   from,
   run,
@@ -41,3 +43,5 @@ export {
 export { stage } from "./stage.js";
 
 export { render } from "./render.js";
+
+export { Result, ok, err } from "neverthrow";

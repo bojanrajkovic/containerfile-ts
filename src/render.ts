@@ -54,7 +54,7 @@ function renderCopy(instruction: CopyInstruction): string {
   if (instruction.chmod !== null) {
     line += ` --chmod=${instruction.chmod}`;
   }
-  const srcStr = typeof instruction.src === "string" ? instruction.src : instruction.src.join(" ");
+  const srcStr = instruction.src.join(" ");
   line += ` ${srcStr} ${instruction.dest}`;
   return line;
 }
@@ -67,7 +67,7 @@ function renderAdd(instruction: AddInstruction): string {
   if (instruction.chmod !== null) {
     line += ` --chmod=${instruction.chmod}`;
   }
-  const srcStr = typeof instruction.src === "string" ? instruction.src : instruction.src.join(" ");
+  const srcStr = instruction.src.join(" ");
   line += ` ${srcStr} ${instruction.dest}`;
   return line;
 }
@@ -81,11 +81,14 @@ function renderEnv(instruction: EnvInstruction): string {
 }
 
 function renderExpose(instruction: ExposeInstruction): string {
-  const protocolSuffix = instruction.protocol === "tcp" ? "" : `/${instruction.protocol}`;
+  const protocolSuffix =
+    instruction.protocol === null || instruction.protocol === "tcp"
+      ? ""
+      : `/${instruction.protocol}`;
   const portStr =
-    typeof instruction.port === "number"
-      ? String(instruction.port)
-      : `${instruction.port.start}-${instruction.port.end}`;
+    instruction.endPort !== null
+      ? `${instruction.port}-${instruction.endPort}`
+      : String(instruction.port);
   return `EXPOSE ${portStr}${protocolSuffix}`;
 }
 

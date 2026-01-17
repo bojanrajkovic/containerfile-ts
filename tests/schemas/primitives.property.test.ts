@@ -19,7 +19,7 @@ describe("validatePort property tests", () => {
         if (result.isOk()) {
           expect(result.value).toBe(port);
         }
-      })
+      }),
     );
   });
 
@@ -28,7 +28,7 @@ describe("validatePort property tests", () => {
       fc.property(fc.integer({ min: -1000000, max: -1 }), (port) => {
         const result = validatePort(port);
         expect(result.isErr()).toBe(true);
-      })
+      }),
     );
   });
 
@@ -37,31 +37,25 @@ describe("validatePort property tests", () => {
       fc.property(fc.integer({ min: 65536, max: 1000000 }), (port) => {
         const result = validatePort(port);
         expect(result.isErr()).toBe(true);
-      })
+      }),
     );
   });
 
   it("rejects all non-integer numbers", () => {
     fc.assert(
-      fc.property(
-        fc.double({ noInteger: true, min: 0, max: 65535 }),
-        (port) => {
-          const result = validatePort(port);
-          expect(result.isErr()).toBe(true);
-        }
-      )
+      fc.property(fc.double({ noInteger: true, min: 0, max: 65535 }), (port) => {
+        const result = validatePort(port);
+        expect(result.isErr()).toBe(true);
+      }),
     );
   });
 
   it("rejects all non-number values", () => {
     fc.assert(
-      fc.property(
-        fc.oneof(fc.string(), fc.boolean(), fc.object(), fc.constant(null)),
-        (value) => {
-          const result = validatePort(value);
-          expect(result.isErr()).toBe(true);
-        }
-      )
+      fc.property(fc.oneof(fc.string(), fc.boolean(), fc.object(), fc.constant(null)), (value) => {
+        const result = validatePort(value);
+        expect(result.isErr()).toBe(true);
+      }),
     );
   });
 });
@@ -81,8 +75,8 @@ describe("validatePortRange property tests", () => {
             expect(result.value.start).toBe(start);
             expect(result.value.end).toBe(end);
           }
-        }
-      )
+        },
+      ),
     );
   });
 
@@ -99,8 +93,8 @@ describe("validatePortRange property tests", () => {
             const result = validatePortRange({ start: actualStart, end: actualEnd });
             expect(result.isErr()).toBe(true);
           }
-        }
-      )
+        },
+      ),
     );
   });
 
@@ -116,8 +110,8 @@ describe("validatePortRange property tests", () => {
             // Should have errors for both ports
             expect(result.error.length).toBeGreaterThanOrEqual(2);
           }
-        }
-      )
+        },
+      ),
     );
   });
 });
@@ -125,16 +119,13 @@ describe("validatePortRange property tests", () => {
 describe("validateNonEmptyString property tests", () => {
   it("accepts all non-empty strings", () => {
     fc.assert(
-      fc.property(
-        fc.string({ minLength: 1 }),
-        (str) => {
-          const result = validateNonEmptyString(str);
-          expect(result.isOk()).toBe(true);
-          if (result.isOk()) {
-            expect(result.value).toBe(str);
-          }
+      fc.property(fc.string({ minLength: 1 }), (str) => {
+        const result = validateNonEmptyString(str);
+        expect(result.isOk()).toBe(true);
+        if (result.isOk()) {
+          expect(result.value).toBe(str);
         }
-      )
+      }),
     );
   });
 
@@ -152,13 +143,13 @@ describe("validateNonEmptyString property tests", () => {
           fc.boolean(),
           fc.object(),
           fc.constant(null),
-          fc.constant(undefined)
+          fc.constant(undefined),
         ),
         (value) => {
           const result = validateNonEmptyString(value);
           expect(result.isErr()).toBe(true);
-        }
-      )
+        },
+      ),
     );
   });
 });
@@ -166,13 +157,10 @@ describe("validateNonEmptyString property tests", () => {
 describe("validateDockerPath property tests", () => {
   it("accepts all non-empty strings as paths", () => {
     fc.assert(
-      fc.property(
-        fc.string({ minLength: 1 }),
-        (path) => {
-          const result = validateDockerPath(path);
-          expect(result.isOk()).toBe(true);
-        }
-      )
+      fc.property(fc.string({ minLength: 1 }), (path) => {
+        const result = validateDockerPath(path);
+        expect(result.isOk()).toBe(true);
+      }),
     );
   });
 
@@ -198,7 +186,7 @@ describe("validateImageName property tests", () => {
       fc.property(simpleImageName, (name) => {
         const result = validateImageName(name);
         expect(result.isOk()).toBe(true);
-      })
+      }),
     );
   });
 
@@ -207,7 +195,7 @@ describe("validateImageName property tests", () => {
       fc.property(simpleImageName, validTag, (name, tag) => {
         const result = validateImageName(`${name}:${tag}`);
         expect(result.isOk()).toBe(true);
-      })
+      }),
     );
   });
 
@@ -224,8 +212,8 @@ describe("validateImageName property tests", () => {
         (upperName) => {
           const result = validateImageName(upperName);
           expect(result.isErr()).toBe(true);
-        }
-      )
+        },
+      ),
     );
   });
 
@@ -236,8 +224,8 @@ describe("validateImageName property tests", () => {
         (nameWithSpace) => {
           const result = validateImageName(nameWithSpace);
           expect(result.isErr()).toBe(true);
-        }
-      )
+        },
+      ),
     );
   });
 });

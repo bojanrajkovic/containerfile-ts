@@ -34,7 +34,7 @@ describe("Factory function roundtrip properties", () => {
             expect(rendered).toContain(image);
           }
         }
-      })
+      }),
     );
   });
 
@@ -47,7 +47,7 @@ describe("Factory function roundtrip properties", () => {
           expect(result.value.type).toBe("WORKDIR");
           expect(result.value.path).toBe(path);
         }
-      })
+      }),
     );
   });
 
@@ -61,7 +61,7 @@ describe("Factory function roundtrip properties", () => {
           expect(result.value.key).toBe(key);
           expect(result.value.value).toBe(value);
         }
-      })
+      }),
     );
   });
 
@@ -74,7 +74,7 @@ describe("Factory function roundtrip properties", () => {
           expect(result.value.type).toBe("EXPOSE");
           expect(result.value.port).toBe(port);
         }
-      })
+      }),
     );
   });
 
@@ -89,7 +89,7 @@ describe("Factory function roundtrip properties", () => {
           expect(result.value.port).toBe(start);
           expect(result.value.endPort).toBe(end);
         }
-      })
+      }),
     );
   });
 });
@@ -97,20 +97,17 @@ describe("Factory function roundtrip properties", () => {
 describe("Error collection properties", () => {
   it("containerfile collects all errors from multiple invalid instructions", () => {
     fc.assert(
-      fc.property(
-        fc.integer({ min: 2, max: 5 }),
-        (count) => {
-          // Create 'count' invalid from instructions (empty image)
-          const invalidInstructions = Array.from({ length: count }, () => from(""));
-          const result = containerfile(invalidInstructions);
+      fc.property(fc.integer({ min: 2, max: 5 }), (count) => {
+        // Create 'count' invalid from instructions (empty image)
+        const invalidInstructions = Array.from({ length: count }, () => from(""));
+        const result = containerfile(invalidInstructions);
 
-          expect(result.isErr()).toBe(true);
-          if (result.isErr()) {
-            // Should have at least one error per invalid instruction
-            expect(result.error.length).toBeGreaterThanOrEqual(count);
-          }
+        expect(result.isErr()).toBe(true);
+        if (result.isErr()) {
+          // Should have at least one error per invalid instruction
+          expect(result.error.length).toBeGreaterThanOrEqual(count);
         }
-      )
+      }),
     );
   });
 });

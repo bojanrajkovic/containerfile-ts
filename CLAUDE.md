@@ -135,7 +135,7 @@ All instruction types use:
 TypeBox-validated branded types for compile-time and runtime type safety:
 
 ```typescript
-type Port = number & { readonly __brand: "Port" };       // Valid port 0-65535
+type Port = number & { readonly __brand: "Port" }; // Valid port 0-65535
 type ImageName = string & { readonly __brand: "ImageName" }; // Docker image name
 type DockerPath = string & { readonly __brand: "DockerPath" }; // Non-empty path
 type PortRange = { readonly start: Port; readonly end: Port }; // Port range
@@ -275,11 +275,13 @@ To add a new test fixture:
 ### Unit Tests
 
 `tests/instructions.test.ts` - Tests each factory function for:
+
 - Valid input returns `Ok` with correct instruction structure
 - Invalid input returns `Err` with appropriate ValidationErrors
 - Error messages include field names and invalid values
 
 `tests/schemas/primitives.test.ts` - Tests primitive validators for:
+
 - Valid values return `Ok` with branded types
 - Invalid values return `Err` with ValidationErrors
 - Edge cases (empty strings, boundary values, special characters)
@@ -289,11 +291,13 @@ To add a new test fixture:
 Uses fast-check to generate random inputs:
 
 `tests/instructions.property.test.ts` - Verifies:
+
 - All valid inputs produce Ok results (no false negatives)
 - Invalid inputs consistently produce Err results (no false positives)
 - Error messages always include the invalid value
 
 `tests/schemas/primitives.property.test.ts` - Verifies:
+
 - Port validation accepts 0-65535, rejects others
 - Image name validation handles various registry formats
 - String validation rejects empty strings

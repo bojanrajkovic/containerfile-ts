@@ -25,6 +25,7 @@ import {
   validateNonEmptyString,
   validateOptional,
   validateDockerPath,
+  validateStringArray,
 } from "./schemas/index.js";
 import { ValidationError } from "./errors.js";
 
@@ -73,13 +74,33 @@ export function from(
 }
 
 /**
- * Creates a RUN instruction
+ * Create a RUN instruction.
+ * Accepts shell form (string) or exec form (array).
  */
-export function run(command: string | ReadonlyArray<string>): RunInstruction {
-  return {
-    type: "RUN",
-    command,
-  };
+export function run(
+  command: string | ReadonlyArray<string>,
+): Result<RunInstruction, Array<ValidationError>> {
+  if (typeof command === "string") {
+    const result = validateNonEmptyString(command, "command");
+    if (result.isErr()) {
+      return err(result.error);
+    }
+    return ok({
+      type: "RUN" as const,
+      command,
+    });
+  }
+
+  // Array form
+  const result = validateStringArray([...command], "command");
+  if (result.isErr()) {
+    return err(result.error);
+  }
+
+  return ok({
+    type: "RUN" as const,
+    command: result.value,
+  });
 }
 
 /**
@@ -202,23 +223,37 @@ export function expose(
 }
 
 /**
- * Creates a CMD instruction
+ * Create a CMD instruction (exec form only).
  */
-export function cmd(command: ReadonlyArray<string>): CmdInstruction {
-  return {
-    type: "CMD",
-    command,
-  };
+export function cmd(
+  command: ReadonlyArray<string>,
+): Result<CmdInstruction, Array<ValidationError>> {
+  const result = validateStringArray([...command], "command");
+  if (result.isErr()) {
+    return err(result.error);
+  }
+
+  return ok({
+    type: "CMD" as const,
+    command: result.value,
+  });
 }
 
 /**
- * Creates an ENTRYPOINT instruction
+ * Create an ENTRYPOINT instruction (exec form only).
  */
-export function entrypoint(command: ReadonlyArray<string>): EntrypointInstruction {
-  return {
-    type: "ENTRYPOINT",
-    command,
-  };
+export function entrypoint(
+  command: ReadonlyArray<string>,
+): Result<EntrypointInstruction, Array<ValidationError>> {
+  const result = validateStringArray([...command], "command");
+  if (result.isErr()) {
+    return err(result.error);
+  }
+
+  return ok({
+    type: "ENTRYPOINT" as const,
+    command: result.value,
+  });
 }
 
 /**

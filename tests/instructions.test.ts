@@ -1,7 +1,7 @@
 // pattern: Imperative Shell
 
 import { describe, it, expect } from "vitest";
-import { from, workdir, env, label, arg } from "../src/instructions.js";
+import { from, workdir, env, label, arg, run, cmd, entrypoint } from "../src/instructions.js";
 
 describe("from()", () => {
   it("returns Ok for valid simple image", () => {
@@ -152,5 +152,71 @@ describe("arg()", () => {
     if (result.isErr()) {
       expect(result.error[0].field).toBe("name");
     }
+  });
+});
+
+describe("run()", () => {
+  it("returns Ok for shell form string", () => {
+    const result = run("npm install");
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.type).toBe("RUN");
+      expect(result.value.command).toBe("npm install");
+    }
+  });
+
+  it("returns Ok for exec form array", () => {
+    const result = run(["npm", "install"]);
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.command).toEqual(["npm", "install"]);
+    }
+  });
+
+  it("returns Err for empty string", () => {
+    const result = run("");
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("returns Err for empty array", () => {
+    const result = run([]);
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("returns Err for array with empty string", () => {
+    const result = run(["npm", ""]);
+    expect(result.isErr()).toBe(true);
+  });
+});
+
+describe("cmd()", () => {
+  it("returns Ok for valid command array", () => {
+    const result = cmd(["node", "server.js"]);
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.type).toBe("CMD");
+      expect(result.value.command).toEqual(["node", "server.js"]);
+    }
+  });
+
+  it("returns Err for empty array", () => {
+    const result = cmd([]);
+    expect(result.isErr()).toBe(true);
+  });
+});
+
+describe("entrypoint()", () => {
+  it("returns Ok for valid command array", () => {
+    const result = entrypoint(["docker-entrypoint.sh"]);
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.type).toBe("ENTRYPOINT");
+      expect(result.value.command).toEqual(["docker-entrypoint.sh"]);
+    }
+  });
+
+  it("returns Err for empty array", () => {
+    const result = entrypoint([]);
+    expect(result.isErr()).toBe(true);
   });
 });

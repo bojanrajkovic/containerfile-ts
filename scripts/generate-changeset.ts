@@ -33,12 +33,18 @@ import { CommitParser } from "conventional-commits-parser";
 
 type UpgradeType = "major" | "minor" | "patch" | "none";
 
+type CommitNote = {
+  readonly title: string;
+  readonly text: string;
+};
+
 type CommitMessage = {
   readonly type: string | null;
   readonly scope: string | null;
   readonly subject: string;
   readonly body: string | null;
   readonly footer: string | null;
+  readonly notes: ReadonlyArray<CommitNote>;
 };
 
 type CommitInfo = {
@@ -48,8 +54,13 @@ type CommitInfo = {
   readonly upgradeType: UpgradeType;
 };
 
-// Pattern to identify breaking changes in commit messages
-const BREAKING_PATTERN = "BREAKING CHANGE";
+// Parser options for conventional commits with breaking change support
+const PARSER_OPTIONS = {
+  headerPattern: /^(\w*)(?:\(([\w$.\-* ]*)\))?: (.*)$/,
+  breakingHeaderPattern: /^(\w*)(?:\((.*)\))?!: (.*)$/,
+  headerCorrespondence: ["type", "scope", "subject"],
+  noteKeywords: ["BREAKING CHANGE", "BREAKING-CHANGE"],
+};
 
 // Mapping of commit types to corresponding upgrade types
 const bumpMap: Record<string, UpgradeType> = {
@@ -145,22 +156,24 @@ function parseCommit(commitText: string): CommitInfo {
   const commit = commitText.trim();
   const sha = commit.substring(0, 40);
   const message = commit.substring(40).trim();
-  const parser = new CommitParser();
-  const commitMessage = parser.parse(message);
-  const isBreakingChange = Boolean(
-    commitMessage.body?.includes(BREAKING_PATTERN) ??
-    commitMessage.footer?.includes(BREAKING_PATTERN),
+  const parser = new CommitParser(PARSER_OPTIONS);
+  const parsed = parser.parse(message);
+
+  // Check for breaking changes via notes array (handles both "feat!:" and "BREAKING CHANGE:" footer)
+  const isBreakingChange = parsed.notes.some(
+    (note) => note.title === "BREAKING CHANGE" || note.title === "BREAKING-CHANGE",
   );
-  const upgradeType = isBreakingChange ? "major" : bumpMap[commitMessage.type ?? ""] || "none";
+  const upgradeType = isBreakingChange ? "major" : bumpMap[parsed.type ?? ""] || "none";
 
   return {
     sha,
     commitMessage: {
-      type: commitMessage.type,
-      scope: commitMessage.scope,
-      subject: commitMessage.subject,
-      body: commitMessage.body,
-      footer: commitMessage.footer,
+      type: parsed.type,
+      scope: parsed.scope,
+      subject: parsed.subject ?? "",
+      body: parsed.body,
+      footer: parsed.footer,
+      notes: parsed.notes.map((note) => ({ title: note.title, text: note.text })),
     },
     isBreakingChange,
     upgradeType,

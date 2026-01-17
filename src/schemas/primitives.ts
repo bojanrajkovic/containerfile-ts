@@ -6,10 +6,6 @@ import { Value } from "@sinclair/typebox/value";
 import { Result, ok, err } from "neverthrow";
 import { ValidationError, validationError } from "../errors.js";
 
-// ============================================================================
-// Branded Types
-// ============================================================================
-
 /**
  * Valid port number (0-65535, integer).
  */
@@ -24,10 +20,6 @@ export type ImageName = string & { readonly __brand: "ImageName" };
  * Valid Docker path (non-empty string).
  */
 export type DockerPath = string & { readonly __brand: "DockerPath" };
-
-// ============================================================================
-// Schemas
-// ============================================================================
 
 /**
  * Schema for valid port numbers.
@@ -73,17 +65,9 @@ const DockerPathSchemaBase = Type.String({
 
 export const DockerPathSchema = Type.Unsafe<DockerPath>(DockerPathSchemaBase);
 
-// ============================================================================
-// Compiled Validators (compile once at module load)
-// ============================================================================
-
 const CompiledPortValidator = TypeCompiler.Compile(PortSchema);
 const CompiledImageNameValidator = TypeCompiler.Compile(ImageNameSchema);
 const CompiledDockerPathValidator = TypeCompiler.Compile(DockerPathSchema);
-
-// ============================================================================
-// Validation Functions
-// ============================================================================
 
 /**
  * Validate a value as a Port.
@@ -137,10 +121,6 @@ export function validateDockerPath(
   return ok(value as DockerPath);
 }
 
-// ============================================================================
-// Port Range Type and Validation
-// ============================================================================
-
 /**
  * Validated port range with start <= end guarantee.
  */
@@ -176,10 +156,6 @@ export function validatePortRange(
       return ok({ start: startPort, end: endPort });
     });
 }
-
-// ============================================================================
-// String Validation
-// ============================================================================
 
 /**
  * Schema for non-empty strings.
@@ -231,10 +207,6 @@ export function validateStringArray(
     value.map((item, i) => validateNonEmptyString(item, `${field}[${i}]`)),
   ).mapErr((errors) => errors.flat());
 }
-
-// ============================================================================
-// Optional Value Helper
-// ============================================================================
 
 /**
  * Validate an optional value. Returns ok(null) for undefined/null,

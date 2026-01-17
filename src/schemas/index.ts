@@ -17,4 +17,5 @@ export {
   validatePortRange,
   validateNonEmptyString,
   validateStringArray,
+  validateOptional,
 } from "./primitives.js";

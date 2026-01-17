@@ -245,3 +245,22 @@ export function validateStringArray(
 
   return ok(validated);
 }
+
+// ============================================================================
+// Optional Value Helper
+// ============================================================================
+
+/**
+ * Validate an optional value. Returns ok(null) for undefined/null,
+ * otherwise delegates to the provided validator.
+ */
+export function validateOptional<T>(
+  value: unknown,
+  validator: (v: unknown, field?: string) => Result<T, Array<ValidationError>>,
+  field: string = "value",
+): Result<T | null, Array<ValidationError>> {
+  if (value === undefined || value === null) {
+    return ok(null);
+  }
+  return validator(value, field);
+}

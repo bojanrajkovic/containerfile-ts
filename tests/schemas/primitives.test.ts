@@ -9,6 +9,7 @@ import {
   type PortRange,
   validateNonEmptyString,
   validateStringArray,
+  validateOptional,
 } from "../../src/schemas/primitives.js";
 
 describe("validatePort", () => {
@@ -207,5 +208,36 @@ describe("validateStringArray", () => {
     if (result.isErr()) {
       expect(result.error[0].field).toBe("command[0]");
     }
+  });
+});
+
+describe("validateOptional", () => {
+  it("returns ok(null) for undefined", () => {
+    const result = validateOptional(undefined, validateNonEmptyString);
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value).toBeNull();
+    }
+  });
+
+  it("returns ok(null) for null", () => {
+    const result = validateOptional(null, validateNonEmptyString);
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value).toBeNull();
+    }
+  });
+
+  it("validates present values", () => {
+    const result = validateOptional("hello", validateNonEmptyString);
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value).toBe("hello");
+    }
+  });
+
+  it("returns errors for invalid present values", () => {
+    const result = validateOptional("", validateNonEmptyString);
+    expect(result.isErr()).toBe(true);
   });
 });

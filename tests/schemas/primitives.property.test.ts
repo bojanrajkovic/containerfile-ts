@@ -181,3 +181,63 @@ describe("validateDockerPath property tests", () => {
     expect(result.isErr()).toBe(true);
   });
 });
+
+describe("validateImageName property tests", () => {
+  // Generator for valid simple image names (lowercase alphanumeric with separators)
+  const simpleImageName = fc
+    .string({ minLength: 1, maxLength: 20 })
+    .filter((s) => /^[a-z0-9]+$/.test(s)); // Only lowercase alphanumeric
+
+  // Generator for valid tags
+  const validTag = fc
+    .string({ minLength: 1, maxLength: 20 })
+    .filter((s) => /^[a-zA-Z0-9_][a-zA-Z0-9._-]*$/.test(s)); // Valid tag characters
+
+  it("accepts simple image names", () => {
+    fc.assert(
+      fc.property(simpleImageName, (name) => {
+        const result = validateImageName(name);
+        expect(result.isOk()).toBe(true);
+      })
+    );
+  });
+
+  it("accepts image names with tags", () => {
+    fc.assert(
+      fc.property(simpleImageName, validTag, (name, tag) => {
+        const result = validateImageName(`${name}:${tag}`);
+        expect(result.isOk()).toBe(true);
+      })
+    );
+  });
+
+  it("rejects empty strings", () => {
+    const result = validateImageName("");
+    expect(result.isErr()).toBe(true);
+  });
+
+  it("rejects strings with uppercase in image name part", () => {
+    // Image names (not tags) must be lowercase
+    fc.assert(
+      fc.property(
+        fc.string({ minLength: 1, maxLength: 10 }).filter((s) => /^[A-Z]+$/.test(s)),
+        (upperName) => {
+          const result = validateImageName(upperName);
+          expect(result.isErr()).toBe(true);
+        }
+      )
+    );
+  });
+
+  it("rejects strings with spaces", () => {
+    fc.assert(
+      fc.property(
+        fc.tuple(simpleImageName, simpleImageName).map(([a, b]) => `${a} ${b}`),
+        (nameWithSpace) => {
+          const result = validateImageName(nameWithSpace);
+          expect(result.isErr()).toBe(true);
+        }
+      )
+    );
+  });
+});

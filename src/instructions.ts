@@ -32,7 +32,27 @@ import {
   validatePort,
   validatePortRange,
 } from "./schemas/index.js";
-import { ValidationError, prefixErrors } from "./errors.js";
+import { ValidationError, prefixErrors, validationError } from "./errors.js";
+
+/**
+ * Validate an array of Docker paths (for COPY/ADD src).
+ * Array must have at least one element.
+ * Collects all element-level errors.
+ */
+function validateDockerPathArray(
+  src: string | ReadonlyArray<string>,
+  field: string,
+): Result<Array<string>, Array<ValidationError>> {
+  const srcArray = typeof src === "string" ? [src] : [...src];
+
+  if (srcArray.length === 0) {
+    return err([validationError(field, "must have at least one source", src)]);
+  }
+
+  return Result.combineWithAllErrors(
+    srcArray.map((path, i) => validateDockerPath(path, `${field}[${i}]`)),
+  ).mapErr((errors) => errors.flat());
+}
 
 /**
  * Create a FROM instruction.
@@ -53,36 +73,18 @@ export function from(
   image: string,
   options?: FromOptions,
 ): Result<FromInstruction, Array<ValidationError>> {
-  const errors: Array<ValidationError> = [];
-
-  // Validate image name
-  const imageResult = validateImageName(image, "image");
-  if (imageResult.isErr()) {
-    errors.push(...imageResult.error);
-  }
-
-  // Validate optional 'as' if provided
-  const asResult = validateOptional(options?.as, validateNonEmptyString, "as");
-  if (asResult.isErr()) {
-    errors.push(...asResult.error);
-  }
-
-  // Validate optional 'platform' if provided
-  const platformResult = validateOptional(options?.platform, validateNonEmptyString, "platform");
-  if (platformResult.isErr()) {
-    errors.push(...platformResult.error);
-  }
-
-  if (errors.length > 0) {
-    return err(errors);
-  }
-
-  return ok({
-    type: "FROM" as const,
-    image,
-    as: asResult.isOk() ? asResult.value : null,
-    platform: platformResult.isOk() ? platformResult.value : null,
-  });
+  return Result.combineWithAllErrors([
+    validateImageName(image, "image"),
+    validateOptional(options?.as, validateNonEmptyString, "as"),
+    validateOptional(options?.platform, validateNonEmptyString, "platform"),
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([validatedImage, asValue, platformValue]) => ({
+      type: "FROM" as const,
+      image: validatedImage,
+      as: asValue,
+      platform: platformValue,
+    }));
 }
 
 /**
@@ -147,61 +149,22 @@ export function copy(
   dest: string,
   options?: CopyOptions,
 ): Result<CopyInstruction, Array<ValidationError>> {
-  const errors: Array<ValidationError> = [];
-
-  // Normalize src to array
-  const srcArray = typeof src === "string" ? [src] : [...src];
-
-  // Validate sources
-  if (srcArray.length === 0) {
-    errors.push({
-      field: "src",
-      message: "must have at least one source",
-      value: src,
-    });
-  } else {
-    for (let i = 0; i < srcArray.length; i++) {
-      const result = validateDockerPath(srcArray[i], `src[${i}]`);
-      if (result.isErr()) {
-        errors.push(...result.error);
-      }
-    }
-  }
-
-  // Validate destination
-  const destResult = validateDockerPath(dest, "dest");
-  if (destResult.isErr()) {
-    errors.push(...destResult.error);
-  }
-
-  // Validate optional fields
-  const fromResult = validateOptional(options?.from, validateNonEmptyString, "from");
-  if (fromResult.isErr()) {
-    errors.push(...fromResult.error);
-  }
-
-  const chownResult = validateOptional(options?.chown, validateNonEmptyString, "chown");
-  if (chownResult.isErr()) {
-    errors.push(...chownResult.error);
-  }
-
-  const chmodResult = validateOptional(options?.chmod, validateNonEmptyString, "chmod");
-  if (chmodResult.isErr()) {
-    errors.push(...chmodResult.error);
-  }
-
-  if (errors.length > 0) {
-    return err(errors);
-  }
-
-  return ok({
-    type: "COPY" as const,
-    src: srcArray,
-    dest,
-    from: fromResult.isOk() ? fromResult.value : null,
-    chown: chownResult.isOk() ? chownResult.value : null,
-    chmod: chmodResult.isOk() ? chmodResult.value : null,
-  });
+  return Result.combineWithAllErrors([
+    validateDockerPathArray(src, "src"),
+    validateDockerPath(dest, "dest"),
+    validateOptional(options?.from, validateNonEmptyString, "from"),
+    validateOptional(options?.chown, validateNonEmptyString, "chown"),
+    validateOptional(options?.chmod, validateNonEmptyString, "chmod"),
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([srcArray, validatedDest, fromValue, chownValue, chmodValue]) => ({
+      type: "COPY" as const,
+      src: srcArray,
+      dest: validatedDest,
+      from: fromValue,
+      chown: chownValue,
+      chmod: chmodValue,
+    }));
 }
 
 /**
@@ -225,55 +188,20 @@ export function add(
   dest: string,
   options?: AddOptions,
 ): Result<AddInstruction, Array<ValidationError>> {
-  const errors: Array<ValidationError> = [];
-
-  // Normalize src to array
-  const srcArray = typeof src === "string" ? [src] : [...src];
-
-  // Validate sources
-  if (srcArray.length === 0) {
-    errors.push({
-      field: "src",
-      message: "must have at least one source",
-      value: src,
-    });
-  } else {
-    for (let i = 0; i < srcArray.length; i++) {
-      const result = validateDockerPath(srcArray[i], `src[${i}]`);
-      if (result.isErr()) {
-        errors.push(...result.error);
-      }
-    }
-  }
-
-  // Validate destination
-  const destResult = validateDockerPath(dest, "dest");
-  if (destResult.isErr()) {
-    errors.push(...destResult.error);
-  }
-
-  // Validate optional fields
-  const chownResult = validateOptional(options?.chown, validateNonEmptyString, "chown");
-  if (chownResult.isErr()) {
-    errors.push(...chownResult.error);
-  }
-
-  const chmodResult = validateOptional(options?.chmod, validateNonEmptyString, "chmod");
-  if (chmodResult.isErr()) {
-    errors.push(...chmodResult.error);
-  }
-
-  if (errors.length > 0) {
-    return err(errors);
-  }
-
-  return ok({
-    type: "ADD" as const,
-    src: srcArray,
-    dest,
-    chown: chownResult.isOk() ? chownResult.value : null,
-    chmod: chmodResult.isOk() ? chmodResult.value : null,
-  });
+  return Result.combineWithAllErrors([
+    validateDockerPathArray(src, "src"),
+    validateDockerPath(dest, "dest"),
+    validateOptional(options?.chown, validateNonEmptyString, "chown"),
+    validateOptional(options?.chmod, validateNonEmptyString, "chmod"),
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([srcArray, validatedDest, chownValue, chmodValue]) => ({
+      type: "ADD" as const,
+      src: srcArray,
+      dest: validatedDest,
+      chown: chownValue,
+      chmod: chmodValue,
+    }));
 }
 
 /**
@@ -291,15 +219,10 @@ export function add(
  * ```
  */
 export function workdir(path: string): Result<WorkdirInstruction, Array<ValidationError>> {
-  const pathResult = validateDockerPath(path, "path");
-  if (pathResult.isErr()) {
-    return err(pathResult.error);
-  }
-
-  return ok({
+  return validateDockerPath(path, "path").map((validatedPath) => ({
     type: "WORKDIR" as const,
-    path,
-  });
+    path: validatedPath,
+  }));
 }
 
 /**
@@ -318,22 +241,16 @@ export function workdir(path: string): Result<WorkdirInstruction, Array<Validati
  * ```
  */
 export function env(key: string, value: string): Result<EnvInstruction, Array<ValidationError>> {
-  const keyResult = validateNonEmptyString(key, "key");
-  if (keyResult.isErr()) {
-    return err(keyResult.error);
-  }
-
-  // Value can be empty string (valid in Dockerfile), but must be a string
-  const valueResult = validateString(value, "value");
-  if (valueResult.isErr()) {
-    return err(valueResult.error);
-  }
-
-  return ok({
-    type: "ENV" as const,
-    key,
-    value,
-  });
+  return Result.combineWithAllErrors([
+    validateNonEmptyString(key, "key"),
+    validateString(value, "value"), // Value can be empty string (valid in Dockerfile)
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([validatedKey, validatedValue]) => ({
+      type: "ENV" as const,
+      key: validatedKey,
+      value: validatedValue,
+    }));
 }
 
 /**
@@ -402,15 +319,10 @@ export function expose(
 export function cmd(
   command: ReadonlyArray<string>,
 ): Result<CmdInstruction, Array<ValidationError>> {
-  const result = validateStringArray([...command], "command");
-  if (result.isErr()) {
-    return err(result.error);
-  }
-
-  return ok({
+  return validateStringArray([...command], "command").map((validatedCommand) => ({
     type: "CMD" as const,
-    command: result.value,
-  });
+    command: validatedCommand,
+  }));
 }
 
 /**
@@ -430,15 +342,10 @@ export function cmd(
 export function entrypoint(
   command: ReadonlyArray<string>,
 ): Result<EntrypointInstruction, Array<ValidationError>> {
-  const result = validateStringArray([...command], "command");
-  if (result.isErr()) {
-    return err(result.error);
-  }
-
-  return ok({
+  return validateStringArray([...command], "command").map((validatedCommand) => ({
     type: "ENTRYPOINT" as const,
-    command: result.value,
-  });
+    command: validatedCommand,
+  }));
 }
 
 /**
@@ -460,26 +367,16 @@ export function arg(
   name: string,
   options?: ArgOptions,
 ): Result<ArgInstruction, Array<ValidationError>> {
-  const nameResult = validateNonEmptyString(name, "name");
-  if (nameResult.isErr()) {
-    return err(nameResult.error);
-  }
-
-  // Validate defaultValue if provided (must be non-empty string)
-  const defaultValueResult = validateOptional(
-    options?.defaultValue,
-    validateNonEmptyString,
-    "defaultValue",
-  );
-  if (defaultValueResult.isErr()) {
-    return err(defaultValueResult.error);
-  }
-
-  return ok({
-    type: "ARG" as const,
-    name,
-    defaultValue: defaultValueResult.value,
-  });
+  return Result.combineWithAllErrors([
+    validateNonEmptyString(name, "name"),
+    validateOptional(options?.defaultValue, validateNonEmptyString, "defaultValue"),
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([validatedName, defaultValue]) => ({
+      type: "ARG" as const,
+      name: validatedName,
+      defaultValue,
+    }));
 }
 
 /**
@@ -501,22 +398,16 @@ export function label(
   key: string,
   value: string,
 ): Result<LabelInstruction, Array<ValidationError>> {
-  const keyResult = validateNonEmptyString(key, "key");
-  if (keyResult.isErr()) {
-    return err(keyResult.error);
-  }
-
-  // Value can be empty string (valid in Dockerfile), but must be a string
-  const valueResult = validateString(value, "value");
-  if (valueResult.isErr()) {
-    return err(valueResult.error);
-  }
-
-  return ok({
-    type: "LABEL" as const,
-    key,
-    value,
-  });
+  return Result.combineWithAllErrors([
+    validateNonEmptyString(key, "key"),
+    validateString(value, "value"), // Value can be empty string (valid in Dockerfile)
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([validatedKey, validatedValue]) => ({
+      type: "LABEL" as const,
+      key: validatedKey,
+      value: validatedValue,
+    }));
 }
 
 /**

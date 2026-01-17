@@ -1,9 +1,28 @@
 // pattern: Functional Core
 
-import { Result, ok, err } from "neverthrow";
+import { Result, err } from "neverthrow";
 import type { Instruction, Stage } from "./types.js";
-import { ValidationError, prefixErrors } from "./errors.js";
+import { ValidationError, prefixErrors, validationError } from "./errors.js";
 import { validateNonEmptyString } from "./schemas/index.js";
+
+/**
+ * Validate and combine instruction Results for a stage.
+ * Returns all instructions on success, all collected errors on failure.
+ */
+function validateInstructionResults(
+  instructions: ReadonlyArray<Result<Instruction, Array<ValidationError>>>,
+): Result<Array<Instruction>, Array<ValidationError>> {
+  if (instructions.length === 0) {
+    return err([validationError("instructions", "stage must have at least one instruction", instructions)]);
+  }
+
+  // Map each instruction result to prefix errors with index
+  const prefixedResults = instructions.map((result, i) =>
+    result.mapErr((errors) => prefixErrors(`instructions[${i}]`, errors)),
+  );
+
+  return Result.combineWithAllErrors(prefixedResults).mapErr((errors) => errors.flat());
+}
 
 /**
  * Create a named stage for multi-stage builds.
@@ -34,42 +53,13 @@ export function stage(
   name: string,
   instructions: ReadonlyArray<Result<Instruction, Array<ValidationError>>>,
 ): Result<Stage, Array<ValidationError>> {
-  const errors: Array<ValidationError> = [];
-
-  // Validate stage name
-  const nameResult = validateNonEmptyString(name, "name");
-  if (nameResult.isErr()) {
-    errors.push(...nameResult.error);
-  }
-
-  // Validate instructions array is not empty
-  if (instructions.length === 0) {
-    errors.push({
-      field: "instructions",
-      message: "stage must have at least one instruction",
-      value: instructions,
-    });
-  }
-
-  // Collect errors from each instruction, prefixing with index
-  const validInstructions: Array<Instruction> = [];
-
-  for (let i = 0; i < instructions.length; i++) {
-    const result = instructions[i];
-    if (result === undefined) continue;
-    if (result.isErr()) {
-      errors.push(...prefixErrors(`instructions[${i}]`, result.error));
-    } else {
-      validInstructions.push(result.value);
-    }
-  }
-
-  if (errors.length > 0) {
-    return err(errors);
-  }
-
-  return ok({
-    name,
-    instructions: validInstructions,
-  });
+  return Result.combineWithAllErrors([
+    validateNonEmptyString(name, "name"),
+    validateInstructionResults(instructions),
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([validatedName, validatedInstructions]) => ({
+      name: validatedName,
+      instructions: validatedInstructions,
+    }));
 }

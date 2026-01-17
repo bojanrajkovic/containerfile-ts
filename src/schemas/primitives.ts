@@ -157,40 +157,24 @@ export function validatePortRange(
   value: { readonly start: number; readonly end: number },
   field: string = "port",
 ): Result<PortRange, Array<ValidationError>> {
-  const errors: Array<ValidationError> = [];
-
-  // Validate start port
-  const startResult = validatePort(value.start, `${field}.start`);
-  if (startResult.isErr()) {
-    errors.push(...startResult.error);
-  }
-
-  // Validate end port
-  const endResult = validatePort(value.end, `${field}.end`);
-  if (endResult.isErr()) {
-    errors.push(...endResult.error);
-  }
-
-  // If either port is invalid, return collected errors
-  if (errors.length > 0) {
-    return err(errors);
-  }
-
-  // Both ports valid, check start <= end
-  if (value.start > value.end) {
-    return err([
-      validationError(
-        field,
-        `invalid port range: start (${value.start}) must be <= end (${value.end})`,
-        value,
-      ),
-    ]);
-  }
-
-  return ok({
-    start: value.start as Port,
-    end: value.end as Port,
-  });
+  return Result.combineWithAllErrors([
+    validatePort(value.start, `${field}.start`),
+    validatePort(value.end, `${field}.end`),
+  ])
+    .mapErr((errors) => errors.flat())
+    .andThen(([startPort, endPort]) => {
+      // Both ports valid, check start <= end
+      if (startPort > endPort) {
+        return err([
+          validationError(
+            field,
+            `invalid port range: start (${startPort}) must be <= end (${endPort})`,
+            value,
+          ),
+        ]);
+      }
+      return ok({ start: startPort, end: endPort });
+    });
 }
 
 // ============================================================================
@@ -243,23 +227,9 @@ export function validateStringArray(
     return err([validationError(field, "must be a non-empty array", value)]);
   }
 
-  const errors: Array<ValidationError> = [];
-  const validated: Array<string> = [];
-
-  for (let i = 0; i < value.length; i++) {
-    const result = validateNonEmptyString(value[i], `${field}[${i}]`);
-    if (result.isErr()) {
-      errors.push(...result.error);
-    } else {
-      validated.push(result.value);
-    }
-  }
-
-  if (errors.length > 0) {
-    return err(errors);
-  }
-
-  return ok(validated);
+  return Result.combineWithAllErrors(
+    value.map((item, i) => validateNonEmptyString(item, `${field}[${i}]`)),
+  ).mapErr((errors) => errors.flat());
 }
 
 // ============================================================================

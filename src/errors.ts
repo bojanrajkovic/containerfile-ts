@@ -30,3 +30,11 @@ export function prefixErrors(
     field: e.field ? `${prefix}.${e.field}` : prefix,
   }));
 }
+
+/**
+ * Type guard that checks if a value is an array while preserving the original type.
+ * Unlike Array.isArray() which widens to any[], this preserves generic type info.
+ */
+export function isReadonlyArray<T>(value: T): value is T & readonly unknown[] {
+  return Array.isArray(value);
+}

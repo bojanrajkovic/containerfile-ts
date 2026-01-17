@@ -32,7 +32,7 @@ import {
   validatePort,
   validatePortRange,
 } from "./schemas/index.js";
-import { ValidationError, prefixErrors, validationError } from "./errors.js";
+import { ValidationError, prefixErrors, validationError, isReadonlyArray } from "./errors.js";
 
 /**
  * Validate an array of Docker paths (for COPY/ADD src).
@@ -43,14 +43,22 @@ function validateDockerPathArray(
   src: string | ReadonlyArray<string>,
   field: string,
 ): Result<ReadonlyArray<string>, Array<ValidationError>> {
-  const srcArray = typeof src === "string" ? [src] : src;
+  // String case: validate and wrap in array
+  if (typeof src === "string") {
+    return validateDockerPath(src, `${field}[0]`).map((path) => [path]);
+  }
 
-  if (srcArray.length === 0) {
+  // Defensive: handle type bypass from JS or casting
+  if (!isReadonlyArray(src)) {
+    return err([validationError(field, "must be a string or array of strings", src)]);
+  }
+
+  if (src.length === 0) {
     return err([validationError(field, "must have at least one source", src)]);
   }
 
   return Result.combineWithAllErrors(
-    srcArray.map((path, i) => validateDockerPath(path, `${field}[${i}]`)),
+    src.map((path, i) => validateDockerPath(path, `${field}[${i}]`)),
   ).mapErr((errors) => errors.flat());
 }
 
@@ -288,7 +296,12 @@ export function expose(
     });
   }
 
-  // Port range
+  // Defensive: handle type bypass (null, primitives)
+  if (port === null || typeof port !== "object") {
+    return err([validationError("port", "must be a number or port range object", port)]);
+  }
+
+  // Port range - validatePortRange handles structure validation
   const rangeResult = validatePortRange(port, "port");
   if (rangeResult.isErr()) {
     return err(rangeResult.error);
@@ -469,6 +482,11 @@ export function containerfile(
     Result<Instruction, Array<ValidationError>> | Result<Stage, Array<ValidationError>>
   >,
 ): Result<Containerfile, Array<ValidationError>> {
+  // Defensive: handle type bypass from JS or casting
+  if (!isReadonlyArray(items)) {
+    return err([validationError("items", "must be an array of instruction or stage Results", items)]);
+  }
+
   if (items.length === 0) {
     return err([
       {

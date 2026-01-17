@@ -182,8 +182,8 @@ Factory functions create instruction objects with validation. All return `Result
 | `workdir`       | `(path: string): Result<WorkdirInstruction, ValidationError[]>`                                                           |                                  |
 | `env`           | `(key: string, value: string): Result<EnvInstruction, ValidationError[]>`                                                 |                                  |
 | `expose`        | `(port: number \| PortRange, options?: ExposeOptions): Result<ExposeInstruction, ValidationError[]>`                      | Validates port range 0-65535     |
-| `cmd`           | `(command: ReadonlyArray<string>): Result<CmdInstruction, ValidationError[]>`                                             | Exec form only                   |
-| `entrypoint`    | `(command: ReadonlyArray<string>): Result<EntrypointInstruction, ValidationError[]>`                                      | Exec form only                   |
+| `cmd`           | `(command: string \| ReadonlyArray<string>): Result<CmdInstruction, ValidationError[]>`                                   | Shell or exec form               |
+| `entrypoint`    | `(command: string \| ReadonlyArray<string>): Result<EntrypointInstruction, ValidationError[]>`                            | Shell or exec form               |
 | `arg`           | `(name: string, options?: ArgOptions): Result<ArgInstruction, ValidationError[]>`                                         | `defaultValue` option            |
 | `label`         | `(key: string, value: string): Result<LabelInstruction, ValidationError[]>`                                               |                                  |
 | `containerfile` | `(items: ReadonlyArray<Result<Instruction, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                | Single-stage                     |

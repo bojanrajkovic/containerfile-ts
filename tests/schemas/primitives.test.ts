@@ -66,9 +66,7 @@ describe("validateImageName", () => {
   });
 
   it("accepts images with digests", () => {
-    expect(
-      validateImageName("nginx@sha256:abc123def456").isOk()
-    ).toBe(true);
+    expect(validateImageName("nginx@sha256:abc123def456").isOk()).toBe(true);
   });
 
   it("rejects empty strings", () => {

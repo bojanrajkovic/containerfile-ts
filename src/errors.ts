@@ -13,11 +13,7 @@ export type ValidationError = {
 /**
  * Create a validation error with consistent structure.
  */
-export function validationError(
-  field: string,
-  message: string,
-  value: unknown
-): ValidationError {
+export function validationError(field: string, message: string, value: unknown): ValidationError {
   return { field, message, value };
 }
 
@@ -27,7 +23,7 @@ export function validationError(
  */
 export function prefixErrors(
   prefix: string,
-  errors: ReadonlyArray<ValidationError>
+  errors: ReadonlyArray<ValidationError>,
 ): Array<ValidationError> {
   return errors.map((e) => ({
     ...e,

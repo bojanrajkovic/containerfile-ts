@@ -88,21 +88,15 @@ const CompiledDockerPathValidator = TypeCompiler.Compile(DockerPathSchema);
  */
 export function validatePort(
   value: unknown,
-  field: string = "port"
+  field: string = "port",
 ): Result<Port, Array<ValidationError>> {
   if (!CompiledPortValidator.Check(value)) {
     const errors = [...Value.Errors(PortSchema, value)];
     if (errors.length === 0) {
       // Fallback if no specific errors
-      return err([
-        validationError(field, "invalid port: must be integer 0-65535", value),
-      ]);
+      return err([validationError(field, "invalid port: must be integer 0-65535", value)]);
     }
-    return err(
-      errors.map((e) =>
-        validationError(field, e.message ?? "invalid port", value)
-      )
-    );
+    return err(errors.map((e) => validationError(field, e.message ?? "invalid port", value)));
   }
   return ok(value as Port);
 }
@@ -112,20 +106,14 @@ export function validatePort(
  */
 export function validateImageName(
   value: unknown,
-  field: string = "image"
+  field: string = "image",
 ): Result<ImageName, Array<ValidationError>> {
   if (!CompiledImageNameValidator.Check(value)) {
     const errors = [...Value.Errors(ImageNameSchema, value)];
     if (errors.length === 0) {
-      return err([
-        validationError(field, "invalid image name format", value),
-      ]);
+      return err([validationError(field, "invalid image name format", value)]);
     }
-    return err(
-      errors.map((e) =>
-        validationError(field, e.message ?? "invalid image name", value)
-      )
-    );
+    return err(errors.map((e) => validationError(field, e.message ?? "invalid image name", value)));
   }
   return ok(value as ImageName);
 }
@@ -135,18 +123,14 @@ export function validateImageName(
  */
 export function validateDockerPath(
   value: unknown,
-  field: string = "path"
+  field: string = "path",
 ): Result<DockerPath, Array<ValidationError>> {
   if (!CompiledDockerPathValidator.Check(value)) {
     const errors = [...Value.Errors(DockerPathSchema, value)];
     if (errors.length === 0) {
       return err([validationError(field, "path must be non-empty string", value)]);
     }
-    return err(
-      errors.map((e) =>
-        validationError(field, e.message ?? "invalid path", value)
-      )
-    );
+    return err(errors.map((e) => validationError(field, e.message ?? "invalid path", value)));
   }
   return ok(value as DockerPath);
 }

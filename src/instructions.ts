@@ -35,7 +35,18 @@ import { ValidationError, prefixErrors } from "./errors.js";
 
 /**
  * Create a FROM instruction.
+ *
+ * @param image - Docker image name (e.g., "node:18", "ghcr.io/user/app")
+ * @param options - Optional settings (as, platform)
  * @returns Result with FromInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * const result = from("node:18", { as: "builder" });
+ * if (result.isOk()) {
+ *   console.log(result.value); // FromInstruction
+ * }
+ * ```
  */
 export function from(
   image: string,
@@ -56,11 +67,7 @@ export function from(
   }
 
   // Validate optional 'platform' if provided
-  const platformResult = validateOptional(
-    options?.platform,
-    validateNonEmptyString,
-    "platform",
-  );
+  const platformResult = validateOptional(options?.platform, validateNonEmptyString, "platform");
   if (platformResult.isErr()) {
     errors.push(...platformResult.error);
   }
@@ -79,7 +86,18 @@ export function from(
 
 /**
  * Create a RUN instruction.
- * Accepts shell form (string) or exec form (array).
+ *
+ * @param command - Shell form (string) or exec form (array of strings)
+ * @returns Result with RunInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * // Shell form
+ * const shellResult = run("npm install && npm build");
+ *
+ * // Exec form
+ * const execResult = run(["npm", "install"]);
+ * ```
  */
 export function run(
   command: string | ReadonlyArray<string>,
@@ -109,6 +127,19 @@ export function run(
 
 /**
  * Create a COPY instruction.
+ *
+ * @param src - Source path(s) in build context (string or array)
+ * @param dest - Destination path in container
+ * @param options - Optional settings (from, chown, chmod)
+ * @returns Result with CopyInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * const result = copy("package*.json", "/app", { chown: "node:node" });
+ * if (result.isOk()) {
+ *   console.log(result.value); // CopyInstruction
+ * }
+ * ```
  */
 export function copy(
   src: string | ReadonlyArray<string>,
@@ -148,20 +179,12 @@ export function copy(
     errors.push(...fromResult.error);
   }
 
-  const chownResult = validateOptional(
-    options?.chown,
-    validateNonEmptyString,
-    "chown",
-  );
+  const chownResult = validateOptional(options?.chown, validateNonEmptyString, "chown");
   if (chownResult.isErr()) {
     errors.push(...chownResult.error);
   }
 
-  const chmodResult = validateOptional(
-    options?.chmod,
-    validateNonEmptyString,
-    "chmod",
-  );
+  const chmodResult = validateOptional(options?.chmod, validateNonEmptyString, "chmod");
   if (chmodResult.isErr()) {
     errors.push(...chmodResult.error);
   }
@@ -182,6 +205,19 @@ export function copy(
 
 /**
  * Create an ADD instruction.
+ *
+ * @param src - Source path(s) in build context (string or array)
+ * @param dest - Destination path in container
+ * @param options - Optional settings (chown, chmod)
+ * @returns Result with AddInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * const result = add("archive.tar.gz", "/app", { chown: "node:node" });
+ * if (result.isOk()) {
+ *   console.log(result.value); // AddInstruction
+ * }
+ * ```
  */
 export function add(
   src: string | ReadonlyArray<string>,
@@ -216,20 +252,12 @@ export function add(
   }
 
   // Validate optional fields
-  const chownResult = validateOptional(
-    options?.chown,
-    validateNonEmptyString,
-    "chown",
-  );
+  const chownResult = validateOptional(options?.chown, validateNonEmptyString, "chown");
   if (chownResult.isErr()) {
     errors.push(...chownResult.error);
   }
 
-  const chmodResult = validateOptional(
-    options?.chmod,
-    validateNonEmptyString,
-    "chmod",
-  );
+  const chmodResult = validateOptional(options?.chmod, validateNonEmptyString, "chmod");
   if (chmodResult.isErr()) {
     errors.push(...chmodResult.error);
   }
@@ -249,10 +277,19 @@ export function add(
 
 /**
  * Create a WORKDIR instruction.
+ *
+ * @param path - Working directory path in container
+ * @returns Result with WorkdirInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * const result = workdir("/app");
+ * if (result.isOk()) {
+ *   console.log(result.value); // WorkdirInstruction
+ * }
+ * ```
  */
-export function workdir(
-  path: string,
-): Result<WorkdirInstruction, Array<ValidationError>> {
+export function workdir(path: string): Result<WorkdirInstruction, Array<ValidationError>> {
   const pathResult = validateDockerPath(path, "path");
   if (pathResult.isErr()) {
     return err(pathResult.error);
@@ -266,12 +303,20 @@ export function workdir(
 
 /**
  * Create an ENV instruction.
- * Value can be empty string.
+ *
+ * @param key - Environment variable name
+ * @param value - Environment variable value (can be empty string)
+ * @returns Result with EnvInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * const result = env("NODE_ENV", "production");
+ * if (result.isOk()) {
+ *   console.log(result.value); // EnvInstruction
+ * }
+ * ```
  */
-export function env(
-  key: string,
-  value: string,
-): Result<EnvInstruction, Array<ValidationError>> {
+export function env(key: string, value: string): Result<EnvInstruction, Array<ValidationError>> {
   const keyResult = validateNonEmptyString(key, "key");
   if (keyResult.isErr()) {
     return err(keyResult.error);
@@ -287,7 +332,19 @@ export function env(
 
 /**
  * Create an EXPOSE instruction.
- * Accepts single port or port range.
+ *
+ * @param port - Single port number (0-65535) or port range {start, end}
+ * @param options - Optional settings (protocol)
+ * @returns Result with ExposeInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * // Single port
+ * const singleResult = expose(3000);
+ *
+ * // Port range
+ * const rangeResult = expose({ start: 8000, end: 8100 }, { protocol: "udp" });
+ * ```
  */
 export function expose(
   port: number | { readonly start: number; readonly end: number },
@@ -324,6 +381,17 @@ export function expose(
 
 /**
  * Create a CMD instruction (exec form only).
+ *
+ * @param command - Array of command and arguments
+ * @returns Result with CmdInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * const result = cmd(["npm", "start"]);
+ * if (result.isOk()) {
+ *   console.log(result.value); // CmdInstruction
+ * }
+ * ```
  */
 export function cmd(
   command: ReadonlyArray<string>,
@@ -341,6 +409,17 @@ export function cmd(
 
 /**
  * Create an ENTRYPOINT instruction (exec form only).
+ *
+ * @param command - Array of command and arguments
+ * @returns Result with EntrypointInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * const result = entrypoint(["node", "server.js"]);
+ * if (result.isOk()) {
+ *   console.log(result.value); // EntrypointInstruction
+ * }
+ * ```
  */
 export function entrypoint(
   command: ReadonlyArray<string>,
@@ -358,6 +437,18 @@ export function entrypoint(
 
 /**
  * Create an ARG instruction.
+ *
+ * @param name - Build argument name
+ * @param options - Optional settings (defaultValue)
+ * @returns Result with ArgInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * const result = arg("NODE_VERSION", { defaultValue: "18" });
+ * if (result.isOk()) {
+ *   console.log(result.value); // ArgInstruction
+ * }
+ * ```
  */
 export function arg(
   name: string,
@@ -377,6 +468,18 @@ export function arg(
 
 /**
  * Create a LABEL instruction.
+ *
+ * @param key - Label key
+ * @param value - Label value
+ * @returns Result with LabelInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * const result = label("version", "1.0.0");
+ * if (result.isOk()) {
+ *   console.log(result.value); // LabelInstruction
+ * }
+ * ```
  */
 export function label(
   key: string,
@@ -398,7 +501,9 @@ export function label(
  * Type guard to check if array contains instruction Results.
  */
 function isInstructionArray(
-  arr: ReadonlyArray<Result<Instruction, Array<ValidationError>> | Result<Stage, Array<ValidationError>>>,
+  arr: ReadonlyArray<
+    Result<Instruction, Array<ValidationError>> | Result<Stage, Array<ValidationError>>
+  >,
 ): arr is ReadonlyArray<Result<Instruction, Array<ValidationError>>> {
   if (arr.length === 0) return true;
   const first = arr[0];
@@ -418,12 +523,27 @@ function isInstructionArray(
 }
 
 /**
- * Create a Containerfile definition.
+ * Create a Containerfile definition supporting single-stage and multi-stage builds.
  *
- * @overload Single-stage: array of instruction Results
- * @overload Multi-stage: array of stage Results
+ * @param items - Array of instruction Results (single-stage) or stage Results (multi-stage)
+ * @returns Result with Containerfile on success, all ValidationErrors on failure
  *
- * Uses Result.combineWithAllErrors pattern to collect all validation errors.
+ * @example
+ * ```typescript
+ * // Single-stage
+ * const cf1 = containerfile([
+ *   from("node:18"),
+ *   workdir("/app"),
+ *   copy(["package.json", "package-lock.json"], "/app"),
+ *   run("npm install"),
+ * ]);
+ *
+ * // Multi-stage
+ * const cf2 = containerfile([
+ *   stage("builder", [from("node:18"), run("npm install")]),
+ *   stage("runtime", [from("node:18-alpine"), copy({ from: "builder" }, "/app", "/app")]),
+ * ]);
+ * ```
  */
 export function containerfile(
   items: ReadonlyArray<Result<Instruction, Array<ValidationError>>>,
@@ -432,7 +552,9 @@ export function containerfile(
   items: ReadonlyArray<Result<Stage, Array<ValidationError>>>,
 ): Result<Containerfile, Array<ValidationError>>;
 export function containerfile(
-  items: ReadonlyArray<Result<Instruction, Array<ValidationError>> | Result<Stage, Array<ValidationError>>>,
+  items: ReadonlyArray<
+    Result<Instruction, Array<ValidationError>> | Result<Stage, Array<ValidationError>>
+  >,
 ): Result<Containerfile, Array<ValidationError>> {
   if (items.length === 0) {
     return err([

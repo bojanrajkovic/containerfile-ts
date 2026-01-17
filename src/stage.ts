@@ -7,11 +7,29 @@ import { validateNonEmptyString } from "./schemas/index.js";
 
 /**
  * Create a named stage for multi-stage builds.
- * Accepts an array of instruction Results and combines all errors.
  *
- * @param name - Stage name (used in --from=name)
+ * Accepts an array of instruction Results and combines all errors from validation.
+ * Stage names can be used in COPY and RUN instructions with --from=name syntax.
+ *
+ * @param name - Stage name (used in --from=name references)
  * @param instructions - Array of instruction Results from factory functions
  * @returns Result with Stage on success, all ValidationErrors on failure
+ *
+ * @example
+ * ```typescript
+ * const builder = stage("builder", [
+ *   from("node:18"),
+ *   workdir("/app"),
+ *   copy(["package.json", "package-lock.json"], "/app"),
+ *   run("npm install"),
+ * ]);
+ *
+ * if (builder.isOk()) {
+ *   console.log(builder.value); // Stage
+ * } else {
+ *   console.error(builder.error); // ValidationError[]
+ * }
+ * ```
  */
 export function stage(
   name: string,

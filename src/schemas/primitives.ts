@@ -204,6 +204,20 @@ const NonEmptyStringSchema = Type.String({ minLength: 1 });
 const CompiledNonEmptyStringValidator = TypeCompiler.Compile(NonEmptyStringSchema);
 
 /**
+ * Validate that a value is a string (allows empty strings).
+ * Use for runtime type checking when empty strings are valid values.
+ */
+export function validateString(
+  value: unknown,
+  field: string = "value",
+): Result<string, Array<ValidationError>> {
+  if (typeof value !== "string") {
+    return err([validationError(field, "must be a string", value)]);
+  }
+  return ok(value);
+}
+
+/**
  * Validate that a value is a non-empty string.
  */
 export function validateNonEmptyString(

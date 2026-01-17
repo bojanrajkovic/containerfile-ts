@@ -125,6 +125,16 @@ describe("env()", () => {
     const result = env("KEY", "");
     expect(result.isOk()).toBe(true);
   });
+
+  it("returns Err for non-string value at runtime", () => {
+    // Simulate runtime data from JSON parsing or external sources
+    const result = env("KEY", 123 as unknown as string);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].field).toBe("value");
+      expect(result.error[0].message).toContain("string");
+    }
+  });
 });
 
 describe("label()", () => {
@@ -141,6 +151,16 @@ describe("label()", () => {
   it("returns Err for empty key", () => {
     const result = label("", "value");
     expect(result.isErr()).toBe(true);
+  });
+
+  it("returns Err for non-string value at runtime", () => {
+    // Simulate runtime data from JSON parsing or external sources
+    const result = label("version", { obj: true } as unknown as string);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].field).toBe("value");
+      expect(result.error[0].message).toContain("string");
+    }
   });
 });
 
@@ -168,6 +188,24 @@ describe("arg()", () => {
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
       expect(result.error[0].field).toBe("name");
+    }
+  });
+
+  it("returns Err for non-string defaultValue at runtime", () => {
+    // Simulate runtime data from JSON parsing or external sources
+    const result = arg("VERSION", { defaultValue: 42 as unknown as string });
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].field).toBe("defaultValue");
+      expect(result.error[0].message).toContain("non-empty string");
+    }
+  });
+
+  it("returns Err for empty defaultValue", () => {
+    const result = arg("VERSION", { defaultValue: "" });
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].field).toBe("defaultValue");
     }
   });
 });

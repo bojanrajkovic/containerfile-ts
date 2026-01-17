@@ -27,6 +27,7 @@ import {
   validateNonEmptyString,
   validateOptional,
   validateDockerPath,
+  validateString,
   validateStringArray,
   validatePort,
   validatePortRange,
@@ -322,7 +323,12 @@ export function env(key: string, value: string): Result<EnvInstruction, Array<Va
     return err(keyResult.error);
   }
 
-  // Value can be empty string (valid in Dockerfile)
+  // Value can be empty string (valid in Dockerfile), but must be a string
+  const valueResult = validateString(value, "value");
+  if (valueResult.isErr()) {
+    return err(valueResult.error);
+  }
+
   return ok({
     type: "ENV" as const,
     key,
@@ -459,10 +465,20 @@ export function arg(
     return err(nameResult.error);
   }
 
+  // Validate defaultValue if provided (must be non-empty string)
+  const defaultValueResult = validateOptional(
+    options?.defaultValue,
+    validateNonEmptyString,
+    "defaultValue",
+  );
+  if (defaultValueResult.isErr()) {
+    return err(defaultValueResult.error);
+  }
+
   return ok({
     type: "ARG" as const,
     name,
-    defaultValue: options?.defaultValue ?? null,
+    defaultValue: defaultValueResult.value,
   });
 }
 
@@ -488,6 +504,12 @@ export function label(
   const keyResult = validateNonEmptyString(key, "key");
   if (keyResult.isErr()) {
     return err(keyResult.error);
+  }
+
+  // Value can be empty string (valid in Dockerfile), but must be a string
+  const valueResult = validateString(value, "value");
+  if (valueResult.isErr()) {
+    return err(valueResult.error);
   }
 
   return ok({
@@ -541,7 +563,7 @@ function isInstructionArray(
  * // Multi-stage
  * const cf2 = containerfile([
  *   stage("builder", [from("node:18"), run("npm install")]),
- *   stage("runtime", [from("node:18-alpine"), copy({ from: "builder" }, "/app", "/app")]),
+ *   stage("runtime", [from("node:18-alpine"), copy("./dist", "/app", { from: "builder" })]),
  * ]);
  * ```
  */

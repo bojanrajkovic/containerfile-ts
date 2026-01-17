@@ -15,6 +15,7 @@ export {
   validateImageName,
   validateDockerPath,
   validatePortRange,
+  validateString,
   validateNonEmptyString,
   validateStringArray,
   validateOptional,

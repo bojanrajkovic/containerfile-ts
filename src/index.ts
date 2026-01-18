@@ -1,8 +1,8 @@
 // pattern: Functional Core
 
-export { Result, ok, err } from "neverthrow";
+export type { Result } from "neverthrow";
 
-export { ValidationError, validationError, prefixErrors } from "./errors.js";
+export type { ValidationError } from "./errors.js";
 
 export type { Port, ImageName, DockerPath, PortRange } from "./schemas/index.js";
 

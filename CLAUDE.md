@@ -312,14 +312,24 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 [optional body]
 ```
 
-**Types:**
+**Types (choose carefully):**
 
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `chore:` - Maintenance tasks, dependencies, tooling
+- `feat:` - New library/application features (user-facing functionality)
+- `fix:` - Bug fixes to library/application code (not CI, not tooling)
+- `chore:` - Cleanup, minor package tweaks, lint fixes, dependency updates
+- `ci:` - CI/CD workflow changes (GitHub Actions, publishing pipelines)
 - `docs:` - Documentation only changes
 - `test:` - Adding or updating tests
-- `refactor:` - Code change that neither fixes a bug nor adds a feature
+- `refactor:` - Significant code restructuring without behavior change
+- `perf:` - Performance improvements
+
+**Type selection guidance:**
+
+- If it changes `.github/workflows/` → use `ci:`
+- If it fixes a bug users would encounter → use `fix:`
+- If it adds functionality users would use → use `feat:`
+- If it restructures code without changing behavior → use `refactor:`
+- If it's minor cleanup or dependency bumps → use `chore:`
 
 ### Trunk-Based Development
 

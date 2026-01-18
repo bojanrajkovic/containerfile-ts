@@ -1,9 +1,19 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": [
+    "config:js-lib",
+    "helpers:pinGitHubActionDigests",
+    ":configMigration",
+    "security:minimumReleaseAgeNpm",
+    "replacements:all"
+  ],
   "semanticCommits": "enabled",
   "automerge": true,
   "automergeType": "pr",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 4am on monday"]
+  },
   "packageRules": [
     {
       "matchDepTypes": ["devDependencies"],

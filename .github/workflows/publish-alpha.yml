@@ -10,6 +10,8 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      pull-requests: write
+      statuses: write
 
     steps:
       - name: Checkout
@@ -17,6 +19,20 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
+
+      - name: Set pending commit status
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.workflow_run.head_sha }}',
+              state: 'pending',
+              description: 'Publishing alpha package...',
+              context: 'alpha-publish',
+              target_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+            });
 
       - name: Setup mise
         uses: jdx/mise-action@v3
@@ -53,8 +69,122 @@ jobs:
       - name: Create snapshot version
         run: pnpm exec changeset version --snapshot ${{ env.SNAPSHOT_TAG }}
 
+      - name: Extract package version
+        id: extract-version
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Extracted version: ${VERSION}"
+
       - name: Publish alpha packages
         run: pnpm exec changeset publish --tag alpha
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+
+      - name: Notify PR and set success status
+        uses: actions/github-script@v8
+        env:
+          PACKAGE_VERSION: ${{ steps.extract-version.outputs.version }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        with:
+          script: |
+            const marker = '<!-- alpha-publish-comment -->';
+            const version = process.env.PACKAGE_VERSION;
+            const headSha = process.env.HEAD_SHA;
+            const headBranch = process.env.HEAD_BRANCH;
+
+            const commentBody = [
+              marker,
+              '## 📦 Alpha Package Published',
+              '',
+              '| Package | Version |',
+              '|---------|---------|',
+              `| \`@bojanrajkovic/containerfile-ts\` | \`${version}\` |`,
+              '',
+              '**Install specific version:**',
+              '```bash',
+              `pnpm add @bojanrajkovic/containerfile-ts@${version}`,
+              '```',
+              '',
+              '**Or use the alpha tag (latest alpha):**',
+              '```bash',
+              'pnpm add @bojanrajkovic/containerfile-ts@alpha',
+              '```',
+              '',
+              `<sub>Published from commit ${headSha.substring(0, 7)} on branch \`${headBranch}\`</sub>`
+            ].join('\n');
+
+            // Find PR for this branch
+            const headFilter = `${context.repo.owner}:${headBranch}`;
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: headFilter,
+              state: 'open'
+            });
+
+            if (prs.length === 0) {
+              console.log(`No open PR found for branch ${headBranch}. Skipping PR comment.`);
+            } else {
+              const prNumber = prs[0].number;
+              console.log(`Found PR #${prNumber} for branch ${headBranch}`);
+
+              // Find existing comment with marker
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber
+              });
+
+              const existingComment = comments.find(comment =>
+                comment.body && comment.body.includes(marker)
+              );
+
+              if (existingComment) {
+                console.log(`Updating existing comment ${existingComment.id}`);
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                  body: commentBody
+                });
+              } else {
+                console.log(`Creating new comment on PR #${prNumber}`);
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: commentBody
+                });
+              }
+            }
+
+            // Always set success status (even if no PR)
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: headSha,
+              state: 'success',
+              description: 'Alpha package published successfully',
+              context: 'alpha-publish',
+              target_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+            });
+            console.log('Set commit status to success');
+
+      - name: Set failure status on error
+        if: failure()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.workflow_run.head_sha }}',
+              state: 'failure',
+              description: 'Alpha publish failed',
+              context: 'alpha-publish',
+              target_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+            });
+            console.log('Set commit status to failure');

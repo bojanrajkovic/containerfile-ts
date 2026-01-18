@@ -383,6 +383,11 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 - **Versioning:** Changesets snapshot: `{version}-{branch}-{sha}`
 - **Example:** `@bojanrajkovic/containerfile-ts@1.0.0-add-healthcheck-abc1234`
 - **Usage:** `pnpm add @bojanrajkovic/containerfile-ts@alpha`
+- **PR notifications:** After successful publish, a comment is posted to the associated PR with:
+  - Package version in a table format
+  - Installation commands (specific version and alpha tag)
+  - Commit SHA and branch info
+- **Commit status:** Shows `alpha-publish` status (pending → success/failure) on PR commits
 
 **Release Publishing (`publish-release.yml`)**
 

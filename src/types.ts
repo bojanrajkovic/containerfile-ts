@@ -25,12 +25,13 @@ export type RunInstruction = {
  * Single source: `COPY file.txt /dest/`
  * Multiple sources: `COPY file1.txt file2.txt /dest/`
  *
- * The `src` field supports both single file (string) and multiple files (ReadonlyArray<string>).
+ * The `src` field is always a ReadonlyArray<string>.
+ * The factory function normalizes single files to arrays for consistent handling.
  * When using an array, the final element in the container must be a directory for correct semantics.
  */
 export type CopyInstruction = {
   readonly type: "COPY";
-  readonly src: string | ReadonlyArray<string>;
+  readonly src: ReadonlyArray<string>;
   readonly dest: string;
   readonly from: string | null;
   readonly chown: string | null;
@@ -45,12 +46,13 @@ export type CopyInstruction = {
  * Multiple sources: `ADD file1.txt file2.txt /app/`
  * URL source: `ADD https://example.com/file.tar.gz /app/`
  *
- * The `src` field supports both single source (string) and multiple sources (ReadonlyArray<string>).
+ * The `src` field is always a ReadonlyArray<string>.
+ * The factory function normalizes single sources to arrays for consistent handling.
  * Sources can be local files or URLs. When using an array, the final destination must be a directory.
  */
 export type AddInstruction = {
   readonly type: "ADD";
-  readonly src: string | ReadonlyArray<string>;
+  readonly src: ReadonlyArray<string>;
   readonly dest: string;
   readonly chown: string | null;
   readonly chmod: string | null;
@@ -76,7 +78,6 @@ export type EnvInstruction = {
 /**
  * EXPOSE instruction - documents exposed ports
  *
- * The `port` field supports both single ports and port ranges.
  * Single port: `EXPOSE 8080/tcp`
  * Port range: `EXPOSE 8080-8090/tcp`
  *
@@ -89,8 +90,9 @@ export type EnvInstruction = {
  */
 export type ExposeInstruction = {
   readonly type: "EXPOSE";
-  readonly port: number | { readonly start: number; readonly end: number };
-  readonly protocol: "tcp" | "udp" | "sctp";
+  readonly port: number;
+  readonly endPort: number | null;
+  readonly protocol: "tcp" | "udp" | "sctp" | null;
 };
 
 /**
@@ -98,7 +100,7 @@ export type ExposeInstruction = {
  */
 export type CmdInstruction = {
   readonly type: "CMD";
-  readonly command: ReadonlyArray<string>;
+  readonly command: string | ReadonlyArray<string>;
 };
 
 /**
@@ -106,7 +108,7 @@ export type CmdInstruction = {
  */
 export type EntrypointInstruction = {
   readonly type: "ENTRYPOINT";
-  readonly command: ReadonlyArray<string>;
+  readonly command: string | ReadonlyArray<string>;
 };
 
 /**

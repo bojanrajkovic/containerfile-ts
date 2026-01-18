@@ -1,6 +1,6 @@
 # containerfile-ts
 
-> Freshness: 2026-01-15
+> Freshness: 2026-01-17
 
 Type-safe Dockerfile/Containerfile generation with declarative TypeScript.
 
@@ -26,9 +26,18 @@ src/
   instructions.ts   # Factory functions (Functional Core)
   stage.ts          # Stage factory (Functional Core)
   render.ts         # Dockerfile rendering (Functional Core)
+  errors.ts         # ValidationError type and helpers (Functional Core)
+  schemas/          # TypeBox validation schemas
+    index.ts        # Schema exports
+    primitives.ts   # Branded types and validators (Port, ImageName, etc.)
 tests/
-  fixtures/         # Expected Dockerfiles + generators
-  generation.test.ts
+  fixtures/             # Expected Dockerfiles + generators
+  generation.test.ts    # Fixture-based rendering tests
+  instructions.test.ts  # Instruction factory unit tests
+  instructions.property.test.ts  # Property-based tests for factories
+  schemas/              # Schema validation tests
+    primitives.test.ts  # Unit tests for primitive validators
+    primitives.property.test.ts  # Property-based tests for validators
 scripts/
   generate-changeset.ts  # Converts conventional commits to changesets
 docs/
@@ -68,10 +77,31 @@ src/
   instructions.ts # Factory functions for creating instructions
   stage.ts        # Factory function for creating multi-stage stages
   render.ts       # Rendering functions for Dockerfile output
+  errors.ts       # ValidationError type and helper functions
+  schemas/        # TypeBox validation schemas
+    index.ts      # Re-exports from primitives
+    primitives.ts # Branded types, schemas, and validation functions
 tests/
-  generation.test.ts  # Fixture-based generation tests
-  fixtures/           # Test fixtures with generator.ts and expected.Dockerfile
+  generation.test.ts              # Fixture-based generation tests
+  instructions.test.ts            # Unit tests for instruction factories
+  instructions.property.test.ts   # Property-based tests for factories
+  fixtures/                       # Test fixtures with generator.ts and expected.Dockerfile
+  schemas/                        # Schema validation tests
+    primitives.test.ts            # Unit tests for primitive validators
+    primitives.property.test.ts   # Property-based tests for validators
 ```
+
+### Dependencies
+
+**Runtime dependencies:**
+
+- `@sinclair/typebox` - JSON Schema validation with TypeScript integration, used for branded types and schema validation
+- `neverthrow` - Type-safe Result types for error handling without exceptions
+
+**Dev dependencies (testing):**
+
+- `fast-check` - Property-based testing library for generating random test inputs
+- `vitest` - Test runner
 
 ## Public API Contracts
 
@@ -100,6 +130,24 @@ All instruction types use:
 - `null` for absent optional values (not `undefined`)
 - `ReadonlyArray<T>` for array fields
 
+### Branded Types
+
+TypeBox-validated branded types for compile-time and runtime type safety:
+
+```typescript
+type Port = number & { readonly __brand: "Port" }; // Valid port 0-65535
+type ImageName = string & { readonly __brand: "ImageName" }; // Docker image name
+type DockerPath = string & { readonly __brand: "DockerPath" }; // Non-empty path
+type PortRange = { readonly start: Port; readonly end: Port }; // Port range
+```
+
+Validation functions return `Result<T, ValidationError[]>`:
+
+- `validatePort(value, field?)` - Validates port numbers
+- `validateImageName(value, field?)` - Validates Docker image names
+- `validateDockerPath(value, field?)` - Validates non-empty paths
+- `validatePortRange(value, field?)` - Validates port ranges (start <= end)
+
 ### Stage Type
 
 For multi-stage builds:
@@ -123,23 +171,24 @@ type Containerfile =
 
 ### Factory Functions
 
-Factory functions create instruction objects with optional parameters via option objects:
+Factory functions create instruction objects with validation. All return `Result<Instruction, ValidationError[]>`:
 
-| Function        | Signature                                                                     | Notes                                           |
-| --------------- | ----------------------------------------------------------------------------- | ----------------------------------------------- |
-| `from`          | `(image: string, options?: FromOptions)`                                      | `as`, `platform` options                        |
-| `run`           | `(command: string \| ReadonlyArray<string>)`                                  | Shell or exec form                              |
-| `copy`          | `(src: string \| ReadonlyArray<string>, dest: string, options?: CopyOptions)` | `from`, `chown`, `chmod` options                |
-| `add`           | `(src: string \| ReadonlyArray<string>, dest: string, options?: AddOptions)`  | `chown`, `chmod` options                        |
-| `workdir`       | `(path: string)`                                                              |                                                 |
-| `env`           | `(key: string, value: string)`                                                |                                                 |
-| `expose`        | `(port: number \| {start, end}, options?: ExposeOptions)`                     | Validates port range 0-65535, `protocol` option |
-| `cmd`           | `(command: ReadonlyArray<string>)`                                            | Exec form only                                  |
-| `entrypoint`    | `(command: ReadonlyArray<string>)`                                            | Exec form only                                  |
-| `arg`           | `(name: string, options?: ArgOptions)`                                        | `defaultValue` option                           |
-| `label`         | `(key: string, value: string)`                                                |                                                 |
-| `containerfile` | `(def: Containerfile)`                                                        | Identity function for type safety               |
-| `stage`         | `(name: string, instructions: ReadonlyArray<Instruction>)`                    | Creates a named stage for multi-stage builds    |
+| Function        | Signature                                                                                                                 | Notes                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `from`          | `(image: string, options?: FromOptions): Result<FromInstruction, ValidationError[]>`                                      | `as`, `platform` options         |
+| `run`           | `(command: string \| ReadonlyArray<string>): Result<RunInstruction, ValidationError[]>`                                   | Shell or exec form               |
+| `copy`          | `(src: string \| ReadonlyArray<string>, dest: string, options?: CopyOptions): Result<CopyInstruction, ValidationError[]>` | `from`, `chown`, `chmod` options |
+| `add`           | `(src: string \| ReadonlyArray<string>, dest: string, options?: AddOptions): Result<AddInstruction, ValidationError[]>`   | `chown`, `chmod` options         |
+| `workdir`       | `(path: string): Result<WorkdirInstruction, ValidationError[]>`                                                           |                                  |
+| `env`           | `(key: string, value: string): Result<EnvInstruction, ValidationError[]>`                                                 |                                  |
+| `expose`        | `(port: number \| PortRange, options?: ExposeOptions): Result<ExposeInstruction, ValidationError[]>`                      | Validates port range 0-65535     |
+| `cmd`           | `(command: string \| ReadonlyArray<string>): Result<CmdInstruction, ValidationError[]>`                                   | Shell or exec form               |
+| `entrypoint`    | `(command: string \| ReadonlyArray<string>): Result<EntrypointInstruction, ValidationError[]>`                            | Shell or exec form               |
+| `arg`           | `(name: string, options?: ArgOptions): Result<ArgInstruction, ValidationError[]>`                                         | `defaultValue` option            |
+| `label`         | `(key: string, value: string): Result<LabelInstruction, ValidationError[]>`                                               |                                  |
+| `containerfile` | `(items: ReadonlyArray<Result<Instruction, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                | Single-stage                     |
+| `containerfile` | `(items: ReadonlyArray<Result<Stage, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                      | Multi-stage                      |
+| `stage`         | `(name: string, instructions: ReadonlyArray<Result<Instruction, ValidationError[]>>): Result<Stage, ValidationError[]>`   | Creates named stage              |
 
 ### Render Functions
 
@@ -156,19 +205,54 @@ Rendering behavior:
 - LABEL values are quoted
 - Options rendered in order: `--platform`, `--from`, `--chown`, `--chmod`
 
+### Error Handling
+
+All factory functions return `Result<T, ValidationError[]>` from neverthrow. Handle results using:
+
+```typescript
+import { containerfile, from, run, render } from "@bojanrajkovic/containerfile-ts";
+
+const result = containerfile([from("node:18"), run("npm install")]);
+
+// Pattern matching (preferred)
+result.match(
+  (cf) => console.log(render(cf)),
+  (errors) => console.error("Validation failed:", errors),
+);
+
+// Or use chainable methods
+result.map((cf) => render(cf)).mapErr((errors) => errors.map((e) => e.message).join(", "));
+```
+
+**Important:** Never use `isOk()`/`isErr()` with manual property access. Always use `.match()` or chainable methods (`.map()`, `.mapErr()`, `.andThen()`) for type-safe Result handling.
+
+ValidationError structure:
+
+```typescript
+type ValidationError = {
+  readonly field: string; // e.g., "port", "instructions[2].src"
+  readonly message: string; // Human-readable error
+  readonly value: unknown; // The invalid value
+};
+```
+
 ### Validation
 
-The `expose()` function validates:
+All factory functions validate inputs and return Results:
 
-- Port numbers are integers
-- Port numbers are in range 0-65535
-- Port range start <= end
+- **Port numbers**: Must be integers 0-65535
+- **Port ranges**: Start must be <= end
+- **Image names**: Must match Docker registry format
+- **Paths**: Must be non-empty strings
+- **Command arrays**: Must be non-empty with non-empty elements
 
-Throws `Error` with descriptive message on invalid input.
+Errors are collected, not short-circuited. A single call may return multiple ValidationErrors.
 
 ## Testing
 
-Fixture-based testing:
+### Fixture-Based Testing
+
+Integration tests verify complete Dockerfile generation:
 
 1. Create `tests/fixtures/<name>/expected.Dockerfile`
 2. Create `tests/fixtures/<name>/generator.ts` exporting `fixture`
@@ -185,6 +269,36 @@ To add a new test fixture:
 1. Create `tests/fixtures/<fixture-name>/generator.ts`
 2. Create `tests/fixtures/<fixture-name>/expected.Dockerfile`
 3. Export `fixture` from the generator file
+
+### Unit Tests
+
+`tests/instructions.test.ts` - Tests each factory function for:
+
+- Valid input returns `Ok` with correct instruction structure
+- Invalid input returns `Err` with appropriate ValidationErrors
+- Error messages include field names and invalid values
+
+`tests/schemas/primitives.test.ts` - Tests primitive validators for:
+
+- Valid values return `Ok` with branded types
+- Invalid values return `Err` with ValidationErrors
+- Edge cases (empty strings, boundary values, special characters)
+
+### Property-Based Testing
+
+Uses fast-check to generate random inputs:
+
+`tests/instructions.property.test.ts` - Verifies:
+
+- All valid inputs produce Ok results (no false negatives)
+- Invalid inputs consistently produce Err results (no false positives)
+- Error messages always include the invalid value
+
+`tests/schemas/primitives.property.test.ts` - Verifies:
+
+- Port validation accepts 0-65535, rejects others
+- Image name validation handles various registry formats
+- String validation rejects empty strings
 
 ## Git Workflow
 
@@ -325,6 +439,22 @@ All commits and PR titles must follow [Conventional Commits](https://www.convent
 - `perf:` - Performance improvements
 - `ci:` - CI/CD configuration changes
 - `revert:` - Reverts a previous commit
+
+**Breaking Changes:**
+
+Breaking changes trigger a major version bump. You MUST mark them explicitly for the `generate-changeset.ts` script to detect them:
+
+- **Option 1:** Add `!` after the type: `feat!: change API to return Result types`
+- **Option 2:** Include `BREAKING CHANGE:` in the commit footer:
+
+  ```
+  feat: change API to return Result types
+
+  BREAKING CHANGE: All factory functions now return Result<T, ValidationError[]>
+  instead of throwing exceptions. Callers must handle the Result type.
+  ```
+
+**Why this matters:** The `generate-changeset.ts` script parses conventional commits to determine version bumps. Without explicit breaking change markers, API-breaking changes will only trigger a minor bump instead of a major bump, violating semver.
 
 **Enforcement:**
 

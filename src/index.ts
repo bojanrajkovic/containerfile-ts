@@ -1,5 +1,10 @@
 // pattern: Functional Core
-// Entry point for containerfile-ts library
+
+export type { Result } from "neverthrow";
+
+export type { ValidationError } from "./errors.js";
+
+export type { Port, ImageName, DockerPath, PortRange } from "./schemas/index.js";
 
 export type {
   Instruction,
@@ -14,14 +19,11 @@ export type {
   EntrypointInstruction,
   ArgInstruction,
   LabelInstruction,
-  Containerfile,
-  Stage,
-  FromOptions,
-  CopyOptions,
-  AddOptions,
-  ExposeOptions,
-  ArgOptions,
 } from "./types.js";
+
+export type { Stage, Containerfile } from "./types.js";
+
+export type { FromOptions, CopyOptions, AddOptions, ExposeOptions, ArgOptions } from "./types.js";
 
 export {
   from,

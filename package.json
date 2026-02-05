@@ -51,8 +51,8 @@
   },
   "devDependencies": {
     "@changesets/cli": "2.29.8",
-    "@commitlint/cli": "20.4.0",
-    "@commitlint/config-conventional": "20.4.0",
+    "@commitlint/cli": "20.4.1",
+    "@commitlint/config-conventional": "20.4.1",
     "conventional-commits-parser": "6.2.1",
     "fast-check": "4.5.3",
     "husky": "9.1.7",

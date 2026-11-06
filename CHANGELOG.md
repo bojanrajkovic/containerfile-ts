@@ -1,5 +1,13 @@
 # @bojanrajkovic/containerfile-ts
 
+## 2.0.1
+
+### Patch Changes
+
+- update dependency @sinclair/typebox to v0.34.50 (#205)
+
+  Co-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>
+
 ## 2.0.0
 
 ### Major Changes

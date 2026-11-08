@@ -395,10 +395,11 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 - **Purpose:** PR-based production releases to npm
 - **Uses:** Changesets with custom `generate-changeset.ts` script
 - **Versioning:** `feat:` → minor, `fix:` → patch, `BREAKING CHANGE:` → major
+- **Runs as:** the releaser bot (a GitHub App), in the `release` environment. The job mints an app token from the `RELEASER_BOT_CLIENT_ID` variable and `RELEASER_BOT_PRIVATE_KEY` secret. We use the bot instead of `GITHUB_TOKEN` because PRs and commits made with `GITHUB_TOKEN` don't trigger workflows, so the release PR would get no CI.
 - **Workflow:**
   1. Generates changesets from conventional commits since last tag
-  2. Creates "Version Packages" PR (if releasable changes exist)
-  3. On PR merge: publishes to npm with `@latest` tag
+  2. Creates or updates the "Version Packages" PR as the bot (if releasable changes exist)
+  3. On PR merge (by a maintainer, by hand): publishes to npm with `@latest` tag, and the bot creates the git tag and GitHub Release
 - **Publishes to:** npm public registry as `@bojanrajkovic/containerfile-ts`
 
 **PR Title Validation (`pr-title.yml`)**
@@ -487,13 +488,16 @@ Breaking changes trigger a major version bump. You MUST mark them explicitly for
 
 ## npm Publishing Configuration
 
-This project uses npm token authentication with provenance attestation enabled.
+This project publishes through npm Trusted Publishing, with provenance attestation enabled. There is no npm token: npm trusts the OIDC identity of `publish-switch.yml`, which is why both alpha and release publishing route through it.
 
-### Required Secrets
+### Required Configuration
 
-**GitHub repository secret:**
+**`release` environment (GitHub):**
 
-- `NPM_TOKEN` - npm automation token with publish permissions for `@bojanrajkovic/containerfile-ts`
+- `RELEASER_BOT_CLIENT_ID` (variable) - client ID of the releaser bot GitHub App
+- `RELEASER_BOT_PRIVATE_KEY` (secret) - the app's private key
+
+The app must be installed on this repository with contents and pull requests write access.
 
 ### Provenance Attestation
 
@@ -507,18 +511,20 @@ Both publish workflows set `NPM_CONFIG_PROVENANCE: true` to generate provenance 
 
 The `publish-switch.yml` workflow (OIDC entry point) passes permissions to reusable workflows:
 
-- `id-token: write` - Required for provenance attestation
-- `contents: write` - Required for creating release commits and tags
-- `pull-requests: write` - Required for creating "Version Packages" PRs
+- `id-token: write` - Required for Trusted Publishing and provenance
+- `contents: read` - Release publishing; repo writes use the releaser bot token
+
+The bot token is scoped to `contents: write` (release commits, tags, GitHub Releases) and `pull-requests: write` (the "Version Packages" PR).
 
 ### Troubleshooting
 
-If publishing fails with authentication error:
+If npm publishing fails with an authentication error:
 
-1. Verify `NPM_TOKEN` secret is configured in GitHub repository settings
-2. Verify token has publish permissions for `@bojanrajkovic/containerfile-ts`
-3. Check workflow has `id-token: write` permission for provenance
-4. Check `NPM_CONFIG_PROVENANCE: true` is set in workflow
+1. Verify the Trusted Publisher on npmjs.com names this repository and `publish-switch.yml`
+2. Check the workflow has `id-token: write` permission
+3. Check `NPM_CONFIG_PROVENANCE: true` is set in workflow
+
+If the "Mint releaser bot token" step fails, check that the releaser bot app is installed on the repository and that the `release` environment has the variable and secret above.
 
 ## ADRs
 

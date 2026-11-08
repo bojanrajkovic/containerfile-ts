@@ -28,6 +28,5 @@ jobs:
     uses: ./.github/workflows/publish-release.yml
     permissions:
       id-token: write
-      contents: write
-      pull-requests: write
+      contents: read
     secrets: inherit

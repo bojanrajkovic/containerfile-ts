@@ -12,6 +12,8 @@ RUN ["npm", "ci", "--production"]
 COPY --from=builder dist/ /app/dist/
 USER root
 USER node:node
+VOLUME ["/data"]
+VOLUME ["/var/log", "/var/cache"]
 EXPOSE 5000-5010/udp
 EXPOSE 8080
 ENTRYPOINT ["node", "--experimental-specifier-resolution=node"]

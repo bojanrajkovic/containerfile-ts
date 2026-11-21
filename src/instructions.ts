@@ -13,6 +13,7 @@ import type {
   ArgInstruction,
   LabelInstruction,
   UserInstruction,
+  VolumeInstruction,
   Containerfile,
   Instruction,
   Stage,
@@ -474,6 +475,34 @@ export function user(
       user: validatedUser,
       group: validatedGroup,
     }));
+}
+
+/**
+ * Create a VOLUME instruction.
+ *
+ * @param paths - Mount point path or array of paths
+ * @returns Result with VolumeInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * volume(["/data", "/logs"]).match(
+ *   (instruction) => console.log(instruction), // renders as `VOLUME ["/data", "/logs"]`
+ *   (errors) => console.error(errors),
+ * );
+ * ```
+ */
+export function volume(
+  paths: string | ReadonlyArray<string>,
+): Result<VolumeInstruction, Array<ValidationError>> {
+  const validated =
+    typeof paths === "string"
+      ? validateDockerPath(paths, "paths[0]").map((path) => [path])
+      : validateStringArray(paths, "paths");
+
+  return validated.map((validatedPaths) => ({
+    type: "VOLUME" as const,
+    paths: validatedPaths,
+  }));
 }
 
 /**

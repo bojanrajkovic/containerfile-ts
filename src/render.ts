@@ -16,6 +16,7 @@ import type {
   ArgInstruction,
   LabelInstruction,
   UserInstruction,
+  VolumeInstruction,
 } from "./types.js";
 
 /**
@@ -124,6 +125,11 @@ function renderUser(instruction: UserInstruction): string {
     : `USER ${instruction.user}:${instruction.group}`;
 }
 
+// Always JSON form: it stays correct when a path contains spaces.
+function renderVolume(instruction: VolumeInstruction): string {
+  return `VOLUME ${formatArray(instruction.paths)}`;
+}
+
 /**
  * Renderer dispatch table - maps instruction type to render function
  */
@@ -142,6 +148,7 @@ const renderers: {
   ARG: renderArg,
   LABEL: renderLabel,
   USER: renderUser,
+  VOLUME: renderVolume,
 };
 
 /**

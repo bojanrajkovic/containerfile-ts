@@ -7,6 +7,7 @@ import {
   env,
   label,
   user,
+  volume,
   arg,
   run,
   cmd,
@@ -208,6 +209,31 @@ describe("user()", () => {
 
   it("returns Err for non-string user at runtime", () => {
     expect(user(42 as unknown as string).isErr()).toBe(true);
+  });
+});
+
+describe("volume()", () => {
+  it("normalizes a single path to an array", () => {
+    expect(volume("/data")._unsafeUnwrap()).toEqual({ type: "VOLUME", paths: ["/data"] });
+  });
+
+  it("returns Ok for multiple paths", () => {
+    expect(volume(["/data", "/logs"])._unsafeUnwrap().paths).toEqual(["/data", "/logs"]);
+  });
+
+  it("returns Err for empty string", () => {
+    expect(volume("")._unsafeUnwrapErr()[0].field).toBe("paths[0]");
+  });
+
+  it("returns Err for empty array", () => {
+    expect(volume([])._unsafeUnwrapErr()[0].field).toBe("paths");
+  });
+
+  it("collects errors for each bad element", () => {
+    const fields = volume(["", "/ok", ""])
+      ._unsafeUnwrapErr()
+      .map((e) => e.field);
+    expect(fields).toEqual(["paths[0]", "paths[2]"]);
   });
 });
 

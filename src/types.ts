@@ -1,5 +1,7 @@
 // pattern: Functional Core
 
+/// <reference lib="esnext.temporal" />
+
 /**
  * FROM instruction - specifies base image
  */

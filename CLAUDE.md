@@ -97,7 +97,8 @@ tests/
 
 - `@sinclair/typebox` - JSON Schema validation with TypeScript integration, used for branded types and schema validation
 - `neverthrow` - Type-safe Result types for error handling without exceptions
-- `@bojanrajkovic/go-duration` - Converts `Temporal.Duration` to Go duration strings for HEALTHCHECK. It needs a global `Temporal`, so the package requires Node 26+.
+- `@bojanrajkovic/go-duration` - Converts `Temporal.Duration` to Go duration strings for HEALTHCHECK. It needs a global `Temporal`, which `temporal-polyfill` supplies where the runtime lacks it.
+- `temporal-polyfill` - Provides the global `Temporal` (and its types). It does nothing on runtimes that already have `Temporal`.
 
 **Dev dependencies (testing):**
 

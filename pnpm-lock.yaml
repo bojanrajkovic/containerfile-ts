@@ -10,13 +10,16 @@ importers:
     dependencies:
       '@bojanrajkovic/go-duration':
         specifier: ^0.1.0
-        version: 0.1.0
+        version: 0.1.0(temporal-polyfill@1.0.8)
       '@sinclair/typebox':
         specifier: ^0.34.47
         version: 0.34.52
       neverthrow:
         specifier: ^8.2.0
         version: 8.2.0
+      temporal-polyfill:
+        specifier: ^1.0.8
+        version: 1.0.8
     devDependencies:
       '@changesets/cli':
         specifier: 3.0.3
@@ -1339,6 +1342,15 @@ packages:
     resolution: {integrity: sha512-yDPMNjp4WyfYBkHnjIRLfca1i6KMyGCtsVgoKe/z1+6vukgaENdgGBZt+ZmKPc4gavvEZ5OgHfHdrazhgNyG7w==}
     engines: {node: '>=12'}
 
+  temporal-polyfill@1.0.8:
+    resolution: {integrity: sha512-RCCGa0GddT099XG49ijdD0tDf86L8vfuZun1+JyJiO4Y2NP9PACQsG0OnvNPXwVLisdvhr/zqL2nhKQmXXx08A==}
+
+  temporal-spec@1.0.1:
+    resolution: {integrity: sha512-wxVoanmDeavXie1vu2JaQ3WIc3JZnWAOYFBsJyATaVsXsycKYUflGsyBmrRSnoCpZJpwPyr38VpgSUlQ8CbFxg==}
+
+  temporal-utils@1.0.4:
+    resolution: {integrity: sha512-4mAcgbWlaxe+gn23gk8g0iHxCVGVOhKzSCfF5HM3lfvH8BdT+/pBmH/R/E4CrIse+koUgs8ThkPzCLnui6Fi8w==}
+
   tinybench@6.2.3:
     resolution: {integrity: sha512-Al01C2JIBnO2CXCAPbpAl6sUiOZHeThGtHYNTa51JRw9PyWOCdr+9Ong05R4qg/Sk3+H645E8ov1h2c58ityNw==}
     engines: {node: '>=20.0.0'}
@@ -1492,7 +1504,9 @@ snapshots:
 
   '@babel/helper-validator-identifier@7.29.7': {}
 
-  '@bojanrajkovic/go-duration@0.1.0': {}
+  '@bojanrajkovic/go-duration@0.1.0(temporal-polyfill@1.0.8)':
+    optionalDependencies:
+      temporal-polyfill: 1.0.8
 
   '@changesets/apply-release-plan@8.1.1':
     dependencies:
@@ -2490,6 +2504,15 @@ snapshots:
   strip-ansi@7.2.0:
     dependencies:
       ansi-regex: 6.6.0
+
+  temporal-polyfill@1.0.8:
+    dependencies:
+      temporal-spec: 1.0.1
+      temporal-utils: 1.0.4
+
+  temporal-spec@1.0.1: {}
+
+  temporal-utils@1.0.4: {}
 
   tinybench@6.2.3: {}
 

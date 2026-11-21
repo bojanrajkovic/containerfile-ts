@@ -26,6 +26,8 @@ import type {
   ExposeOptions,
   ArgOptions,
 } from "./types.js";
+// Must load before go-duration, which throws at import if the global Temporal is missing.
+import "temporal-polyfill/global";
 import { Result, ok, err } from "neverthrow";
 import { stringifyDuration } from "@bojanrajkovic/go-duration";
 import {

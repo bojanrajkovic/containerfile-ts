@@ -224,7 +224,7 @@ The script runs exactly as written. The delimiter is quoted, so the shell doesn'
 
 ### Line breaks
 
-Each value must fit on its rendered line. A line break would start a new instruction, and a trailing `\` (even with spaces after it) would pull the next instruction into this one, so factories reject both.
+Each value must fit on its rendered line. A line break would start a new instruction, and a trailing single `\` (even with spaces after it) would pull the next instruction into this one, so factories reject both. A doubled `\\` is a literal backslash and is allowed.
 
 Shell-form commands (`run`, `cmd`, `entrypoint`, `healthcheck` with a string) can span lines with `\` continuations. Every line except the last must end with `\`, and the last line must be a command. Heredoc redirects such as `cat <<EOF` are rejected, because BuildKit would read the following Dockerfile lines as the heredoc body:
 

@@ -13,6 +13,7 @@ import {
   containerfile,
 } from "../src/instructions.js";
 import { render } from "../src/render.js";
+import { HEREDOC_REDIRECT, LINE_BREAK, LINE_CONTINUATION } from "../src/schemas/primitives.js";
 
 // Generator for valid Docker image names
 const validImageName = fc
@@ -20,7 +21,7 @@ const validImageName = fc
   .filter((s) => /^[a-z0-9]+$/.test(s));
 
 // Single-line: no line breaks and no trailing backslash (BuildKit allows spaces after it).
-const singleLine = (s: string) => !/[\r\n]/.test(s) && !/\\[ \t]*$/.test(s);
+const singleLine = (s: string) => !LINE_BREAK.test(s) && !LINE_CONTINUATION.test(s);
 
 // Generator for valid paths
 const validPath = fc
@@ -163,7 +164,7 @@ describe("line safety properties", () => {
         env(key, value).map((instruction) => {
           const rendered = render({ instructions: [instruction] });
           expect(rendered.split("\n")).toHaveLength(1);
-          expect(rendered).not.toMatch(/\\[ \t]*$/);
+          expect(rendered).not.toMatch(LINE_CONTINUATION);
         });
       }),
     );
@@ -174,13 +175,13 @@ describe("line safety properties", () => {
       fc.property(lineHostile, (command) => {
         run(command).map((instruction) => {
           const rendered = render({ instructions: [instruction] });
-          expect(rendered).not.toMatch(/(?<!<)<<-?["']?[A-Za-z_]/);
+          expect(rendered).not.toMatch(HEREDOC_REDIRECT);
           const lines = rendered.split("\n");
           for (const line of lines.slice(0, -1)) {
-            expect(line).toMatch(/\\[ \t]*$/);
+            expect(line).toMatch(LINE_CONTINUATION);
           }
           const last = lines.at(-1) ?? "";
-          expect(last).not.toMatch(/\\[ \t]*$/);
+          expect(last).not.toMatch(LINE_CONTINUATION);
           expect(last.trimStart().startsWith("#")).toBe(false);
           expect(last.includes("\r")).toBe(false);
         });
@@ -190,7 +191,7 @@ describe("line safety properties", () => {
 });
 
 describe("heredoc() properties", () => {
-  const scriptLine = fc.string({ maxLength: 20 }).filter((s) => !/[\r\n]/.test(s));
+  const scriptLine = fc.string({ maxLength: 20 }).filter((s) => !LINE_BREAK.test(s));
 
   it("the delimiter never matches a script line, so the heredoc can't end early", () => {
     fc.assert(

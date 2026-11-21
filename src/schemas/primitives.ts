@@ -105,6 +105,24 @@ export function validateImageName(
 }
 
 /**
+ * Check that a string fits on one rendered Dockerfile line.
+ * A line break would start a new instruction, and a trailing `\` would join the next
+ * instruction onto this one, so either lets a value inject instructions.
+ */
+function validateSingleLine<T extends string>(
+  value: T,
+  field: string,
+): Result<T, Array<ValidationError>> {
+  if (/[\r\n]/.test(value)) {
+    return err([validationError(field, "must not contain line breaks", value)]);
+  }
+  if (value.endsWith("\\")) {
+    return err([validationError(field, "must not end with a backslash", value)]);
+  }
+  return ok(value);
+}
+
+/**
  * Validate a value as a DockerPath.
  */
 export function validateDockerPath(
@@ -118,7 +136,7 @@ export function validateDockerPath(
     }
     return err(errors.map((e) => validationError(field, e.message ?? "invalid path", value)));
   }
-  return ok(value as DockerPath);
+  return validateSingleLine(value as DockerPath, field);
 }
 
 /**
@@ -164,8 +182,9 @@ const NonEmptyStringSchema = Type.String({ minLength: 1 });
 const CompiledNonEmptyStringValidator = TypeCompiler.Compile(NonEmptyStringSchema);
 
 /**
- * Validate that a value is a string (allows empty strings).
+ * Validate that a value is a single-line string (allows empty strings).
  * Use for runtime type checking when empty strings are valid values.
+ * Rejects line breaks and a trailing backslash, which would inject instructions.
  */
 export function validateString(
   value: unknown,
@@ -174,15 +193,12 @@ export function validateString(
   if (typeof value !== "string") {
     return err([validationError(field, "must be a string", value)]);
   }
-  return ok(value);
+  return validateSingleLine(value, field);
 }
 
-/**
- * Validate that a value is a non-empty string.
- */
-export function validateNonEmptyString(
+function checkNonEmptyString(
   value: unknown,
-  field: string = "value",
+  field: string,
 ): Result<string, Array<ValidationError>> {
   if (!CompiledNonEmptyStringValidator.Check(value)) {
     return err([validationError(field, "must be a non-empty string", value)]);
@@ -191,9 +207,54 @@ export function validateNonEmptyString(
 }
 
 /**
- * Validate an array of non-empty strings.
+ * Validate that a value is a non-empty, single-line string.
+ * Rejects line breaks and a trailing backslash, which would inject instructions.
+ */
+export function validateNonEmptyString(
+  value: unknown,
+  field: string = "value",
+): Result<string, Array<ValidationError>> {
+  return checkNonEmptyString(value, field).andThen((str) => validateSingleLine(str, field));
+}
+
+/**
+ * Validate a shell-form command (RUN, CMD, ENTRYPOINT, HEALTHCHECK).
+ *
+ * Multi-line commands are allowed as `\` line continuations: every line except the last
+ * must end with `\`. The last line must hold a command, so the continuation can't swallow
+ * the next instruction. That rules out an empty last line, a comment, or a trailing `\`.
+ * Heredocs (`<<EOF`) and carriage returns are rejected.
+ */
+export function validateShellCommand(
+  value: unknown,
+  field: string = "command",
+): Result<string, Array<ValidationError>> {
+  return checkNonEmptyString(value, field).andThen((str) => {
+    if (str.includes("\r")) {
+      return err([validationError(field, "must not contain carriage returns", value)]);
+    }
+
+    const lines = str.split("\n");
+    const last = str.slice(str.lastIndexOf("\n") + 1);
+    if (!lines.slice(0, -1).every((line) => line.endsWith("\\"))) {
+      return err([
+        validationError(field, "line breaks must follow a `\\` line continuation", value),
+      ]);
+    }
+    if (last.endsWith("\\") || last.trim() === "" || last.trimStart().startsWith("#")) {
+      return err([
+        validationError(field, "last line must be a command, not empty, a comment, or `\\`", value),
+      ]);
+    }
+    return ok(str);
+  });
+}
+
+/**
+ * Validate an array of non-empty strings for exec (JSON) form.
  * Array must have at least one element.
  * Collects all element-level errors.
+ * Elements may contain line breaks: JSON form renders them escaped as `\n`.
  */
 export function validateStringArray(
   value: ReadonlyArray<unknown>,
@@ -204,7 +265,7 @@ export function validateStringArray(
   }
 
   return Result.combineWithAllErrors(
-    value.map((item, i) => validateNonEmptyString(item, `${field}[${i}]`)),
+    value.map((item, i) => checkNonEmptyString(item, `${field}[${i}]`)),
   ).mapErr((errors) => errors.flat());
 }
 

@@ -719,3 +719,30 @@ describe("containerfile()", () => {
     });
   });
 });
+
+describe("instruction injection", () => {
+  it.each([
+    ["run", () => run("echo hi\nUSER root")],
+    ["cmd", () => cmd("npm start\nUSER root")],
+    ["entrypoint", () => entrypoint("/start.sh\nUSER root")],
+    ["healthcheck", () => healthcheck("curl -f localhost\nUSER root")],
+    ["env value", () => env("KEY", "v\nUSER root")],
+    ["env trailing backslash", () => env("KEY", "v\\")],
+    ["label value", () => label("key", "v\nUSER root")],
+    ["workdir", () => workdir("/app\nUSER root")],
+    ["copy dest", () => copy("a", "/app\nUSER root")],
+    ["arg default", () => arg("A", { defaultValue: "x\nUSER root" })],
+    ["from as", () => from("node", { as: "b\nUSER root" })],
+  ])("rejects a line break in %s", (_name, make) => {
+    expect(make().isErr()).toBe(true);
+  });
+
+  it("accepts a shell-form line continuation", () => {
+    const result = run("apt-get update && \\\n    apt-get install -y curl");
+    expect(result.isOk()).toBe(true);
+  });
+
+  it("accepts a line break in an exec-form element", () => {
+    expect(run(["sh", "-c", "echo a\necho b"]).isOk()).toBe(true);
+  });
+});

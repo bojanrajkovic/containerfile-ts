@@ -18,5 +18,6 @@ export {
   validateString,
   validateNonEmptyString,
   validateStringArray,
+  validateShellCommand,
   validateOptional,
 } from "./primitives.js";

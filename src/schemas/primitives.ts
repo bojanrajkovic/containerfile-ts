@@ -105,9 +105,11 @@ export function validateImageName(
 }
 
 /**
- * BuildKit continues a line that ends in `\`, even with spaces or tabs after it.
+ * BuildKit continues a line that ends in a single `\`, even with spaces or tabs after it.
+ * A doubled `\\` is an escaped backslash and doesn't continue. This mirrors BuildKit's
+ * `lineContinuationRegex` in frontend/dockerfile/parser/parser.go.
  */
-const CONTINUATION = /\\[ \t]*$/;
+const CONTINUATION = /(?:^|[^\\])\\[ \t]*$/;
 
 /**
  * Check that a string fits on one rendered Dockerfile line.
@@ -223,9 +225,13 @@ export function validateNonEmptyString(
 }
 
 /**
- * `<<WORD`, `<<-WORD`, or `<<"WORD"`, which BuildKit treats as a heredoc. Excludes `<<<`.
+ * A heredoc redirect. BuildKit treats any shell word matching `^\d*<<-?\s*[^<]+$` as one
+ * (`reHeredoc` in frontend/dockerfile/parser/parser.go), so `<<EOF`, `<<\a`, and `<<$x` all
+ * count, and so does `<< EOF` with whitespace before the word. This matches `<<` anywhere,
+ * then optional whitespace and any character but `<`, which covers every such word.
+ * Here-strings (`<<<`) don't match.
  */
-const HEREDOC = /(?<!<)<<-?["']?[A-Za-z_]/;
+const HEREDOC = /(?<!<)<<-?\s*[^<\s]/;
 
 /**
  * Validate a shell-form command (RUN, CMD, ENTRYPOINT, HEALTHCHECK).

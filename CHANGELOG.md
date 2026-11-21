@@ -1,5 +1,33 @@
 # @bojanrajkovic/containerfile-ts
 
+## 3.0.0
+
+### Major Changes
+
+- require non-empty instruction and stage lists (#372)
+
+  BREAKING CHANGE: containerfile() and stage() take NonEmptyArray<T>
+  instead of ReadonlyArray<T>. Array literals still type-check. A computed
+  array must be narrowed with a length check before it is passed in.
+
+  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+### Minor Changes
+
+- add HEALTHCHECK instruction support (#366)
+- add group() to set instructions apart with blank lines (#371)
+- add comment() for full-line Dockerfile comments (#370)
+- add heredoc() for multi-line RUN scripts (#373)
+- add USER instruction support (#363)
+- add VOLUME instruction support (#364)
+- add SHELL instruction support (#365)
+
+### Patch Changes
+
+- update dependency @sinclair/typebox to v0.34.50 (#205)
+- reject line breaks that inject Dockerfile instructions (#369)
+- keep PR descriptions out of generated changelog entries (#368)
+
 ## 2.0.0
 
 ### Major Changes

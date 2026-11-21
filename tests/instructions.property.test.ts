@@ -10,8 +10,8 @@ const validImageName = fc
   .string({ minLength: 1, maxLength: 20 })
   .filter((s) => /^[a-z0-9]+$/.test(s));
 
-// Single-line: no line breaks and no trailing backslash, which the validators reject.
-const singleLine = (s: string) => !/[\r\n]/.test(s) && !s.endsWith("\\");
+// Single-line: no line breaks and no trailing backslash (BuildKit allows spaces after it).
+const singleLine = (s: string) => !/[\r\n]/.test(s) && !/\\[ \t]*$/.test(s);
 
 // Generator for valid paths
 const validPath = fc
@@ -144,7 +144,7 @@ describe("Error collection properties", () => {
 describe("line safety properties", () => {
   // Characters that can break or join Dockerfile lines, mixed into ordinary text.
   const lineHostile = fc.string({
-    unit: fc.constantFrom("a", " ", "#", "\\", "\n", "\r", "<"),
+    unit: fc.constantFrom("a", " ", "\t", "#", "\\", "\n", "\r", "<", "E"),
     maxLength: 12,
   });
 
@@ -154,7 +154,7 @@ describe("line safety properties", () => {
         env(key, value).map((instruction) => {
           const rendered = render({ instructions: [instruction] });
           expect(rendered.split("\n")).toHaveLength(1);
-          expect(rendered.endsWith("\\")).toBe(false);
+          expect(rendered).not.toMatch(/\\[ \t]*$/);
         });
       }),
     );
@@ -164,12 +164,14 @@ describe("line safety properties", () => {
     fc.assert(
       fc.property(lineHostile, (command) => {
         run(command).map((instruction) => {
-          const lines = render({ instructions: [instruction] }).split("\n");
+          const rendered = render({ instructions: [instruction] });
+          expect(rendered).not.toMatch(/(?<!<)<<-?["']?[A-Za-z_]/);
+          const lines = rendered.split("\n");
           for (const line of lines.slice(0, -1)) {
-            expect(line.endsWith("\\")).toBe(true);
+            expect(line).toMatch(/\\[ \t]*$/);
           }
           const last = lines[lines.length - 1];
-          expect(last.endsWith("\\")).toBe(false);
+          expect(last).not.toMatch(/\\[ \t]*$/);
           expect(last.trimStart().startsWith("#")).toBe(false);
           expect(last.includes("\r")).toBe(false);
         });

@@ -256,7 +256,7 @@ All factory functions validate inputs and return Results:
 - **Image names**: Must match Docker registry format
 - **Paths**: Must be non-empty strings
 - **Command arrays**: Must be non-empty with non-empty elements
-- **Line breaks**: Values rendered as plain text reject `\r`, `\n`, and a trailing `\`, so they can't inject or join instructions. Shell-form commands allow `\` line continuations when the last line is a command (`validateShellCommand`). Exec-form elements allow line breaks, since JSON form escapes them.
+- **Line breaks**: Values rendered as plain text reject `\r`, `\n`, and a trailing `\` (spaces or tabs after it included, as BuildKit allows), so they can't inject or join instructions. Shell-form commands allow `\` line continuations when the last line is a command, and reject heredoc redirects (`validateShellCommand`). Exec-form elements allow line breaks, since JSON form escapes them.
 
 Errors are collected, not short-circuited. A single call may return multiple ValidationErrors.
 

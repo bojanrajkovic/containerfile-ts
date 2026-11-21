@@ -10,8 +10,8 @@ import {
   validateNonEmptyString,
 } from "../../src/schemas/primitives.js";
 
-// Single-line: no line breaks and no trailing backslash, which the validators reject.
-const singleLine = (s: string) => !/[\r\n]/.test(s) && !s.endsWith("\\");
+// Single-line: no line breaks and no trailing backslash (BuildKit allows spaces after it).
+const singleLine = (s: string) => !/[\r\n]/.test(s) && !/\\[ \t]*$/.test(s);
 
 describe("validatePort property tests", () => {
   it("accepts all valid port numbers (0-65535)", () => {

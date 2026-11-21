@@ -249,7 +249,7 @@ describe("line-break checks", () => {
     ["validateString", validateString],
     ["validateDockerPath", validateDockerPath],
   ] as const)("%s rejects line breaks and a trailing backslash", (_name, validate) => {
-    for (const bad of ["a\nUSER root", "a\rb", "a\r\nb", "C:\\"]) {
+    for (const bad of ["a\nUSER root", "a\rb", "a\r\nb", "C:\\", "x\\ ", "x\\\t"]) {
       const result = validate(bad, "field");
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
@@ -278,6 +278,8 @@ describe("validateShellCommand", () => {
       true,
     );
     expect(validateShellCommand("a \\\n  # note \\\n  b").isOk()).toBe(true);
+    expect(validateShellCommand("a \\ \nb").isOk()).toBe(true);
+    expect(validateShellCommand("cat <<< hello").isOk()).toBe(true);
   });
 
   it.each([
@@ -286,6 +288,9 @@ describe("validateShellCommand", () => {
     ["heredoc", "<<EOF\nnpm ci\nEOF"],
     ["carriage return", "echo a \\\r\necho b"],
     ["trailing backslash", "echo a \\"],
+    ["trailing backslash and space", "echo a \\ "],
+    ["inline heredoc", "cat <<EOF"],
+    ["quoted heredoc", "cat <<-'EOF'"],
     ["continuation into an empty line", "echo a \\\n   "],
     ["continuation into a comment", "echo a \\\n# done"],
   ])("rejects %s", (_name, command) => {

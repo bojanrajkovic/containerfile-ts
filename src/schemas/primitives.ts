@@ -105,6 +105,11 @@ export function validateImageName(
 }
 
 /**
+ * BuildKit continues a line that ends in `\`, even with spaces or tabs after it.
+ */
+const CONTINUATION = /\\[ \t]*$/;
+
+/**
  * Check that a string fits on one rendered Dockerfile line.
  * A line break would start a new instruction, and a trailing `\` would join the next
  * instruction onto this one, so either lets a value inject instructions.
@@ -116,7 +121,7 @@ function validateSingleLine<T extends string>(
   if (/[\r\n]/.test(value)) {
     return err([validationError(field, "must not contain line breaks", value)]);
   }
-  if (value.endsWith("\\")) {
+  if (CONTINUATION.test(value)) {
     return err([validationError(field, "must not end with a backslash", value)]);
   }
   return ok(value);
@@ -218,12 +223,18 @@ export function validateNonEmptyString(
 }
 
 /**
+ * `<<WORD`, `<<-WORD`, or `<<"WORD"`, which BuildKit treats as a heredoc. Excludes `<<<`.
+ */
+const HEREDOC = /(?<!<)<<-?["']?[A-Za-z_]/;
+
+/**
  * Validate a shell-form command (RUN, CMD, ENTRYPOINT, HEALTHCHECK).
  *
  * Multi-line commands are allowed as `\` line continuations: every line except the last
- * must end with `\`. The last line must hold a command, so the continuation can't swallow
- * the next instruction. That rules out an empty last line, a comment, or a trailing `\`.
- * Heredocs (`<<EOF`) and carriage returns are rejected.
+ * must end with `\` (trailing spaces allowed). The last line must hold a command, so the
+ * continuation can't swallow the next instruction. That rules out an empty last line, a
+ * comment, or a trailing `\`. Carriage returns and heredoc redirects (`<<EOF`) are
+ * rejected: BuildKit would read the following Dockerfile lines as the heredoc body.
  */
 export function validateShellCommand(
   value: unknown,
@@ -234,14 +245,18 @@ export function validateShellCommand(
       return err([validationError(field, "must not contain carriage returns", value)]);
     }
 
+    if (HEREDOC.test(str)) {
+      return err([validationError(field, "must not start a heredoc (`<<WORD`)", value)]);
+    }
+
     const lines = str.split("\n");
     const last = str.slice(str.lastIndexOf("\n") + 1);
-    if (!lines.slice(0, -1).every((line) => line.endsWith("\\"))) {
+    if (!lines.slice(0, -1).every((line) => CONTINUATION.test(line))) {
       return err([
         validationError(field, "line breaks must follow a `\\` line continuation", value),
       ]);
     }
-    if (last.endsWith("\\") || last.trim() === "" || last.trimStart().startsWith("#")) {
+    if (CONTINUATION.test(last) || last.trim() === "" || last.trimStart().startsWith("#")) {
       return err([
         validationError(field, "last line must be a command, not empty, a comment, or `\\`", value),
       ]);

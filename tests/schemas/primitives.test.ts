@@ -263,6 +263,10 @@ describe("line-break checks", () => {
     expect(validateNonEmptyString("C:\\app").isOk()).toBe(true);
   });
 
+  it("allows a doubled trailing backslash, which BuildKit reads as a literal backslash", () => {
+    expect(validateNonEmptyString("C:\\\\").isOk()).toBe(true);
+  });
+
   it("validateStringArray allows line breaks, which JSON form escapes", () => {
     expect(validateStringArray(["sh", "-c", "echo a\necho b"]).isOk()).toBe(true);
   });
@@ -289,6 +293,7 @@ describe("validateShellCommand", () => {
     ["carriage return", "echo a \\\r\necho b"],
     ["trailing backslash", "echo a \\"],
     ["trailing backslash and space", "echo a \\ "],
+    ["escaped backslash before a line break", "echo a \\\\\nUSER root"],
     ["inline heredoc", "cat <<EOF"],
     ["quoted heredoc", "cat <<-'EOF'"],
     ["continuation into an empty line", "echo a \\\n   "],

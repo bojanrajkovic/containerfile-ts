@@ -20,7 +20,7 @@ const validImageName = fc
   .filter((s) => /^[a-z0-9]+$/.test(s));
 
 // Single-line: no line breaks and no trailing backslash (BuildKit allows spaces after it).
-const singleLine = (s: string) => !/[\r\n]/.test(s) && !/\\[ \t]*$/.test(s);
+const singleLine = (s: string) => !/[\r\n]/.test(s) && !/(?:^|[^\\])\\[ \t]*$/.test(s);
 
 // Generator for valid paths
 const validPath = fc
@@ -163,7 +163,7 @@ describe("line safety properties", () => {
         env(key, value).map((instruction) => {
           const rendered = render({ instructions: [instruction] });
           expect(rendered.split("\n")).toHaveLength(1);
-          expect(rendered).not.toMatch(/\\[ \t]*$/);
+          expect(rendered).not.toMatch(/(?:^|[^\\])\\[ \t]*$/);
         });
       }),
     );
@@ -177,10 +177,10 @@ describe("line safety properties", () => {
           expect(rendered).not.toMatch(/(?<!<)<<-?["']?[A-Za-z_]/);
           const lines = rendered.split("\n");
           for (const line of lines.slice(0, -1)) {
-            expect(line).toMatch(/\\[ \t]*$/);
+            expect(line).toMatch(/(?:^|[^\\])\\[ \t]*$/);
           }
           const last = lines.at(-1) ?? "";
-          expect(last).not.toMatch(/\\[ \t]*$/);
+          expect(last).not.toMatch(/(?:^|[^\\])\\[ \t]*$/);
           expect(last.trimStart().startsWith("#")).toBe(false);
           expect(last.includes("\r")).toBe(false);
         });

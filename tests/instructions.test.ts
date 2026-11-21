@@ -117,7 +117,7 @@ describe("env()", () => {
     if (result.isOk()) {
       expect(result.value.type).toBe("ENV");
       expect(result.value.key).toBe("NODE_ENV");
-      expect(result.value.value).toBe("production");
+      expect(result.value.value).toEqual({ text: "production", expand: false });
     }
   });
 
@@ -152,7 +152,7 @@ describe("label()", () => {
     if (result.isOk()) {
       expect(result.value.type).toBe("LABEL");
       expect(result.value.key).toBe("maintainer");
-      expect(result.value.value).toBe("user@example.com");
+      expect(result.value.value).toEqual({ text: "user@example.com", expand: false });
     }
   });
 
@@ -352,7 +352,7 @@ describe("arg()", () => {
     const result = arg("VERSION", { defaultValue: "1.0.0" });
     expect(result.isOk()).toBe(true);
     if (result.isOk()) {
-      expect(result.value.defaultValue).toBe("1.0.0");
+      expect(result.value.defaultValue).toEqual({ text: "1.0.0", expand: false });
     }
   });
 
@@ -370,15 +370,15 @@ describe("arg()", () => {
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
       expect(result.error[0]?.field).toBe("defaultValue");
-      expect(result.error[0]?.message).toContain("non-empty string");
+      expect(result.error[0]?.message).toContain("must be a string");
     }
   });
 
-  it("returns Err for empty defaultValue", () => {
-    const result = arg("VERSION", { defaultValue: "" });
-    expect(result.isErr()).toBe(true);
-    if (result.isErr()) {
-      expect(result.error[0]?.field).toBe("defaultValue");
+  it("accepts an empty defaultValue, which renders as an empty quoted string", () => {
+    const result = arg("VERSION", { defaultValue: "", expand: true });
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.defaultValue).toEqual({ text: "", expand: true });
     }
   });
 });
@@ -738,7 +738,6 @@ describe("instruction injection", () => {
     ["entrypoint", () => entrypoint("/start.sh\nUSER root")],
     ["healthcheck", () => healthcheck("curl -f localhost\nUSER root")],
     ["env value", () => env("KEY", "v\nUSER root")],
-    ["env trailing backslash", () => env("KEY", "v\\")],
     ["label value", () => label("key", "v\nUSER root")],
     ["workdir", () => workdir("/app\nUSER root")],
     ["copy dest", () => copy("a", "/app\nUSER root")],
@@ -875,5 +874,29 @@ describe("heredoc()", () => {
     if (result.isErr()) {
       expect(result.error[0]?.field).toBe("command.lines[0]");
     }
+  });
+});
+
+describe("ENV, LABEL, and ARG keys", () => {
+  it.each(["my key", "a=b", 'a"b', "a'b", "a\\b", "$A", "a\tb"])("rejects %j", (key) => {
+    expect(env(key, "v").isErr()).toBe(true);
+    expect(label(key, "v").isErr()).toBe(true);
+    expect(arg(key).isErr()).toBe(true);
+  });
+
+  it("accepts dotted and dashed keys", () => {
+    expect(label("org.opencontainers.image.source", "v").isOk()).toBe(true);
+    expect(env("MY_VAR-1", "v").isOk()).toBe(true);
+  });
+});
+
+describe("ENV, LABEL, and ARG values", () => {
+  it("records expand: true only when asked", () => {
+    expect(env("K", "$A")._unsafeUnwrap().value.expand).toBe(false);
+    expect(env("K", "$A", { expand: true })._unsafeUnwrap().value.expand).toBe(true);
+  });
+
+  it("accepts a trailing backslash, which quoting escapes", () => {
+    expect(env("K", "C:\\").isOk()).toBe(true);
   });
 });

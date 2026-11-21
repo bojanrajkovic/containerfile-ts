@@ -20,6 +20,7 @@ import type {
   HealthcheckInstruction,
   CommentInstruction,
   Group,
+  QuotedValue,
 } from "./types.js";
 
 /**
@@ -89,8 +90,16 @@ function renderWorkdir(instruction: WorkdirInstruction): string {
   return `WORKDIR ${instruction.path}`;
 }
 
+/**
+ * Double-quote a value. Escaping `\\` and `"` keeps it one argument; escaping `$` as well
+ * (unless `expand`) stops BuildKit from expanding variables in it.
+ */
+function quote(value: QuotedValue): string {
+  return `"${value.text.replace(value.expand ? /["\\]/g : /["\\$]/g, "\\$&")}"`;
+}
+
 function renderEnv(instruction: EnvInstruction): string {
-  return `ENV ${instruction.key}=${instruction.value}`;
+  return `ENV ${instruction.key}=${quote(instruction.value)}`;
 }
 
 function renderExpose(instruction: ExposeInstruction): string {
@@ -121,13 +130,13 @@ function renderEntrypoint(instruction: EntrypointInstruction): string {
 
 function renderArg(instruction: ArgInstruction): string {
   if (instruction.defaultValue !== null) {
-    return `ARG ${instruction.name}=${instruction.defaultValue}`;
+    return `ARG ${instruction.name}=${quote(instruction.defaultValue)}`;
   }
   return `ARG ${instruction.name}`;
 }
 
 function renderLabel(instruction: LabelInstruction): string {
-  return `LABEL ${instruction.key}="${instruction.value}"`;
+  return `LABEL ${instruction.key}=${quote(instruction.value)}`;
 }
 
 function renderUser(instruction: UserInstruction): string {

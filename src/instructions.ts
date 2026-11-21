@@ -28,6 +28,8 @@ import type {
   AddOptions,
   ExposeOptions,
   ArgOptions,
+  ValueOptions,
+  QuotedValue,
   Heredoc,
   HeredocOptions,
 } from "./types.js";
@@ -41,10 +43,9 @@ import {
   validateNonEmptyString,
   validateOptional,
   validateDockerPath,
-  validateString,
+  validateLine,
   validateStringArray,
   validateShellCommand,
-  LINE_BREAK,
   validatePort,
   validatePortRange,
 } from "./schemas/index.js";
@@ -168,20 +169,6 @@ export function run(
     .map((validatedHeredoc) => ({ type: "RUN" as const, command: validatedHeredoc }));
 }
 
-function validateHeredocLine(
-  value: unknown,
-  field: string,
-): Result<string, Array<ValidationError>> {
-  if (typeof value !== "string") {
-    return err([validationError(field, "must be a string", value)]);
-  }
-  // The delimiter is quoted, so the body is literal: a trailing `\` is fine; a line break is not.
-  if (LINE_BREAK.test(value)) {
-    return err([validationError(field, "must not contain line breaks", value)]);
-  }
-  return ok(value);
-}
-
 /**
  * Pick a heredoc delimiter from the script's SHA-256. The same script always gets the same
  * delimiter, so the rendered RUN line, and BuildKit's layer cache key, stay stable.
@@ -217,7 +204,7 @@ export function heredoc(
   // Defensive: the tuple type stops TypeScript callers, but not JS or casting
   const validatedLines =
     isReadonlyArray(lines) && lines.length > 0
-      ? combineNonEmpty(lines, (line, i) => validateHeredocLine(line, `lines[${i}]`))
+      ? combineNonEmpty(lines, (line, i) => validateLine(line, `lines[${i}]`))
       : err([validationError("lines", "must be a non-empty array of strings", lines)]);
 
   return Result.combineWithAllErrors([
@@ -331,24 +318,54 @@ export function workdir(path: string): Result<WorkdirInstruction, Array<Validati
 }
 
 /**
+ * Validate an ENV, LABEL, or ARG key. Whitespace or `=` would split it into a different
+ * key and value; quotes, `\\`, and `$` would be processed by BuildKit.
+ */
+function validateKey(value: unknown, field: string): Result<string, Array<ValidationError>> {
+  return validateNonEmptyString(value, field).andThen((str) =>
+    /[\s="'\\$]/.test(str)
+      ? err([validationError(field, "must not contain whitespace, =, quotes, \\, or $", value)])
+      : ok(str),
+  );
+}
+
+/**
+ * Validate a value that renders in double quotes. Only line breaks are rejected: quoting
+ * escapes everything else.
+ */
+function validateQuotedValue(
+  value: unknown,
+  options: ValueOptions | undefined,
+  field: string,
+): Result<QuotedValue, Array<ValidationError>> {
+  return validateLine(value, field).map((text) => ({ text, expand: options?.expand === true }));
+}
+
+/**
  * Create an ENV instruction.
  *
- * @param key - Environment variable name
- * @param value - Environment variable value (can be empty string)
+ * The value renders in double quotes and BuildKit stores it exactly as given. Pass
+ * `{ expand: true }` to let BuildKit expand `$VAR` and `${VAR}` in it instead.
+ *
+ * @param key - Environment variable name; no whitespace, `=`, quotes, `\\`, or `$`
+ * @param value - Environment variable value; may be empty, must not contain line breaks
+ * @param options - Optional settings (expand)
  * @returns Result with EnvInstruction on success, ValidationError[] on failure
  *
  * @example
  * ```typescript
- * env("NODE_ENV", "production").match(
- *   (instruction) => console.log(instruction),
- *   (errors) => console.error(errors),
- * );
+ * env("DB_PASS", "hunter$2go"); // ENV DB_PASS="hunter\\$2go", stored as hunter$2go
+ * env("NODE_ENV", "${APP_ENV}", { expand: true }); // reads the APP_ENV build arg
  * ```
  */
-export function env(key: string, value: string): Result<EnvInstruction, Array<ValidationError>> {
+export function env(
+  key: string,
+  value: string,
+  options?: ValueOptions,
+): Result<EnvInstruction, Array<ValidationError>> {
   return Result.combineWithAllErrors([
-    validateNonEmptyString(key, "key"),
-    validateString(value, "value"), // Value can be empty string (valid in Dockerfile)
+    validateKey(key, "key"),
+    validateQuotedValue(value, options, "value"),
   ])
     .mapErr((errors) => errors.flat())
     .map(([validatedKey, validatedValue]) => ({
@@ -479,14 +496,17 @@ export function entrypoint(
 /**
  * Create an ARG instruction.
  *
- * @param name - Build argument name
- * @param options - Optional settings (defaultValue)
+ * A default value renders in double quotes and is used exactly as given, unless
+ * `expand: true` lets BuildKit expand `$VAR` in it.
+ *
+ * @param name - Build argument name; no whitespace, `=`, quotes, `\\`, or `$`
+ * @param options - Optional settings (defaultValue, expand)
  * @returns Result with ArgInstruction on success, ValidationError[] on failure
  *
  * @example
  * ```typescript
  * arg("NODE_VERSION", { defaultValue: "18" }).match(
- *   (instruction) => console.log(instruction),
+ *   (instruction) => console.log(instruction), // renders as `ARG NODE_VERSION="18"`
  *   (errors) => console.error(errors),
  * );
  * ```
@@ -496,8 +516,10 @@ export function arg(
   options?: ArgOptions,
 ): Result<ArgInstruction, Array<ValidationError>> {
   return Result.combineWithAllErrors([
-    validateNonEmptyString(name, "name"),
-    validateOptional(options?.defaultValue, validateNonEmptyString, "defaultValue"),
+    validateKey(name, "name"),
+    options?.defaultValue === undefined
+      ? ok(null)
+      : validateQuotedValue(options.defaultValue, options, "defaultValue"),
   ])
     .mapErr((errors) => errors.flat())
     .map(([validatedName, defaultValue]) => ({
@@ -510,13 +532,17 @@ export function arg(
 /**
  * Create a LABEL instruction.
  *
- * @param key - Label key
- * @param value - Label value
+ * The value renders in double quotes and is stored exactly as given, unless
+ * `{ expand: true }` lets BuildKit expand `$VAR` in it.
+ *
+ * @param key - Label key; no whitespace, `=`, quotes, `\\`, or `$`
+ * @param value - Label value; may be empty, must not contain line breaks
+ * @param options - Optional settings (expand)
  * @returns Result with LabelInstruction on success, ValidationError[] on failure
  *
  * @example
  * ```typescript
- * label("version", "1.0.0").match(
+ * label("org.opencontainers.image.version", "${VERSION}", { expand: true }).match(
  *   (instruction) => console.log(instruction),
  *   (errors) => console.error(errors),
  * );
@@ -525,10 +551,11 @@ export function arg(
 export function label(
   key: string,
   value: string,
+  options?: ValueOptions,
 ): Result<LabelInstruction, Array<ValidationError>> {
   return Result.combineWithAllErrors([
-    validateNonEmptyString(key, "key"),
-    validateString(value, "value"), // Value can be empty string (valid in Dockerfile)
+    validateKey(key, "key"),
+    validateQuotedValue(value, options, "value"),
   ])
     .mapErr((errors) => errors.flat())
     .map(([validatedKey, validatedValue]) => ({
@@ -731,16 +758,11 @@ function validateCommentLine(
   value: unknown,
   field: string,
 ): Result<string, Array<ValidationError>> {
-  if (typeof value !== "string") {
-    return err([validationError(field, "must be a string", value)]);
-  }
-  if (LINE_BREAK.test(value)) {
-    return err([validationError(field, "must not contain line breaks", value)]);
-  }
-  if (/^\s*escape\s*=/i.test(value)) {
-    return err([validationError(field, "must not be an escape= parser directive", value)]);
-  }
-  return ok(value);
+  return validateLine(value, field).andThen((line) =>
+    /^\s*escape\s*=/i.test(line)
+      ? err([validationError(field, "must not be an escape= parser directive", value)])
+      : ok(line),
+  );
 }
 
 /**

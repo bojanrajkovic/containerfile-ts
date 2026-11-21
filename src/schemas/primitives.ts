@@ -200,6 +200,24 @@ const NonEmptyStringSchema = Type.String({ minLength: 1 });
 const CompiledNonEmptyStringValidator = TypeCompiler.Compile(NonEmptyStringSchema);
 
 /**
+ * Validate a string with no line breaks (allows empty strings and a trailing `\\`).
+ * For values rendered where a trailing backslash can't continue the line: quoted values,
+ * comment lines, and quoted heredoc bodies.
+ */
+export function validateLine(
+  value: unknown,
+  field: string = "value",
+): Result<string, Array<ValidationError>> {
+  if (typeof value !== "string") {
+    return err([validationError(field, "must be a string", value)]);
+  }
+  if (LINE_BREAK.test(value)) {
+    return err([validationError(field, "must not contain line breaks", value)]);
+  }
+  return ok(value);
+}
+
+/**
  * Validate that a value is a single-line string (allows empty strings).
  * Use for runtime type checking when empty strings are valid values.
  * Rejects line breaks and a trailing backslash, which would inject instructions.

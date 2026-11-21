@@ -206,12 +206,12 @@ Factory functions create instruction objects with validation. All return `Result
 | `copy`            | `(src: string \| ReadonlyArray<string>, dest: string, options?: CopyOptions): Result<CopyInstruction, ValidationError[]>`                                         | `from`, `chown`, `chmod` options                                                                                                     |
 | `add`             | `(src: string \| ReadonlyArray<string>, dest: string, options?: AddOptions): Result<AddInstruction, ValidationError[]>`                                           | `chown`, `chmod` options                                                                                                             |
 | `workdir`         | `(path: string): Result<WorkdirInstruction, ValidationError[]>`                                                                                                   |                                                                                                                                      |
-| `env`             | `(key: string, value: string): Result<EnvInstruction, ValidationError[]>`                                                                                         |                                                                                                                                      |
+| `env`             | `(key: string, value: string, options?: ValueOptions): Result<EnvInstruction, ValidationError[]>`                                                                 | Value quoted and literal; `expand: true` lets `$VAR` through                                                                         |
 | `expose`          | `(port: number \| PortRange, options?: ExposeOptions): Result<ExposeInstruction, ValidationError[]>`                                                              | Validates port range 0-65535                                                                                                         |
 | `cmd`             | `(command: string \| ReadonlyArray<string>): Result<CmdInstruction, ValidationError[]>`                                                                           | Shell or exec form                                                                                                                   |
 | `entrypoint`      | `(command: string \| ReadonlyArray<string>): Result<EntrypointInstruction, ValidationError[]>`                                                                    | Shell or exec form                                                                                                                   |
-| `arg`             | `(name: string, options?: ArgOptions): Result<ArgInstruction, ValidationError[]>`                                                                                 | `defaultValue` option                                                                                                                |
-| `label`           | `(key: string, value: string): Result<LabelInstruction, ValidationError[]>`                                                                                       |                                                                                                                                      |
+| `arg`             | `(name: string, options?: ArgOptions): Result<ArgInstruction, ValidationError[]>`                                                                                 | `defaultValue` quoted and literal; `expand` as for `env`                                                                             |
+| `label`           | `(key: string, value: string, options?: ValueOptions): Result<LabelInstruction, ValidationError[]>`                                                               | Value quoted and literal; `expand` as for `env`                                                                                      |
 | `user`            | `(user: string, group?: string): Result<UserInstruction, ValidationError[]>`                                                                                      | No whitespace or `:` in either                                                                                                       |
 | `volume`          | `(paths: string \| ReadonlyArray<string>): Result<VolumeInstruction, ValidationError[]>`                                                                          | Always renders JSON form                                                                                                             |
 | `shell`           | `(command: ReadonlyArray<string>): Result<ShellInstruction, ValidationError[]>`                                                                                   | Exec form only                                                                                                                       |
@@ -238,7 +238,7 @@ Rendering behavior:
 - RUN with array uses exec form `["cmd", "arg"]`
 - RUN with a heredoc renders `RUN [interpreter ]<<'DELIM'`, the lines, then `DELIM`
 - EXPOSE omits `/tcp` suffix (default protocol)
-- LABEL values are quoted
+- ENV, LABEL, and ARG values render in double quotes with `\` and `"` escaped. `$` is escaped too unless the value has `expand: true` (`QuotedValue`), so BuildKit stores the value exactly.
 - COMMENT renders one `# line` per entry, `#` for an empty entry
 - Options rendered in order: `--platform`, `--from`, `--chown`, `--chmod`
 
@@ -282,6 +282,7 @@ All factory functions validate inputs and return Results:
 - **Image names**: Must match Docker registry format
 - **Paths**: Must be non-empty strings
 - **Command arrays**: Must be non-empty with non-empty elements
+- **ENV, LABEL, and ARG keys**: Non-empty, with no whitespace, `=`, quotes, `\`, or `$`.
 - **Line breaks**: Values rendered as plain text reject `\r`, `\n`, and a trailing continuation: a single `\`, optionally followed by spaces or tabs, matching BuildKit's `lineContinuationRegex`. A doubled `\\` is a literal backslash, so they can't inject or join instructions. Shell-form commands allow `\` line continuations when the last line is a command, and reject heredoc redirects (`validateShellCommand`). Exec-form elements allow line breaks, since JSON form escapes them.
 
 Errors are collected, not short-circuited. A single call may return multiple ValidationErrors.

@@ -16,6 +16,7 @@ export {
   validateDockerPath,
   validatePortRange,
   validateString,
+  validateLine,
   validateNonEmptyString,
   validateStringArray,
   validateShellCommand,

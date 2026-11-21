@@ -91,7 +91,19 @@ export type WorkdirInstruction = {
 export type EnvInstruction = {
   readonly type: "ENV";
   readonly key: string;
-  readonly value: string;
+  readonly value: QuotedValue;
+};
+
+/**
+ * A value rendered in double quotes for ENV, LABEL, and ARG.
+ *
+ * `\\` and `"` are always escaped. With `expand: false`, `$` is escaped too, so BuildKit
+ * stores `text` exactly. With `expand: true`, `$` passes through and BuildKit expands
+ * `$VAR` and `${VAR}` from build args and earlier ENV values.
+ */
+export type QuotedValue = {
+  readonly text: string;
+  readonly expand: boolean;
 };
 
 /**
@@ -136,7 +148,7 @@ export type EntrypointInstruction = {
 export type ArgInstruction = {
   readonly type: "ARG";
   readonly name: string;
-  readonly defaultValue: string | null;
+  readonly defaultValue: QuotedValue | null;
 };
 
 /**
@@ -145,7 +157,7 @@ export type ArgInstruction = {
 export type LabelInstruction = {
   readonly type: "LABEL";
   readonly key: string;
-  readonly value: string;
+  readonly value: QuotedValue;
 };
 
 /**
@@ -306,7 +318,17 @@ export type ExposeOptions = {
 /**
  * Options for the arg() factory function
  */
-export type ArgOptions = {
+/**
+ * Options for env() and label(). `expand: true` lets BuildKit expand `$VAR` in the value.
+ */
+export type ValueOptions = {
+  readonly expand?: boolean;
+};
+
+/**
+ * Options for the arg() factory function. `expand` applies to `defaultValue`.
+ */
+export type ArgOptions = ValueOptions & {
   readonly defaultValue?: string;
 };
 

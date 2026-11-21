@@ -216,10 +216,13 @@ async function createChangeset(
 function getChangesetMarkdown(commit: CommitInfo, packageName: string): string {
   const {
     upgradeType,
-    commitMessage: { subject, body, footer },
+    commitMessage: { subject, notes },
   } = commit;
 
-  const message = [subject, body, footer].filter(Boolean).join("\n\n");
+  // The commit body is PR text for reviewers (trailers, session links, internals), so keep only
+  // the subject and the breaking-change notes users need to see.
+  const breaking = notes.map(({ title, text }) => `${title}: ${text}`);
+  const message = [subject, ...breaking].join("\n\n");
 
   return `---
 "${packageName}": ${upgradeType}

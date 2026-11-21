@@ -2,24 +2,6 @@
 
 This document tracks Dockerfile instructions not yet implemented in containerfile-ts that could be added in future phases.
 
-## VOLUME Instruction
-
-Creates a mount point and marks it as holding externally mounted volumes.
-
-```dockerfile
-VOLUME ["/data"]
-VOLUME /data /logs
-```
-
-**Proposed type:**
-
-```typescript
-export type VolumeInstruction = {
-  readonly type: "VOLUME";
-  readonly paths: ReadonlyArray<string>;
-};
-```
-
 ## SHELL Instruction
 
 Overrides the default shell used for the shell form of commands.
@@ -103,6 +85,5 @@ function portRange(start: number, end: number): ValidPortRange {
 
 ## Priority
 
-1. **High:** VOLUME - commonly used
-2. **Medium:** SHELL, HEALTHCHECK - useful for production images
-3. **Low:** STOPSIGNAL, ONBUILD - less common use cases
+1. **Medium:** SHELL, HEALTHCHECK - useful for production images
+2. **Low:** STOPSIGNAL, ONBUILD - less common use cases

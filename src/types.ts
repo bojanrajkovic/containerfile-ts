@@ -139,6 +139,16 @@ export type UserInstruction = {
 };
 
 /**
+ * VOLUME instruction - declares mount points
+ *
+ * The `paths` field is always a ReadonlyArray<string>; the factory normalizes a single path.
+ */
+export type VolumeInstruction = {
+  readonly type: "VOLUME";
+  readonly paths: ReadonlyArray<string>;
+};
+
+/**
  * Discriminated union of all Dockerfile instructions
  */
 export type Instruction =
@@ -153,7 +163,8 @@ export type Instruction =
   | EntrypointInstruction
   | ArgInstruction
   | LabelInstruction
-  | UserInstruction;
+  | UserInstruction
+  | VolumeInstruction;
 
 /**
  * A named stage in a multi-stage build

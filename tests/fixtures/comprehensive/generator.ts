@@ -6,6 +6,7 @@ import {
   arg,
   label,
   user,
+  volume,
   env,
   workdir,
   add,
@@ -26,6 +27,7 @@ import {
  * - COPY with --from, --chown, --chmod, and array sources
  * - RUN with exec form (array)
  * - USER with and without group
+ * - VOLUME with one path and several
  * - EXPOSE with port range and UDP protocol
  * - ENTRYPOINT instruction
  * - CMD instruction
@@ -72,6 +74,10 @@ const result = containerfile([
   // USER with user only, then user and group
   user("root"),
   user("node", "node"),
+
+  // VOLUME with a single path and with several
+  volume("/data"),
+  volume(["/var/log", "/var/cache"]),
 
   // EXPOSE with port range and UDP protocol
   expose({ start: 5000, end: 5010 }, { protocol: "udp" }),

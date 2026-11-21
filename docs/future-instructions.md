@@ -2,25 +2,6 @@
 
 This document tracks Dockerfile instructions not yet implemented in containerfile-ts that could be added in future phases.
 
-## USER Instruction
-
-Sets the user and optionally the group for subsequent instructions and the container runtime.
-
-```dockerfile
-USER <user>[:<group>]
-USER <UID>[:<GID>]
-```
-
-**Proposed type:**
-
-```typescript
-export type UserInstruction = {
-  readonly type: "USER";
-  readonly user: string;
-  readonly group: string | null;
-};
-```
-
 ## VOLUME Instruction
 
 Creates a mount point and marks it as holding externally mounted volumes.
@@ -122,6 +103,6 @@ function portRange(start: number, end: number): ValidPortRange {
 
 ## Priority
 
-1. **High:** USER, VOLUME - commonly used
+1. **High:** VOLUME - commonly used
 2. **Medium:** SHELL, HEALTHCHECK - useful for production images
 3. **Low:** STOPSIGNAL, ONBUILD - less common use cases

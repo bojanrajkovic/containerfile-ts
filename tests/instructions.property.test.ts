@@ -2,7 +2,7 @@
 
 import { describe, it, expect } from "vitest";
 import * as fc from "fast-check";
-import { from, workdir, env, expose, containerfile } from "../src/instructions.js";
+import { from, workdir, env, expose, user, containerfile } from "../src/instructions.js";
 import { render } from "../src/render.js";
 
 // Generator for valid Docker image names
@@ -89,6 +89,28 @@ describe("Factory function roundtrip properties", () => {
           expect(result.value.port).toBe(start);
           expect(result.value.endPort).toBe(end);
         }
+      }),
+    );
+  });
+});
+
+describe("user() properties", () => {
+  const userPart = fc.string({ minLength: 1, maxLength: 20 }).filter((s) => !/[\s:]/.test(s));
+
+  it("renders user and group so they split back apart on ':'", () => {
+    fc.assert(
+      fc.property(userPart, fc.option(userPart, { nil: undefined }), (u, g) => {
+        const instruction = user(u, g)._unsafeUnwrap();
+        const line = render({ instructions: [instruction] });
+        expect(line.slice("USER ".length).split(":")).toEqual(g === undefined ? [u] : [u, g]);
+      }),
+    );
+  });
+
+  it("rejects any user containing whitespace or ':'", () => {
+    fc.assert(
+      fc.property(userPart, fc.constantFrom(":", " ", "\t"), userPart, (a, sep, b) => {
+        expect(user(a + sep + b).isErr()).toBe(true);
       }),
     );
   });

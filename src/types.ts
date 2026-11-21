@@ -130,6 +130,15 @@ export type LabelInstruction = {
 };
 
 /**
+ * USER instruction - sets the user (and optionally group) for later instructions and the container
+ */
+export type UserInstruction = {
+  readonly type: "USER";
+  readonly user: string;
+  readonly group: string | null;
+};
+
+/**
  * Discriminated union of all Dockerfile instructions
  */
 export type Instruction =
@@ -143,7 +152,8 @@ export type Instruction =
   | CmdInstruction
   | EntrypointInstruction
   | ArgInstruction
-  | LabelInstruction;
+  | LabelInstruction
+  | UserInstruction;
 
 /**
  * A named stage in a multi-stage build

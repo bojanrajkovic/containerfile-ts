@@ -10,6 +10,8 @@ ADD --chown=node:node --chmod=755 https://example.com/config.tar.gz /app/config/
 COPY --chown=node:node --chmod=644 package.json package-lock.json tsconfig.json /app/
 RUN ["npm", "ci", "--production"]
 COPY --from=builder dist/ /app/dist/
+USER root
+USER node:node
 EXPOSE 5000-5010/udp
 EXPOSE 8080
 ENTRYPOINT ["node", "--experimental-specifier-resolution=node"]

@@ -76,6 +76,7 @@ src/
   types.ts        # All instruction types, Stage, option types
   instructions.ts # Factory functions for creating instructions
   stage.ts        # Factory function for creating multi-stage stages
+  group.ts        # Factory function for instruction groups
   render.ts       # Rendering functions for Dockerfile output
   errors.ts       # ValidationError type and helper functions
   schemas/        # TypeBox validation schemas
@@ -83,6 +84,7 @@ src/
     primitives.ts # Branded types, schemas, and validation functions
 tests/
   generation.test.ts              # Fixture-based generation tests
+  render.test.ts                  # Blank-line placement around groups
   instructions.test.ts            # Unit tests for instruction factories
   instructions.property.test.ts   # Property-based tests for factories
   fixtures/                       # Test fixtures with generator.ts and expected.Dockerfile
@@ -162,7 +164,14 @@ For multi-stage builds:
 ```typescript
 type Stage = {
   readonly name: string;
-  readonly instructions: ReadonlyArray<Instruction>;
+  readonly instructions: ReadonlyArray<Instruction | Group>;
+};
+
+// Instructions set off by blank lines; groups can't nest
+type Group = {
+  readonly type: "GROUP";
+  readonly comment: CommentInstruction | null;
+  readonly instructions: readonly [Instruction, ...Array<Instruction>];
 };
 ```
 
@@ -172,7 +181,7 @@ Unified discriminated union supporting both single-stage and multi-stage:
 
 ```typescript
 type Containerfile =
-  | { readonly instructions: ReadonlyArray<Instruction> } // Single-stage
+  | { readonly instructions: ReadonlyArray<Instruction | Group> } // Single-stage
   | { readonly stages: ReadonlyArray<Stage> }; // Multi-stage
 ```
 
@@ -202,6 +211,8 @@ Factory functions create instruction objects with validation. All return `Result
 | `containerfile`   | `(items: ReadonlyArray<Result<Instruction, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                    | Single-stage                                                                                                                         |
 | `containerfile`   | `(items: ReadonlyArray<Result<Stage, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                          | Multi-stage                                                                                                                          |
 | `stage`           | `(name: string, instructions: ReadonlyArray<Result<Instruction, ValidationError[]>>): Result<Stage, ValidationError[]>`       | Creates named stage                                                                                                                  |
+| `group`           | `(instructions: readonly [Result<Instruction, ValidationError[]>, ...]): Result<Group, ValidationError[]>`                    | Errors prefixed `instructions[i]`                                                                                                    |
+| `group`           | `(comment: Result<CommentInstruction, ValidationError[]>, instructions: readonly [...]): Result<Group, ValidationError[]>`    | Comment errors prefixed `comment`                                                                                                    |
 
 ### Render Functions
 
@@ -213,6 +224,7 @@ Rendering behavior:
 
 - Single-stage: Instructions joined with newlines (no trailing newline)
 - Multi-stage: Stages joined with double newlines (blank line separator)
+- Groups: each group, and each run of ungrouped instructions, is a block; blocks are joined with one blank line. A group's comment renders directly above its first instruction.
 - RUN with array uses exec form `["cmd", "arg"]`
 - EXPOSE omits `/tcp` suffix (default protocol)
 - LABEL values are quoted

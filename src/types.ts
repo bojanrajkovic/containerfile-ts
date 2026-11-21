@@ -213,18 +213,28 @@ export type Instruction =
   | CommentInstruction;
 
 /**
+ * Related instructions, rendered with a blank line on each side and an optional comment
+ * directly above them. Groups hold instructions only, so they can't nest.
+ */
+export type Group = {
+  readonly type: "GROUP";
+  readonly comment: CommentInstruction | null;
+  readonly instructions: readonly [Instruction, ...Array<Instruction>];
+};
+
+/**
  * A named stage in a multi-stage build
  */
 export type Stage = {
   readonly name: string;
-  readonly instructions: ReadonlyArray<Instruction>;
+  readonly instructions: ReadonlyArray<Instruction | Group>;
 };
 
 /**
  * A Containerfile definition - either single-stage (instructions) or multi-stage (stages)
  */
 export type Containerfile =
-  | { readonly instructions: ReadonlyArray<Instruction> }
+  | { readonly instructions: ReadonlyArray<Instruction | Group> }
   | { readonly stages: ReadonlyArray<Stage> };
 
 /**

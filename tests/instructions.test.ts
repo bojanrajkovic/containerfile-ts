@@ -22,6 +22,7 @@ import {
   containerfile,
 } from "../src/instructions.js";
 import { stage } from "../src/stage.js";
+import { group } from "../src/group.js";
 import { Result } from "neverthrow";
 import type { Stage } from "../src/types.js";
 import type { ValidationError } from "../src/errors.js";
@@ -780,5 +781,52 @@ describe("comment()", () => {
 
   it.each(["escape=`", " Escape = `", "escape=\\"])("rejects the escape directive %s", (line) => {
     expect(comment(line).isErr()).toBe(true);
+  });
+});
+
+describe("group()", () => {
+  it("returns Ok without a comment", () => {
+    const result = group([run("a"), run("b")]);
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.type).toBe("GROUP");
+      expect(result.value.comment).toBeNull();
+      expect(result.value.instructions).toHaveLength(2);
+    }
+  });
+
+  it("returns Ok with a comment", () => {
+    const result = group(comment("Install"), [run("npm ci")]);
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.comment).toEqual({ type: "COMMENT", lines: ["Install"] });
+    }
+  });
+
+  it("prefixes comment and instruction errors and collects both", () => {
+    const result = group(comment("bad\nline"), [run("ok"), workdir("")]);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error.map((e) => e.field)).toEqual([
+        "comment.lines[0]",
+        "instructions[1].path",
+      ]);
+    }
+  });
+
+  it("returns Err for an empty array from untyped callers", () => {
+    const result = group([] as never);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].field).toBe("instructions");
+    }
+  });
+
+  it("nests error paths inside a stage", () => {
+    const result = stage("build", [from("node"), group([run("ok"), copy("a", "")])]);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].field).toBe("instructions[1].instructions[1].dest");
+    }
   });
 });

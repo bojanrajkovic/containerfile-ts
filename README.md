@@ -116,22 +116,23 @@ console.log(render(dockerfile));
 
 ### Factory Functions
 
-| Function                    | Description                              |
-| --------------------------- | ---------------------------------------- |
-| `from(image, options?)`     | FROM instruction                         |
-| `run(command)`              | RUN instruction (string or exec form)    |
-| `copy(src, dest, options?)` | COPY instruction                         |
-| `add(src, dest, options?)`  | ADD instruction                          |
-| `workdir(path)`             | WORKDIR instruction                      |
-| `env(key, value)`           | ENV instruction                          |
-| `expose(port, options?)`    | EXPOSE instruction                       |
-| `cmd(command)`              | CMD instruction (exec form)              |
-| `entrypoint(command)`       | ENTRYPOINT instruction (exec form)       |
-| `arg(name, options?)`       | ARG instruction                          |
-| `label(key, value)`         | LABEL instruction                        |
-| `comment(line, ...more)`    | Full-line comment, one argument per line |
-| `stage(name, instructions)` | Named stage for multi-stage builds       |
-| `containerfile(def)`        | Create containerfile definition          |
+| Function                         | Description                              |
+| -------------------------------- | ---------------------------------------- |
+| `from(image, options?)`          | FROM instruction                         |
+| `run(command)`                   | RUN instruction (string or exec form)    |
+| `copy(src, dest, options?)`      | COPY instruction                         |
+| `add(src, dest, options?)`       | ADD instruction                          |
+| `workdir(path)`                  | WORKDIR instruction                      |
+| `env(key, value)`                | ENV instruction                          |
+| `expose(port, options?)`         | EXPOSE instruction                       |
+| `cmd(command)`                   | CMD instruction (exec form)              |
+| `entrypoint(command)`            | ENTRYPOINT instruction (exec form)       |
+| `arg(name, options?)`            | ARG instruction                          |
+| `label(key, value)`              | LABEL instruction                        |
+| `comment(line, ...more)`         | Full-line comment, one argument per line |
+| `group([comment,] instructions)` | Instructions set off by blank lines      |
+| `stage(name, instructions)`      | Named stage for multi-stage builds       |
+| `containerfile(def)`             | Create containerfile definition          |
 
 ### Rendering
 
@@ -154,6 +155,35 @@ comment("Install dependencies first", "", "so the layer caches.");
 ```
 
 A comment at the very top of the file in `key=value` form, such as `comment("syntax=docker/dockerfile:1")`, is read by BuildKit as a [parser directive](https://docs.docker.com/reference/dockerfile/#parser-directives). `comment()` rejects `escape=`, because the line-break checks assume the default `\` escape character. Dockerfiles have no trailing comments: a `#` after an instruction is part of its arguments.
+
+### Groups
+
+`group()` sets related instructions apart with a blank line on each side. Pass a `comment()` first to label the group:
+
+```typescript
+containerfile([
+  from("node:20-alpine"),
+  group(comment("Install dependencies"), [
+    workdir("/app"),
+    copy("package*.json", "."),
+    run("npm ci"),
+  ]),
+  cmd(["node", "dist/index.js"]),
+]);
+```
+
+```dockerfile
+FROM node:20-alpine
+
+# Install dependencies
+WORKDIR /app
+COPY package*.json .
+RUN npm ci
+
+CMD ["node", "dist/index.js"]
+```
+
+Ungrouped instructions stay on consecutive lines. A group never adds a blank line at the start or end of the file or a stage, and adjacent groups share one blank line. Groups can't nest.
 
 ### Line breaks
 

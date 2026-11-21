@@ -1,7 +1,7 @@
 // pattern: Functional Core
 
 import { Result, err } from "neverthrow";
-import type { Instruction, Stage } from "./types.js";
+import type { Group, Instruction, Stage } from "./types.js";
 import { ValidationError, prefixErrors, validationError, isReadonlyArray } from "./errors.js";
 import { validateNonEmptyString } from "./schemas/index.js";
 
@@ -10,8 +10,8 @@ import { validateNonEmptyString } from "./schemas/index.js";
  * Returns all instructions on success, all collected errors on failure.
  */
 function validateInstructionResults(
-  instructions: ReadonlyArray<Result<Instruction, Array<ValidationError>>>,
-): Result<Array<Instruction>, Array<ValidationError>> {
+  instructions: ReadonlyArray<Result<Instruction | Group, Array<ValidationError>>>,
+): Result<Array<Instruction | Group>, Array<ValidationError>> {
   // Defensive: handle type bypass from JS or casting
   if (!isReadonlyArray(instructions)) {
     return err([
@@ -60,7 +60,7 @@ function validateInstructionResults(
  */
 export function stage(
   name: string,
-  instructions: ReadonlyArray<Result<Instruction, Array<ValidationError>>>,
+  instructions: ReadonlyArray<Result<Instruction | Group, Array<ValidationError>>>,
 ): Result<Stage, Array<ValidationError>> {
   return Result.combineWithAllErrors([
     validateNonEmptyString(name, "name"),

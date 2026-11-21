@@ -49,6 +49,7 @@ import {
   validateShellCommand,
   validatePort,
   validatePortRange,
+  type DockerPath,
 } from "./schemas/index.js";
 import {
   ValidationError,
@@ -59,14 +60,14 @@ import {
 } from "./errors.js";
 
 /**
- * Validate an array of Docker paths (for COPY/ADD src).
+ * Validate one Docker path or an array of them (COPY/ADD src, VOLUME paths).
  * Array must have at least one element.
  * Collects all element-level errors.
  */
 function validateDockerPathArray(
   src: string | ReadonlyArray<string>,
   field: string,
-): Result<ReadonlyArray<string>, Array<ValidationError>> {
+): Result<ReadonlyArray<DockerPath>, Array<ValidationError>> {
   // String case: validate and wrap in array
   if (typeof src === "string") {
     return validateDockerPath(src, `${field}[0]`).map((path) => [path]);
@@ -78,7 +79,7 @@ function validateDockerPathArray(
   }
 
   if (src.length === 0) {
-    return err([validationError(field, "must have at least one source", src)]);
+    return err([validationError(field, "must have at least one path", src)]);
   }
 
   return Result.combineWithAllErrors(
@@ -452,10 +453,9 @@ export function expose(
 ): Result<ExposeInstruction, Array<ValidationError>> {
   // Single port
   if (typeof port === "number") {
-    return validatePort(port, "port").map(() => ({
+    return validatePort(port, "port").map((validatedPort) => ({
       type: "EXPOSE" as const,
-      port,
-      endPort: null,
+      ports: validatedPort,
       protocol: options?.protocol ?? null,
     }));
   }
@@ -468,8 +468,7 @@ export function expose(
   // Port range - validatePortRange handles structure validation
   return validatePortRange(port, "port").map((range) => ({
     type: "EXPOSE" as const,
-    port: range.start,
-    endPort: range.end,
+    ports: range,
     protocol: options?.protocol ?? null,
   }));
 }
@@ -680,12 +679,7 @@ export function user(
 export function volume(
   paths: string | ReadonlyArray<string>,
 ): Result<VolumeInstruction, Array<ValidationError>> {
-  const validated =
-    typeof paths === "string"
-      ? validateDockerPath(paths, "paths[0]").map((path) => [path])
-      : validateStringArray(paths, "paths");
-
-  return validated.map((validatedPaths) => ({
+  return validateDockerPathArray(paths, "paths").map((validatedPaths) => ({
     type: "VOLUME" as const,
     paths: validatedPaths,
   }));

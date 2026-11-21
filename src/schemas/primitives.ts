@@ -163,7 +163,7 @@ export function validateDockerPath(
 export type PortRange = {
   readonly start: Port;
   readonly end: Port;
-};
+} & { readonly __brand: "PortRange" };
 
 /**
  * Validate a port range object.
@@ -189,7 +189,7 @@ export function validatePortRange(
           ),
         ]);
       }
-      return ok({ start: startPort, end: endPort });
+      return ok({ start: startPort, end: endPort } as PortRange);
     });
 }
 

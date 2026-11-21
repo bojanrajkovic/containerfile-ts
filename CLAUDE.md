@@ -146,21 +146,16 @@ All instruction types use:
 
 ### Branded Types
 
-TypeBox-validated branded types for compile-time and runtime type safety:
+Instruction fields that hold a validated image, port, or path use branded types, so a value of that type has passed validation:
 
 ```typescript
 type Port = number & { readonly __brand: "Port" }; // Valid port 0-65535
 type ImageName = string & { readonly __brand: "ImageName" }; // Docker image name
-type DockerPath = string & { readonly __brand: "DockerPath" }; // Non-empty path
-type PortRange = { readonly start: Port; readonly end: Port }; // Port range
+type DockerPath = string & { readonly __brand: "DockerPath" }; // Non-empty, single-line path
+type PortRange = { readonly start: Port; readonly end: Port } & { readonly __brand: "PortRange" }; // start <= end
 ```
 
-Validation functions return `Result<T, ValidationError[]>`:
-
-- `validatePort(value, field?)` - Validates port numbers
-- `validateImageName(value, field?)` - Validates Docker image names
-- `validateDockerPath(value, field?)` - Validates non-empty paths
-- `validatePortRange(value, field?)` - Validates port ranges (start <= end)
+`FromInstruction.image` is an `ImageName`, `ExposeInstruction.ports` is a `Port` or a `PortRange`, and COPY/ADD `src` and `dest`, `WORKDIR` `path`, and `VOLUME` `paths` are `DockerPath`s. Factories are the only public way to produce them. The validators that create them (`validatePort`, `validateImageName`, `validateDockerPath`, `validatePortRange`) live in `src/schemas/primitives.ts` and aren't exported from the package.
 
 ### NonEmptyArray
 
@@ -208,7 +203,7 @@ Factory functions create instruction objects with validation. All return `Result
 | `add`             | `(src: string \| ReadonlyArray<string>, dest: string, options?: AddOptions): Result<AddInstruction, ValidationError[]>`                                           | `chown`, `chmod` options                                                                                                             |
 | `workdir`         | `(path: string): Result<WorkdirInstruction, ValidationError[]>`                                                                                                   |                                                                                                                                      |
 | `env`             | `(key: string, value: string, options?: ValueOptions): Result<EnvInstruction, ValidationError[]>`                                                                 | Value quoted and literal; `expand: true` lets `$VAR` through                                                                         |
-| `expose`          | `(port: number \| PortRange, options?: ExposeOptions): Result<ExposeInstruction, ValidationError[]>`                                                              | Validates port range 0-65535                                                                                                         |
+| `expose`          | `(port: number \| { start: number; end: number }, options?: ExposeOptions): Result<ExposeInstruction, ValidationError[]>`                                         | Validates port range 0-65535                                                                                                         |
 | `cmd`             | `(command: string \| ReadonlyArray<string>): Result<CmdInstruction, ValidationError[]>`                                                                           | Shell or exec form                                                                                                                   |
 | `entrypoint`      | `(command: string \| ReadonlyArray<string>): Result<EntrypointInstruction, ValidationError[]>`                                                                    | Shell or exec form                                                                                                                   |
 | `arg`             | `(name: string, options?: ArgOptions): Result<ArgInstruction, ValidationError[]>`                                                                                 | `defaultValue` quoted and literal; `expand` as for `env`                                                                             |

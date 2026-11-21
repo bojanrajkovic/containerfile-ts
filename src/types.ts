@@ -24,7 +24,7 @@ export type RunInstruction = {
  * Multi-line script for RUN, rendered as a BuildKit heredoc:
  *
  * ```
- * RUN [interpreter ]<<delimiter
+ * RUN [interpreter ]<<'delimiter'
  * line...
  * delimiter
  * ```

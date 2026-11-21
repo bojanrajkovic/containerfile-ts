@@ -163,7 +163,7 @@ function validateHeredocLine(
   if (typeof value !== "string") {
     return err([validationError(field, "must be a string", value)]);
   }
-  // Heredoc bodies are literal, so a trailing `\` is fine; a line break is not.
+  // The delimiter is quoted, so the body is literal: a trailing `\` is fine; a line break is not.
   if (/[\r\n]/.test(value)) {
     return err([validationError(field, "must not contain line breaks", value)]);
   }
@@ -181,8 +181,9 @@ function heredocDelimiter(lines: NonEmptyArray<string>): string {
 /**
  * Create a heredoc script for `run()`. Each argument in `lines` is one script line.
  *
- * Renders as `RUN [interpreter ]<<EOF_xxxxxxxx`, the lines, then the delimiter. The delimiter
- * is derived from the script, so it never matches a script line. Heredocs need BuildKit's
+ * Renders as `RUN [interpreter ]<<'EOF_xxxxxxxx'`, the lines, then the delimiter. The delimiter
+ * is derived from the script, so it never matches a script line, and quoted, so the script
+ * reaches the interpreter unchanged: no `$VAR` expansion or `\` handling. Heredocs need BuildKit's
  * Dockerfile frontend 1.4 or later.
  *
  * @param lines - Script lines; may be empty but must not contain line breaks

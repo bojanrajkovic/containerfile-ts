@@ -209,18 +209,18 @@ run(heredoc(["import sys", "print(sys.version)"], { interpreter: "python3" }));
 ```
 
 ```dockerfile
-RUN <<EOF_8e34ced5
+RUN <<'EOF_8e34ced5'
 set -e
 npm ci
 npm run build
 EOF_8e34ced5
-RUN python3 <<EOF_d2c21e47
+RUN python3 <<'EOF_d2c21e47'
 import sys
 print(sys.version)
 EOF_d2c21e47
 ```
 
-The delimiter comes from a hash of the script. The same script always gets the same delimiter, so the rendered line and BuildKit's layer cache stay stable, and no script line can end the heredoc early. Heredocs need BuildKit's Dockerfile frontend 1.4 or later.
+The script runs exactly as written. The delimiter is quoted, so the shell doesn't expand `$VAR` or process backslashes; read build args from the environment at run time. The delimiter comes from a hash of the script. The same script always gets the same delimiter, so the rendered line and BuildKit's layer cache stay stable, and no script line can end the heredoc early. Heredocs need BuildKit's Dockerfile frontend 1.4 or later.
 
 ### Line breaks
 

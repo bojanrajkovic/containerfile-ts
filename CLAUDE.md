@@ -231,7 +231,7 @@ Rendering behavior:
 - Multi-stage: Stages joined with double newlines (blank line separator)
 - Groups: each group, and each run of ungrouped instructions, is a block; blocks are joined with one blank line. A group's comment renders directly above its first instruction.
 - RUN with array uses exec form `["cmd", "arg"]`
-- RUN with a heredoc renders `RUN [interpreter ]<<DELIM`, the lines, then `DELIM`
+- RUN with a heredoc renders `RUN [interpreter ]<<'DELIM'`, the lines, then `DELIM`
 - EXPOSE omits `/tcp` suffix (default protocol)
 - LABEL values are quoted
 - COMMENT renders one `# line` per entry, `#` for an empty entry

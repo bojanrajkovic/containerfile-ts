@@ -50,7 +50,8 @@ function renderRun(instruction: RunInstruction): string {
     return `RUN ${formatArray(command)}`;
   }
   const interpreter = command.interpreter === null ? "" : `${command.interpreter} `;
-  return [`RUN ${interpreter}<<${command.delimiter}`, ...command.lines, command.delimiter].join(
+  // Quoted, so the shell passes the script through without expansion or `\` handling.
+  return [`RUN ${interpreter}<<'${command.delimiter}'`, ...command.lines, command.delimiter].join(
     "\n",
   );
 }

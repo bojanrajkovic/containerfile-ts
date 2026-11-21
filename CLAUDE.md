@@ -85,6 +85,10 @@ src/
     primitives.ts # Branded types, schemas, and validation functions
 tests/
   generation.test.ts              # Fixture-based generation tests
+  buildkit.test.ts                # Rendered output checked with BuildKit's parser
+  buildkit/                       # Go program that runs BuildKit's parser (pinned version)
+  support/buildkit.ts             # parseWithBuildKit() helper and Go detection
+  support/buildkit-setup.ts       # Builds the parser once before tests (globalSetup)
   render.test.ts                  # Blank-line placement around groups
   instructions.test.ts            # Unit tests for instruction factories
   instructions.property.test.ts   # Property-based tests for factories
@@ -317,6 +321,17 @@ To add a new test fixture:
 - Valid values return `Ok` with branded types
 - Invalid values return `Err` with ValidationErrors
 - Edge cases (empty strings, boundary values, special characters)
+
+### BuildKit Parser Tests
+
+`tests/buildkit.test.ts` renders output and parses it with BuildKit's own parser, so tests check what BuildKit actually reads instead of a hand-written reading of its rules.
+
+- `tests/buildkit/` is a small Go module pinned to a BuildKit release. Its `main.go` reads a Dockerfile on stdin and prints each instruction as JSON: parser args, flags, heredocs, and the typed command after variable expansion.
+- `tests/support/buildkit-setup.ts` (vitest `globalSetup`) builds that program once before the tests run. `tests/support/buildkit.ts` exposes `parseWithBuildKit()` and `describeWithBuildKit`.
+- Go comes from `.mise.toml`. Without Go the suite skips locally; in CI a missing Go fails the run.
+- Every fixture must parse with no warnings and the instructions the model holds. Property tests feed hostile input to factories and check that anything accepted parses as one instruction with the intended value.
+
+To bump BuildKit, run `go get github.com/moby/buildkit@<version> && go mod tidy` in `tests/buildkit`.
 
 ### Property-Based Testing
 

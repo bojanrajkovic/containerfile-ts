@@ -55,7 +55,7 @@
     "@changesets/cli": "3.0.3",
     "@commitlint/cli": "21.2.4",
     "@commitlint/config-conventional": "21.2.4",
-    "@types/node": "^20.19.43",
+    "@types/node": "20.19.43",
     "conventional-commits-parser": "7.1.4",
     "fast-check": "4.10.2",
     "husky": "9.1.7",

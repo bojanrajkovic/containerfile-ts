@@ -32,6 +32,7 @@ import type {
   QuotedValue,
   Heredoc,
   HeredocOptions,
+  Chain,
 } from "./types.js";
 // Must load before go-duration, which throws at import if the global Temporal is missing.
 import "temporal-polyfill/global";
@@ -137,7 +138,11 @@ export function from(
  * ```
  */
 export function run(
-  command: string | ReadonlyArray<string> | Result<Heredoc, Array<ValidationError>>,
+  command:
+    | string
+    | ReadonlyArray<string>
+    | Result<Heredoc, Array<ValidationError>>
+    | Result<Chain, Array<ValidationError>>,
 ): Result<RunInstruction, Array<ValidationError>> {
   if (typeof command === "string") {
     return validateShellCommand(command, "command").map(() => ({
@@ -158,15 +163,59 @@ export function run(
     return err([
       validationError(
         "command",
-        "must be a string, an array of strings, or a heredoc() Result",
+        "must be a string, an array of strings, or a heredoc() or chain() Result",
         command,
       ),
     ]);
   }
 
-  return (command as Result<Heredoc, Array<ValidationError>>)
+  return (command as Result<Heredoc | Chain, Array<ValidationError>>)
     .mapErr((errors) => prefixErrors("command", errors))
-    .map((validatedHeredoc) => ({ type: "RUN" as const, command: validatedHeredoc }));
+    .map((validated) => ({ type: "RUN" as const, command: validated }));
+}
+
+/**
+ * Validate one chain step: a single line of shell that the chain can join safely.
+ * `#` at the start of a word would make the shell treat this and every later step as a
+ * comment, so they would silently never run.
+ */
+function validateChainStep(value: unknown, field: string): Result<string, Array<ValidationError>> {
+  return validateShellCommand(value, field).andThen((step) => {
+    if (step.includes("\n")) {
+      return err([validationError(field, "must be a single line", value)]);
+    }
+    if (/(^|\s)#/.test(step)) {
+      return err([validationError(field, "must not contain a # comment", value)]);
+    }
+    return ok(step);
+  });
+}
+
+/**
+ * Create a chain of shell commands for `run()` that stops at the first failing step.
+ *
+ * Renders as `RUN step1 \` with each later step on its own line as `    && stepN`. Works on
+ * every builder, unlike `heredoc()`. Each step is one line of shell with no `#` comment.
+ *
+ * @param steps - Shell commands, run in order
+ * @returns Result with Chain on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * run(chain(["apt-get update", "apt-get install -y curl", "rm -rf /var/lib/apt/lists/*"]));
+ * // RUN apt-get update \
+ * //     && apt-get install -y curl \
+ * //     && rm -rf /var/lib/apt/lists/*
+ * ```
+ */
+export function chain(steps: NonEmptyArray<string>): Result<Chain, Array<ValidationError>> {
+  // Defensive: the tuple type stops TypeScript callers, but not JS or casting
+  if (!isReadonlyArray(steps) || steps.length === 0) {
+    return err([validationError("steps", "must be a non-empty array of strings", steps)]);
+  }
+  return combineNonEmpty(steps, (step, i) => validateChainStep(step, `steps[${i}]`)).map(
+    (validated) => ({ steps: validated }),
+  );
 }
 
 /**

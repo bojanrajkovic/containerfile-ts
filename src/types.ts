@@ -17,7 +17,20 @@ export type FromInstruction = {
  */
 export type RunInstruction = {
   readonly type: "RUN";
-  readonly command: string | ReadonlyArray<string> | Heredoc;
+  readonly command: string | ReadonlyArray<string> | Heredoc | Chain;
+};
+
+/**
+ * Shell commands for RUN that stop at the first failure, rendered as an `&&` chain with
+ * one step per line:
+ *
+ * ```
+ * RUN step1 \
+ *     && step2
+ * ```
+ */
+export type Chain = {
+  readonly steps: NonEmptyArray<string>;
 };
 
 /**

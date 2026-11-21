@@ -199,6 +199,22 @@ CMD ["node", "dist/index.js"]
 
 Ungrouped instructions stay on consecutive lines. A group never adds a blank line at the start or end of the file or a stage, and adjacent groups share one blank line. Groups can't nest.
 
+### Chains
+
+`chain()` runs shell commands in order and stops at the first failure. It renders as the usual `&&` chain, one step per line:
+
+```typescript
+run(chain(["apt-get update", "apt-get install -y curl", "rm -rf /var/lib/apt/lists/*"]));
+```
+
+```dockerfile
+RUN apt-get update \
+    && apt-get install -y curl \
+    && rm -rf /var/lib/apt/lists/*
+```
+
+Each step is one line of shell. A step can't contain a `#` comment: the chain joins into one shell line, so the comment would swallow every later step. Chains work on every builder; heredocs need BuildKit's Dockerfile frontend 1.4 or later.
+
 ### Heredocs
 
 `heredoc()` builds a multi-line `RUN` script. Each argument in the array is one line. An optional `interpreter` runs the script with something other than the shell:

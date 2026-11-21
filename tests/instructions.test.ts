@@ -13,6 +13,7 @@ import {
   healthcheckNone,
   arg,
   run,
+  heredoc,
   cmd,
   entrypoint,
   copy,
@@ -827,6 +828,44 @@ describe("group()", () => {
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
       expect(result.error[0].field).toBe("instructions[1].instructions[1].dest");
+    }
+  });
+});
+
+describe("heredoc()", () => {
+  it("returns Ok with lines, interpreter, and delimiter", () => {
+    const result = heredoc(["echo a", "", "echo b \\"], { interpreter: "bash" });
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.lines).toEqual(["echo a", "", "echo b \\"]);
+      expect(result.value.interpreter).toBe("bash");
+      expect(result.value.delimiter).toMatch(/^EOF_[0-9a-f]{8}$/);
+    }
+  });
+
+  it("gives the same script the same delimiter", () => {
+    const a = heredoc(["npm ci"])._unsafeUnwrap().delimiter;
+    const b = heredoc(["npm ci"])._unsafeUnwrap().delimiter;
+    expect(a).toBe(b);
+  });
+
+  it("collects line and interpreter errors", () => {
+    const result = heredoc(["ok", "bad\nline"], { interpreter: "" });
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error.map((e) => e.field)).toEqual(["lines[1]", "interpreter"]);
+    }
+  });
+
+  it("returns Err for an empty array from untyped callers", () => {
+    expect(heredoc([] as never).isErr()).toBe(true);
+  });
+
+  it("prefixes heredoc errors with command inside run()", () => {
+    const result = run(heredoc(["a\rb"]));
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].field).toBe("command.lines[0]");
     }
   });
 });

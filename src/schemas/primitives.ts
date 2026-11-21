@@ -235,6 +235,7 @@ const HEREDOC = /(?<!<)<<-?["']?[A-Za-z_]/;
  * continuation can't swallow the next instruction. That rules out an empty last line, a
  * comment, or a trailing `\`. Carriage returns and heredoc redirects (`<<EOF`) are
  * rejected: BuildKit would read the following Dockerfile lines as the heredoc body.
+ * Use `heredoc()` for multi-line scripts.
  */
 export function validateShellCommand(
   value: unknown,

@@ -54,7 +54,7 @@ adrs/               # Architecture Decision Records
 
 This project follows Functional Core, Imperative Shell:
 
-- **Functional Core:** All src/ files are pure - types, factory functions, rendering. Currently all production code is Functional Core.
+- **Functional Core:** All src/ files are pure - types, factory functions, rendering. Currently all production code is Functional Core. `heredoc()` hashes with `node:crypto`, which is deterministic, so it stays pure; it also makes the library Node-only, matching `engines.node`.
 - **Imperative Shell:** Tests perform I/O (file reading, dynamic imports)
 
 Mark all files with pattern comment: `// pattern: Functional Core` or `// pattern: Imperative Shell`
@@ -196,7 +196,8 @@ Factory functions create instruction objects with validation. All return `Result
 | Function          | Signature                                                                                                                                                         | Notes                                                                                                                                |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `from`            | `(image: string, options?: FromOptions): Result<FromInstruction, ValidationError[]>`                                                                              | `as`, `platform` options                                                                                                             |
-| `run`             | `(command: string \| ReadonlyArray<string>): Result<RunInstruction, ValidationError[]>`                                                                           | Shell or exec form                                                                                                                   |
+| `run`             | `(command: string \| ReadonlyArray<string> \| Result<Heredoc, ValidationError[]>): Result<RunInstruction, ValidationError[]>`                                     | Shell or exec form                                                                                                                   |
+| `heredoc`         | `(lines: NonEmptyArray<string>, options?: HeredocOptions): Result<Heredoc, ValidationError[]>`                                                                    | `interpreter` option; delimiter is `EOF_` + 8 hex chars of the script's SHA-256                                                      |
 | `copy`            | `(src: string \| ReadonlyArray<string>, dest: string, options?: CopyOptions): Result<CopyInstruction, ValidationError[]>`                                         | `from`, `chown`, `chmod` options                                                                                                     |
 | `add`             | `(src: string \| ReadonlyArray<string>, dest: string, options?: AddOptions): Result<AddInstruction, ValidationError[]>`                                           | `chown`, `chmod` options                                                                                                             |
 | `workdir`         | `(path: string): Result<WorkdirInstruction, ValidationError[]>`                                                                                                   |                                                                                                                                      |
@@ -230,6 +231,7 @@ Rendering behavior:
 - Multi-stage: Stages joined with double newlines (blank line separator)
 - Groups: each group, and each run of ungrouped instructions, is a block; blocks are joined with one blank line. A group's comment renders directly above its first instruction.
 - RUN with array uses exec form `["cmd", "arg"]`
+- RUN with a heredoc renders `RUN [interpreter ]<<DELIM`, the lines, then `DELIM`
 - EXPOSE omits `/tcp` suffix (default protocol)
 - LABEL values are quoted
 - COMMENT renders one `# line` per entry, `#` for an empty entry

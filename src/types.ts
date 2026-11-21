@@ -17,7 +17,24 @@ export type FromInstruction = {
  */
 export type RunInstruction = {
   readonly type: "RUN";
-  readonly command: string | ReadonlyArray<string>;
+  readonly command: string | ReadonlyArray<string> | Heredoc;
+};
+
+/**
+ * Multi-line script for RUN, rendered as a BuildKit heredoc:
+ *
+ * ```
+ * RUN [interpreter ]<<delimiter
+ * line...
+ * delimiter
+ * ```
+ *
+ * `heredoc()` derives `delimiter` from the script, so it never matches a script line.
+ */
+export type Heredoc = {
+  readonly lines: NonEmptyArray<string>;
+  readonly interpreter: string | null;
+  readonly delimiter: string;
 };
 
 /**
@@ -291,4 +308,11 @@ export type ExposeOptions = {
  */
 export type ArgOptions = {
   readonly defaultValue?: string;
+};
+
+/**
+ * Options for the heredoc() factory function
+ */
+export type HeredocOptions = {
+  readonly interpreter?: string;
 };

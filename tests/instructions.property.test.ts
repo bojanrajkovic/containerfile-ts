@@ -2,7 +2,16 @@
 
 import { describe, it, expect } from "vitest";
 import * as fc from "fast-check";
-import { from, workdir, env, expose, user, run, containerfile } from "../src/instructions.js";
+import {
+  from,
+  workdir,
+  env,
+  expose,
+  user,
+  run,
+  heredoc,
+  containerfile,
+} from "../src/instructions.js";
 import { render } from "../src/render.js";
 
 // Generator for valid Docker image names
@@ -175,6 +184,21 @@ describe("line safety properties", () => {
           expect(last.trimStart().startsWith("#")).toBe(false);
           expect(last.includes("\r")).toBe(false);
         });
+      }),
+    );
+  });
+});
+
+describe("heredoc() properties", () => {
+  const scriptLine = fc.string({ maxLength: 20 }).filter((s) => !/[\r\n]/.test(s));
+
+  it("the delimiter never matches a script line, so the heredoc can't end early", () => {
+    fc.assert(
+      fc.property(fc.array(scriptLine, { minLength: 1, maxLength: 8 }), (lines) => {
+        const [first, ...rest] = lines;
+        const script = heredoc([first ?? "", ...rest])._unsafeUnwrap();
+        const rendered = render({ instructions: [{ type: "RUN", command: script }] }).split("\n");
+        expect(rendered.indexOf(script.delimiter)).toBe(rendered.length - 1);
       }),
     );
   });

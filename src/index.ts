@@ -26,7 +26,7 @@ export type {
   CommentInstruction,
 } from "./types.js";
 
-export type { Group, Stage, Containerfile, NonEmptyArray } from "./types.js";
+export type { Group, Heredoc, Stage, Containerfile, NonEmptyArray } from "./types.js";
 
 export type {
   FromOptions,
@@ -35,11 +35,13 @@ export type {
   ExposeOptions,
   ArgOptions,
   HealthcheckOptions,
+  HeredocOptions,
 } from "./types.js";
 
 export {
   from,
   run,
+  heredoc,
   copy,
   add,
   workdir,

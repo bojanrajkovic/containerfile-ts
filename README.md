@@ -199,6 +199,29 @@ CMD ["node", "dist/index.js"]
 
 Ungrouped instructions stay on consecutive lines. A group never adds a blank line at the start or end of the file or a stage, and adjacent groups share one blank line. Groups can't nest.
 
+### Heredocs
+
+`heredoc()` builds a multi-line `RUN` script. Each argument in the array is one line. An optional `interpreter` runs the script with something other than the shell:
+
+```typescript
+run(heredoc(["set -e", "npm ci", "npm run build"]));
+run(heredoc(["import sys", "print(sys.version)"], { interpreter: "python3" }));
+```
+
+```dockerfile
+RUN <<EOF_8e34ced5
+set -e
+npm ci
+npm run build
+EOF_8e34ced5
+RUN python3 <<EOF_d2c21e47
+import sys
+print(sys.version)
+EOF_d2c21e47
+```
+
+The delimiter comes from a hash of the script. The same script always gets the same delimiter, so the rendered line and BuildKit's layer cache stay stable, and no script line can end the heredoc early. Heredocs need BuildKit's Dockerfile frontend 1.4 or later.
+
 ### Line breaks
 
 Each value must fit on its rendered line. A line break would start a new instruction, and a trailing `\` (even with spaces after it) would pull the next instruction into this one, so factories reject both.

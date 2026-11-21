@@ -1,7 +1,7 @@
 // pattern: Imperative Shell
 
 import { describe, it, expect } from "vitest";
-import { comment, containerfile, from, group, run, stage, render } from "../src/index.js";
+import { comment, containerfile, from, group, heredoc, run, stage, render } from "../src/index.js";
 
 function renderOk(result: ReturnType<typeof containerfile>): string {
   return result.match(render, (errors) => {
@@ -39,5 +39,21 @@ describe("render() with groups", () => {
       ]),
     );
     expect(output).toBe("FROM node AS one\n\nRUN a\n\nFROM node\n\nRUN b");
+  });
+});
+
+describe("render() with heredocs", () => {
+  it("renders a RUN heredoc with a delimiter derived from the script", () => {
+    const output = renderOk(containerfile([run(heredoc(["set -e", "npm ci"]))]));
+    expect(output).toBe("RUN <<EOF_f473782a\nset -e\nnpm ci\nEOF_f473782a");
+  });
+
+  it("puts the interpreter before the heredoc", () => {
+    const output = renderOk(
+      containerfile([
+        run(heredoc(["import sys", "print(sys.version)"], { interpreter: "python3" })),
+      ]),
+    );
+    expect(output).toBe("RUN python3 <<EOF_d2c21e47\nimport sys\nprint(sys.version)\nEOF_d2c21e47");
   });
 });

@@ -151,6 +151,17 @@ export function run(
     }));
   }
 
+  // Defensive: JS callers can pass anything; only a Result has match().
+  if (typeof (command as { match?: unknown } | null)?.match !== "function") {
+    return err([
+      validationError(
+        "command",
+        "must be a string, an array of strings, or a heredoc() Result",
+        command,
+      ),
+    ]);
+  }
+
   return (command as Result<Heredoc, Array<ValidationError>>)
     .mapErr((errors) => prefixErrors("command", errors))
     .map((validatedHeredoc) => ({ type: "RUN" as const, command: validatedHeredoc }));

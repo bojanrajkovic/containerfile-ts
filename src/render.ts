@@ -42,10 +42,18 @@ function renderFrom(instruction: FromInstruction): string {
 }
 
 function renderRun(instruction: RunInstruction): string {
-  if (typeof instruction.command === "string") {
-    return `RUN ${instruction.command}`;
+  const { command } = instruction;
+  if (typeof command === "string") {
+    return `RUN ${command}`;
   }
-  return `RUN ${formatArray(instruction.command)}`;
+  if (!("delimiter" in command)) {
+    return `RUN ${formatArray(command)}`;
+  }
+  const interpreter = command.interpreter === null ? "" : `${command.interpreter} `;
+  // Quoted, so the shell passes the script through without expansion or `\` handling.
+  return [`RUN ${interpreter}<<'${command.delimiter}'`, ...command.lines, command.delimiter].join(
+    "\n",
+  );
 }
 
 function renderCopy(instruction: CopyInstruction): string {

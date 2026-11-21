@@ -57,7 +57,7 @@
     "@commitlint/config-conventional": "21.2.4",
     "@types/node": "^20.19.43",
     "conventional-commits-parser": "7.1.4",
-    "fast-check": "4.10.2",
+    "fast-check": "4.10.3",
     "husky": "9.1.7",
     "lint-staged": "17.6.1",
     "oxfmt": "0.79.0",

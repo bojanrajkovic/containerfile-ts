@@ -19,6 +19,7 @@ export type {
   EntrypointInstruction,
   ArgInstruction,
   LabelInstruction,
+  UserInstruction,
 } from "./types.js";
 
 export type { Stage, Containerfile } from "./types.js";
@@ -37,6 +38,7 @@ export {
   entrypoint,
   arg,
   label,
+  user,
   containerfile,
 } from "./instructions.js";
 

@@ -5,6 +5,7 @@ import {
   from,
   arg,
   label,
+  user,
   env,
   workdir,
   add,
@@ -24,6 +25,7 @@ import {
  * - ADD with chown and chmod
  * - COPY with --from, --chown, --chmod, and array sources
  * - RUN with exec form (array)
+ * - USER with and without group
  * - EXPOSE with port range and UDP protocol
  * - ENTRYPOINT instruction
  * - CMD instruction
@@ -66,6 +68,10 @@ const result = containerfile([
 
   // COPY from another stage
   copy("dist/", "/app/dist/", { from: "builder" }),
+
+  // USER with user only, then user and group
+  user("root"),
+  user("node", "node"),
 
   // EXPOSE with port range and UDP protocol
   expose({ start: 5000, end: 5010 }, { protocol: "udp" }),

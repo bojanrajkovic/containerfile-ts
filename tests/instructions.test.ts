@@ -6,6 +6,7 @@ import {
   workdir,
   env,
   label,
+  user,
   arg,
   run,
   cmd,
@@ -161,6 +162,52 @@ describe("label()", () => {
       expect(result.error[0].field).toBe("value");
       expect(result.error[0].message).toContain("string");
     }
+  });
+});
+
+describe("user()", () => {
+  it("returns Ok with null group when group is omitted", () => {
+    const result = user("app");
+    expect(result._unsafeUnwrap()).toEqual({ type: "USER", user: "app", group: null });
+  });
+
+  it("returns Ok with group", () => {
+    const result = user("1000", "1000");
+    expect(result._unsafeUnwrap()).toEqual({ type: "USER", user: "1000", group: "1000" });
+  });
+
+  it("accepts variable references", () => {
+    expect(user("${APP_USER}", "${APP_GROUP}").isOk()).toBe(true);
+  });
+
+  it("returns Err for empty user", () => {
+    const result = user("");
+    expect(result._unsafeUnwrapErr()[0].field).toBe("user");
+  });
+
+  it("returns Err for empty group", () => {
+    const result = user("app", "");
+    expect(result._unsafeUnwrapErr()[0].field).toBe("group");
+  });
+
+  it.each(["a:b", "a b", "a\tb"])("returns Err for %j in user", (bad) => {
+    expect(user(bad).isErr()).toBe(true);
+  });
+
+  it("returns Err for ':' in group", () => {
+    expect(user("app", "a:b").isErr()).toBe(true);
+  });
+
+  it("collects errors for both fields", () => {
+    const errors = user("", "").match(
+      () => [],
+      (e) => e,
+    );
+    expect(errors.map((e) => e.field)).toEqual(["user", "group"]);
+  });
+
+  it("returns Err for non-string user at runtime", () => {
+    expect(user(42 as unknown as string).isErr()).toBe(true);
   });
 });
 

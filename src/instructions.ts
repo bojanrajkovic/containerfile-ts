@@ -12,6 +12,7 @@ import type {
   EntrypointInstruction,
   ArgInstruction,
   LabelInstruction,
+  UserInstruction,
   Containerfile,
   Instruction,
   Stage,
@@ -429,6 +430,49 @@ export function label(
       type: "LABEL" as const,
       key: validatedKey,
       value: validatedValue,
+    }));
+}
+
+/**
+ * Validate one side of USER's `user[:group]`: a non-empty string with no whitespace or ":".
+ * Either would change how the rendered line splits into user and group.
+ */
+function validateUserPart(value: unknown, field: string): Result<string, Array<ValidationError>> {
+  return validateNonEmptyString(value, field).andThen((str) =>
+    /[\s:]/.test(str)
+      ? err([validationError(field, "must not contain whitespace or ':'", value)])
+      : ok(str),
+  );
+}
+
+/**
+ * Create a USER instruction.
+ *
+ * @param user - User name or UID (may be a `${VAR}` reference)
+ * @param group - Optional group name or GID
+ * @returns Result with UserInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * user("app", "app").match(
+ *   (instruction) => console.log(instruction), // renders as `USER app:app`
+ *   (errors) => console.error(errors),
+ * );
+ * ```
+ */
+export function user(
+  user: string,
+  group?: string,
+): Result<UserInstruction, Array<ValidationError>> {
+  return Result.combineWithAllErrors([
+    validateUserPart(user, "user"),
+    group === undefined ? ok(null) : validateUserPart(group, "group"),
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([validatedUser, validatedGroup]) => ({
+      type: "USER" as const,
+      user: validatedUser,
+      group: validatedGroup,
     }));
 }
 

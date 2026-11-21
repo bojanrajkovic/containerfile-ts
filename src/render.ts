@@ -15,6 +15,7 @@ import type {
   EntrypointInstruction,
   ArgInstruction,
   LabelInstruction,
+  UserInstruction,
 } from "./types.js";
 
 /**
@@ -117,6 +118,12 @@ function renderLabel(instruction: LabelInstruction): string {
   return `LABEL ${instruction.key}="${instruction.value}"`;
 }
 
+function renderUser(instruction: UserInstruction): string {
+  return instruction.group === null
+    ? `USER ${instruction.user}`
+    : `USER ${instruction.user}:${instruction.group}`;
+}
+
 /**
  * Renderer dispatch table - maps instruction type to render function
  */
@@ -134,6 +141,7 @@ const renderers: {
   ENTRYPOINT: renderEntrypoint,
   ARG: renderArg,
   LABEL: renderLabel,
+  USER: renderUser,
 };
 
 /**

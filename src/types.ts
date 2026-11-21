@@ -149,6 +149,16 @@ export type VolumeInstruction = {
 };
 
 /**
+ * SHELL instruction - overrides the default shell for shell-form commands
+ *
+ * Docker only accepts exec (JSON array) form, so `command` is always an array.
+ */
+export type ShellInstruction = {
+  readonly type: "SHELL";
+  readonly command: ReadonlyArray<string>;
+};
+
+/**
  * Discriminated union of all Dockerfile instructions
  */
 export type Instruction =
@@ -164,7 +174,8 @@ export type Instruction =
   | ArgInstruction
   | LabelInstruction
   | UserInstruction
-  | VolumeInstruction;
+  | VolumeInstruction
+  | ShellInstruction;
 
 /**
  * A named stage in a multi-stage build

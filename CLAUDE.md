@@ -123,7 +123,8 @@ type Instruction =
   | ArgInstruction
   | LabelInstruction
   | UserInstruction
-  | VolumeInstruction;
+  | VolumeInstruction
+  | ShellInstruction;
 ```
 
 All instruction types use:
@@ -190,6 +191,7 @@ Factory functions create instruction objects with validation. All return `Result
 | `label`         | `(key: string, value: string): Result<LabelInstruction, ValidationError[]>`                                               |                                  |
 | `user`          | `(user: string, group?: string): Result<UserInstruction, ValidationError[]>`                                              | No whitespace or `:` in either   |
 | `volume`        | `(paths: string \| ReadonlyArray<string>): Result<VolumeInstruction, ValidationError[]>`                                  | Always renders JSON form         |
+| `shell`         | `(command: ReadonlyArray<string>): Result<ShellInstruction, ValidationError[]>`                                           | Exec form only                   |
 | `containerfile` | `(items: ReadonlyArray<Result<Instruction, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                | Single-stage                     |
 | `containerfile` | `(items: ReadonlyArray<Result<Stage, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                      | Multi-stage                      |
 | `stage`         | `(name: string, instructions: ReadonlyArray<Result<Instruction, ValidationError[]>>): Result<Stage, ValidationError[]>`   | Creates named stage              |

@@ -21,6 +21,7 @@ export type {
   LabelInstruction,
   UserInstruction,
   VolumeInstruction,
+  ShellInstruction,
 } from "./types.js";
 
 export type { Stage, Containerfile } from "./types.js";
@@ -41,6 +42,7 @@ export {
   label,
   user,
   volume,
+  shell,
   containerfile,
 } from "./instructions.js";
 

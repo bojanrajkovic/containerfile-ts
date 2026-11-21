@@ -14,6 +14,7 @@ import type {
   LabelInstruction,
   UserInstruction,
   VolumeInstruction,
+  ShellInstruction,
   Containerfile,
   Instruction,
   Stage,
@@ -502,6 +503,29 @@ export function volume(
   return validated.map((validatedPaths) => ({
     type: "VOLUME" as const,
     paths: validatedPaths,
+  }));
+}
+
+/**
+ * Create a SHELL instruction.
+ *
+ * @param command - Shell executable followed by its arguments (exec form only)
+ * @returns Result with ShellInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * shell(["/bin/bash", "-c"]).match(
+ *   (instruction) => console.log(instruction), // renders as `SHELL ["/bin/bash", "-c"]`
+ *   (errors) => console.error(errors),
+ * );
+ * ```
+ */
+export function shell(
+  command: ReadonlyArray<string>,
+): Result<ShellInstruction, Array<ValidationError>> {
+  return validateStringArray(command, "command").map((validatedCommand) => ({
+    type: "SHELL" as const,
+    command: validatedCommand,
   }));
 }
 

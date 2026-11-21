@@ -46,8 +46,10 @@
     "release": "pnpm build && pnpm publish --access public --no-git-checks"
   },
   "dependencies": {
+    "@bojanrajkovic/go-duration": "^0.1.0",
     "@sinclair/typebox": "^0.34.47",
-    "neverthrow": "^8.2.0"
+    "neverthrow": "^8.2.0",
+    "temporal-polyfill": "^1.0.8"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.3",

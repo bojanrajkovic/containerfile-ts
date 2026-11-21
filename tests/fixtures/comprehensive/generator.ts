@@ -8,6 +8,8 @@ import {
   user,
   volume,
   shell,
+  healthcheck,
+  healthcheckNone,
   env,
   workdir,
   add,
@@ -30,6 +32,7 @@ import {
  * - USER with and without group
  * - VOLUME with one path and several
  * - SHELL instruction
+ * - HEALTHCHECK in exec form with all options, in shell form, and NONE
  * - EXPOSE with port range and UDP protocol
  * - ENTRYPOINT instruction
  * - CMD instruction
@@ -83,6 +86,17 @@ const result = containerfile([
   // VOLUME with a single path and with several
   volume("/data"),
   volume(["/var/log", "/var/cache"]),
+
+  // HEALTHCHECK with every option, then NONE (the last HEALTHCHECK wins at runtime)
+  healthcheck(["curl", "-f", "http://localhost:8080/"], {
+    interval: Temporal.Duration.from({ seconds: 30 }),
+    timeout: Temporal.Duration.from({ seconds: 3 }),
+    startPeriod: Temporal.Duration.from({ seconds: 5 }),
+    startInterval: Temporal.Duration.from({ seconds: 1 }),
+    retries: 3,
+  }),
+  healthcheck("curl -f http://localhost:8080/ || exit 1"),
+  healthcheckNone(),
 
   // EXPOSE with port range and UDP protocol
   expose({ start: 5000, end: 5010 }, { protocol: "udp" }),

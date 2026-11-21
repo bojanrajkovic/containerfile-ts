@@ -9,6 +9,8 @@ import {
   user,
   volume,
   shell,
+  healthcheck,
+  healthcheckNone,
   arg,
   run,
   cmd,
@@ -256,6 +258,79 @@ describe("shell()", () => {
 
   it("returns Err for a string at runtime", () => {
     expect(shell("/bin/bash" as unknown as ReadonlyArray<string>).isErr()).toBe(true);
+  });
+});
+
+describe("healthcheck()", () => {
+  it("returns Ok with null options when none are given", () => {
+    expect(healthcheck("curl -f http://localhost/")._unsafeUnwrap()).toEqual({
+      type: "HEALTHCHECK",
+      check: "CMD",
+      command: "curl -f http://localhost/",
+      interval: null,
+      timeout: null,
+      startPeriod: null,
+      startInterval: null,
+      retries: null,
+    });
+  });
+
+  it("returns Ok with all options", () => {
+    const result = healthcheck(["curl", "-f", "http://localhost/"], {
+      interval: Temporal.Duration.from({ minutes: 1, seconds: 30 }),
+      timeout: Temporal.Duration.from({ seconds: 3 }),
+      startPeriod: Temporal.Duration.from({ seconds: 5 }),
+      startInterval: Temporal.Duration.from({ milliseconds: 500 }),
+      retries: 3,
+    });
+    expect(result._unsafeUnwrap()).toMatchObject({
+      command: ["curl", "-f", "http://localhost/"],
+      interval: "1m30s",
+      timeout: "3s",
+      startPeriod: "5s",
+      startInterval: "500ms",
+      retries: 3,
+    });
+  });
+
+  it("returns Err for empty command", () => {
+    expect(healthcheck("")._unsafeUnwrapErr()[0].field).toBe("command");
+    expect(healthcheck([])._unsafeUnwrapErr()[0].field).toBe("command");
+  });
+
+  it.each([
+    ["a string", "30s"],
+    ["a negative duration", Temporal.Duration.from({ seconds: -5 })],
+    ["a duration with days", Temporal.Duration.from({ days: 1 })],
+  ])("returns Err for %s", (_name, bad) => {
+    const result = healthcheck("true", { interval: bad as Temporal.Duration });
+    expect(result._unsafeUnwrapErr()[0].field).toBe("interval");
+  });
+
+  it("accepts a zero duration", () => {
+    const result = healthcheck("true", { timeout: Temporal.Duration.from({ seconds: 0 }) });
+    expect(result._unsafeUnwrap()).toMatchObject({ timeout: "0s" });
+  });
+
+  it.each([0, -1, 1.5, Number.NaN])("returns Err for retries %j", (bad) => {
+    expect(healthcheck("true", { retries: bad })._unsafeUnwrapErr()[0].field).toBe("retries");
+  });
+
+  it("collects errors across fields", () => {
+    const fields = healthcheck("", {
+      interval: "x" as unknown as Temporal.Duration,
+      timeout: Temporal.Duration.from({ seconds: -1 }),
+      retries: 0,
+    })
+      ._unsafeUnwrapErr()
+      .map((e) => e.field);
+    expect(fields).toEqual(["command", "interval", "timeout", "retries"]);
+  });
+});
+
+describe("healthcheckNone()", () => {
+  it("returns Ok with no command or options", () => {
+    expect(healthcheckNone()._unsafeUnwrap()).toEqual({ type: "HEALTHCHECK", check: "NONE" });
   });
 });
 

@@ -15,6 +15,8 @@ import type {
   UserInstruction,
   VolumeInstruction,
   ShellInstruction,
+  HealthcheckInstruction,
+  HealthcheckOptions,
   Containerfile,
   Instruction,
   Stage,
@@ -24,7 +26,10 @@ import type {
   ExposeOptions,
   ArgOptions,
 } from "./types.js";
+// Must load before go-duration, which throws at import if the global Temporal is missing.
+import "temporal-polyfill/global";
 import { Result, ok, err } from "neverthrow";
+import { stringifyDuration } from "@bojanrajkovic/go-duration";
 import {
   validateImageName,
   validateNonEmptyString,
@@ -527,6 +532,95 @@ export function shell(
     type: "SHELL" as const,
     command: validatedCommand,
   }));
+}
+
+/**
+ * Validate a Temporal.Duration and convert it to Go syntax (e.g. "1m30s").
+ * stringifyDuration throws RangeError for calendar units or values outside int64 nanoseconds.
+ */
+function validateDuration(
+  value: unknown,
+  field: string = "duration",
+): Result<string, Array<ValidationError>> {
+  if (!(value instanceof Temporal.Duration)) {
+    return err([validationError(field, "must be a Temporal.Duration", value)]);
+  }
+  if (value.sign < 0) {
+    return err([validationError(field, "must not be negative", value)]);
+  }
+
+  try {
+    return ok(stringifyDuration(value));
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return err([validationError(field, error.message, value)]);
+    }
+    throw error;
+  }
+}
+
+function validateRetries(
+  value: unknown,
+  field: string = "retries",
+): Result<number, Array<ValidationError>> {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1
+    ? ok(value)
+    : err([validationError(field, "must be a positive integer", value)]);
+}
+
+/**
+ * Create a HEALTHCHECK instruction that runs a command.
+ *
+ * @param command - Shell form (string) or exec form (array of strings)
+ * @param options - Optional settings (interval, timeout, startPeriod, startInterval, retries)
+ * @returns Result with HealthcheckInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * healthcheck(["curl", "-f", "http://localhost/"], {
+ *   interval: Temporal.Duration.from({ seconds: 30 }),
+ *   retries: 3,
+ * }).match(
+ *   (instruction) => console.log(instruction),
+ *   (errors) => console.error(errors),
+ * );
+ * ```
+ */
+export function healthcheck(
+  command: string | ReadonlyArray<string>,
+  options?: HealthcheckOptions,
+): Result<HealthcheckInstruction, Array<ValidationError>> {
+  const validatedCommand =
+    typeof command === "string"
+      ? validateNonEmptyString(command, "command")
+      : validateStringArray(command, "command");
+
+  return Result.combineWithAllErrors([
+    validatedCommand,
+    validateOptional(options?.interval, validateDuration, "interval"),
+    validateOptional(options?.timeout, validateDuration, "timeout"),
+    validateOptional(options?.startPeriod, validateDuration, "startPeriod"),
+    validateOptional(options?.startInterval, validateDuration, "startInterval"),
+    validateOptional(options?.retries, validateRetries, "retries"),
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([cmdValue, interval, timeout, startPeriod, startInterval, retries]) => ({
+      type: "HEALTHCHECK" as const,
+      check: "CMD" as const,
+      command: cmdValue,
+      interval,
+      timeout,
+      startPeriod,
+      startInterval,
+      retries,
+    }));
+}
+
+/**
+ * Create a `HEALTHCHECK NONE` instruction, which disables any healthcheck inherited from the base image.
+ */
+export function healthcheckNone(): Result<HealthcheckInstruction, Array<ValidationError>> {
+  return ok({ type: "HEALTHCHECK" as const, check: "NONE" as const });
 }
 
 /**

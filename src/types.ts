@@ -1,5 +1,7 @@
 // pattern: Functional Core
 
+/// <reference lib="esnext.temporal" />
+
 /**
  * FROM instruction - specifies base image
  */
@@ -159,6 +161,26 @@ export type ShellInstruction = {
 };
 
 /**
+ * HEALTHCHECK instruction - tells the runtime how to test container health
+ *
+ * `check: "NONE"` disables any inherited healthcheck and takes no command or options.
+ * `check: "CMD"` runs `command` on a schedule; the timing fields are Go durations
+ * (e.g. "30s", "1m30s") and `null` means the runtime default.
+ */
+export type HealthcheckInstruction =
+  | { readonly type: "HEALTHCHECK"; readonly check: "NONE" }
+  | {
+      readonly type: "HEALTHCHECK";
+      readonly check: "CMD";
+      readonly command: string | ReadonlyArray<string>;
+      readonly interval: string | null;
+      readonly timeout: string | null;
+      readonly startPeriod: string | null;
+      readonly startInterval: string | null;
+      readonly retries: number | null;
+    };
+
+/**
  * Discriminated union of all Dockerfile instructions
  */
 export type Instruction =
@@ -175,7 +197,8 @@ export type Instruction =
   | LabelInstruction
   | UserInstruction
   | VolumeInstruction
-  | ShellInstruction;
+  | ShellInstruction
+  | HealthcheckInstruction;
 
 /**
  * A named stage in a multi-stage build
@@ -215,6 +238,18 @@ export type CopyOptions = {
 export type AddOptions = {
   readonly chown?: string;
   readonly chmod?: string;
+};
+
+/**
+ * Options for the healthcheck() factory function.
+ * Durations must be non-negative and use only hours and smaller units (Go has no day unit).
+ */
+export type HealthcheckOptions = {
+  readonly interval?: Temporal.Duration;
+  readonly timeout?: Temporal.Duration;
+  readonly startPeriod?: Temporal.Duration;
+  readonly startInterval?: Temporal.Duration;
+  readonly retries?: number;
 };
 
 /**

@@ -22,11 +22,19 @@ export type {
   UserInstruction,
   VolumeInstruction,
   ShellInstruction,
+  HealthcheckInstruction,
 } from "./types.js";
 
 export type { Stage, Containerfile } from "./types.js";
 
-export type { FromOptions, CopyOptions, AddOptions, ExposeOptions, ArgOptions } from "./types.js";
+export type {
+  FromOptions,
+  CopyOptions,
+  AddOptions,
+  ExposeOptions,
+  ArgOptions,
+  HealthcheckOptions,
+} from "./types.js";
 
 export {
   from,
@@ -43,6 +51,8 @@ export {
   user,
   volume,
   shell,
+  healthcheck,
+  healthcheckNone,
   containerfile,
 } from "./instructions.js";
 

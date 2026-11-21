@@ -116,27 +116,44 @@ console.log(render(dockerfile));
 
 ### Factory Functions
 
-| Function                    | Description                           |
-| --------------------------- | ------------------------------------- |
-| `from(image, options?)`     | FROM instruction                      |
-| `run(command)`              | RUN instruction (string or exec form) |
-| `copy(src, dest, options?)` | COPY instruction                      |
-| `add(src, dest, options?)`  | ADD instruction                       |
-| `workdir(path)`             | WORKDIR instruction                   |
-| `env(key, value)`           | ENV instruction                       |
-| `expose(port, options?)`    | EXPOSE instruction                    |
-| `cmd(command)`              | CMD instruction (exec form)           |
-| `entrypoint(command)`       | ENTRYPOINT instruction (exec form)    |
-| `arg(name, options?)`       | ARG instruction                       |
-| `label(key, value)`         | LABEL instruction                     |
-| `stage(name, instructions)` | Named stage for multi-stage builds    |
-| `containerfile(def)`        | Create containerfile definition       |
+| Function                    | Description                              |
+| --------------------------- | ---------------------------------------- |
+| `from(image, options?)`     | FROM instruction                         |
+| `run(command)`              | RUN instruction (string or exec form)    |
+| `copy(src, dest, options?)` | COPY instruction                         |
+| `add(src, dest, options?)`  | ADD instruction                          |
+| `workdir(path)`             | WORKDIR instruction                      |
+| `env(key, value)`           | ENV instruction                          |
+| `expose(port, options?)`    | EXPOSE instruction                       |
+| `cmd(command)`              | CMD instruction (exec form)              |
+| `entrypoint(command)`       | ENTRYPOINT instruction (exec form)       |
+| `arg(name, options?)`       | ARG instruction                          |
+| `label(key, value)`         | LABEL instruction                        |
+| `comment(line, ...more)`    | Full-line comment, one argument per line |
+| `stage(name, instructions)` | Named stage for multi-stage builds       |
+| `containerfile(def)`        | Create containerfile definition          |
 
 ### Rendering
 
 | Function                | Description                 |
 | ----------------------- | --------------------------- |
 | `render(containerfile)` | Render to Dockerfile string |
+
+### Comments
+
+`comment()` takes one argument per line and renders each as `# line`. An empty argument renders as a bare `#`:
+
+```typescript
+comment("Install dependencies first", "", "so the layer caches.");
+```
+
+```dockerfile
+# Install dependencies first
+#
+# so the layer caches.
+```
+
+A comment at the very top of the file in `key=value` form, such as `comment("syntax=docker/dockerfile:1")`, is read by BuildKit as a [parser directive](https://docs.docker.com/reference/dockerfile/#parser-directives). Dockerfiles have no trailing comments: a `#` after an instruction is part of its arguments.
 
 ### Line breaks
 

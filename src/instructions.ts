@@ -17,6 +17,7 @@ import type {
   ShellInstruction,
   HealthcheckInstruction,
   HealthcheckOptions,
+  CommentInstruction,
   Containerfile,
   Instruction,
   Stage,
@@ -622,6 +623,42 @@ export function healthcheck(
  */
 export function healthcheckNone(): Result<HealthcheckInstruction, Array<ValidationError>> {
   return ok({ type: "HEALTHCHECK" as const, check: "NONE" as const });
+}
+
+/**
+ * Create a full-line comment. Each argument is one line.
+ *
+ * Lines may be empty (rendered as a bare `#`), but must not contain line breaks or end
+ * with a backslash. A comment at the very top of a Dockerfile in `key=value` form, such
+ * as `syntax=docker/dockerfile:1`, is read by BuildKit as a parser directive.
+ *
+ * @param line - First comment line
+ * @param more - Further comment lines
+ * @returns Result with CommentInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * comment("Install dependencies", "", "Uses the lockfile only.").match(
+ *   (instruction) => console.log(instruction), // renders three lines: `# Install…`, `#`, `# Uses…`
+ *   (errors) => console.error(errors),
+ * );
+ * ```
+ */
+export function comment(
+  line: string,
+  ...more: ReadonlyArray<string>
+): Result<CommentInstruction, Array<ValidationError>> {
+  return Result.combineWithAllErrors([
+    validateString(line, "lines[0]"),
+    Result.combineWithAllErrors(
+      more.map((text, i) => validateString(text, `lines[${i + 1}]`)),
+    ).mapErr((errors) => errors.flat()),
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([first, rest]) => ({
+      type: "COMMENT" as const,
+      lines: [first, ...rest] as const,
+    }));
 }
 
 /**

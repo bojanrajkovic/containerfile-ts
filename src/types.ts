@@ -181,6 +181,17 @@ export type HealthcheckInstruction =
     };
 
 /**
+ * Full-line comment. Each entry in `lines` renders as `# line`; an empty entry renders as `#`.
+ *
+ * A comment at the very top of a Dockerfile in `key=value` form (for example
+ * `syntax=docker/dockerfile:1`) is read by BuildKit as a parser directive.
+ */
+export type CommentInstruction = {
+  readonly type: "COMMENT";
+  readonly lines: readonly [string, ...Array<string>];
+};
+
+/**
  * Discriminated union of all Dockerfile instructions
  */
 export type Instruction =
@@ -198,7 +209,8 @@ export type Instruction =
   | UserInstruction
   | VolumeInstruction
   | ShellInstruction
-  | HealthcheckInstruction;
+  | HealthcheckInstruction
+  | CommentInstruction;
 
 /**
  * A named stage in a multi-stage build

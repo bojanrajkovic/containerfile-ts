@@ -127,7 +127,8 @@ type Instruction =
   | UserInstruction
   | VolumeInstruction
   | ShellInstruction
-  | HealthcheckInstruction;
+  | HealthcheckInstruction
+  | CommentInstruction;
 ```
 
 All instruction types use:
@@ -197,6 +198,7 @@ Factory functions create instruction objects with validation. All return `Result
 | `shell`           | `(command: ReadonlyArray<string>): Result<ShellInstruction, ValidationError[]>`                                               | Exec form only                                                                                                                       |
 | `healthcheck`     | `(command: string \| ReadonlyArray<string>, options?: HealthcheckOptions): Result<HealthcheckInstruction, ValidationError[]>` | `interval`, `timeout`, `startPeriod`, `startInterval` (non-negative `Temporal.Duration`, hours or smaller), `retries` (integer >= 1) |
 | `healthcheckNone` | `(): Result<HealthcheckInstruction, ValidationError[]>`                                                                       | Renders `HEALTHCHECK NONE`                                                                                                           |
+| `comment`         | `(line: string, ...more: ReadonlyArray<string>): Result<CommentInstruction, ValidationError[]>`                               | One argument per line; renders `# line`, or `#` for an empty line                                                                    |
 | `containerfile`   | `(items: ReadonlyArray<Result<Instruction, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                    | Single-stage                                                                                                                         |
 | `containerfile`   | `(items: ReadonlyArray<Result<Stage, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                          | Multi-stage                                                                                                                          |
 | `stage`           | `(name: string, instructions: ReadonlyArray<Result<Instruction, ValidationError[]>>): Result<Stage, ValidationError[]>`       | Creates named stage                                                                                                                  |
@@ -214,6 +216,7 @@ Rendering behavior:
 - RUN with array uses exec form `["cmd", "arg"]`
 - EXPOSE omits `/tcp` suffix (default protocol)
 - LABEL values are quoted
+- COMMENT renders one `# line` per entry, `#` for an empty entry
 - Options rendered in order: `--platform`, `--from`, `--chown`, `--chmod`
 
 ### Error Handling

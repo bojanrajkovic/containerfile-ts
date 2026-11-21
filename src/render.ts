@@ -19,6 +19,7 @@ import type {
   VolumeInstruction,
   ShellInstruction,
   HealthcheckInstruction,
+  CommentInstruction,
 } from "./types.js";
 
 /**
@@ -164,6 +165,10 @@ function renderHealthcheck(instruction: HealthcheckInstruction): string {
   return `${line} CMD ${command}`;
 }
 
+function renderComment(instruction: CommentInstruction): string {
+  return instruction.lines.map((line) => (line === "" ? "#" : `# ${line}`)).join("\n");
+}
+
 /**
  * Renderer dispatch table - maps instruction type to render function
  */
@@ -185,6 +190,7 @@ const renderers: {
   VOLUME: renderVolume,
   SHELL: renderShell,
   HEALTHCHECK: renderHealthcheck,
+  COMMENT: renderComment,
 };
 
 /**

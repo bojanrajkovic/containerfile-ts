@@ -2,12 +2,14 @@
 
 /// <reference lib="esnext.temporal" />
 
+import type { DockerPath, ImageName, Port } from "./schemas/index.js";
+
 /**
  * FROM instruction - specifies base image
  */
 export type FromInstruction = {
   readonly type: "FROM";
-  readonly image: string;
+  readonly image: ImageName;
   readonly as: string | null;
   readonly platform: string | null;
 };
@@ -63,8 +65,8 @@ export type Heredoc = {
  */
 export type CopyInstruction = {
   readonly type: "COPY";
-  readonly src: ReadonlyArray<string>;
-  readonly dest: string;
+  readonly src: ReadonlyArray<DockerPath>;
+  readonly dest: DockerPath;
   readonly from: string | null;
   readonly chown: string | null;
   readonly chmod: string | null;
@@ -84,8 +86,8 @@ export type CopyInstruction = {
  */
 export type AddInstruction = {
   readonly type: "ADD";
-  readonly src: ReadonlyArray<string>;
-  readonly dest: string;
+  readonly src: ReadonlyArray<DockerPath>;
+  readonly dest: DockerPath;
   readonly chown: string | null;
   readonly chmod: string | null;
 };
@@ -95,7 +97,7 @@ export type AddInstruction = {
  */
 export type WorkdirInstruction = {
   readonly type: "WORKDIR";
-  readonly path: string;
+  readonly path: DockerPath;
 };
 
 /**
@@ -134,8 +136,8 @@ export type QuotedValue = {
  */
 export type ExposeInstruction = {
   readonly type: "EXPOSE";
-  readonly port: number;
-  readonly endPort: number | null;
+  readonly port: Port;
+  readonly endPort: Port | null;
   readonly protocol: "tcp" | "udp" | "sctp" | null;
 };
 
@@ -189,7 +191,7 @@ export type UserInstruction = {
  */
 export type VolumeInstruction = {
   readonly type: "VOLUME";
-  readonly paths: ReadonlyArray<string>;
+  readonly paths: ReadonlyArray<DockerPath>;
 };
 
 /**

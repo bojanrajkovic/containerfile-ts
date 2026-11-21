@@ -20,6 +20,7 @@ import type {
   CommentInstruction,
   Containerfile,
   Group,
+  NonEmptyArray,
   Instruction,
   Stage,
   FromOptions,
@@ -43,7 +44,13 @@ import {
   validatePort,
   validatePortRange,
 } from "./schemas/index.js";
-import { ValidationError, prefixErrors, validationError, isReadonlyArray } from "./errors.js";
+import {
+  ValidationError,
+  combineNonEmpty,
+  prefixErrors,
+  validationError,
+  isReadonlyArray,
+} from "./errors.js";
 
 /**
  * Validate an array of Docker paths (for COPY/ADD src).
@@ -672,29 +679,18 @@ export function comment(
   line: string,
   ...more: ReadonlyArray<string>
 ): Result<CommentInstruction, Array<ValidationError>> {
-  return Result.combineWithAllErrors([
-    validateCommentLine(line, "lines[0]"),
-    Result.combineWithAllErrors(
-      more.map((text, i) => validateCommentLine(text, `lines[${i + 1}]`)),
-    ).mapErr((errors) => errors.flat()),
-  ])
-    .mapErr((errors) => errors.flat())
-    .map(([first, rest]) => ({
-      type: "COMMENT" as const,
-      lines: [first, ...rest] as const,
-    }));
+  return combineNonEmpty([line, ...more], (text, i) =>
+    validateCommentLine(text, `lines[${i}]`),
+  ).map((lines) => ({ type: "COMMENT" as const, lines }));
 }
+
+type EntryResults = NonEmptyArray<Result<Instruction | Group, Array<ValidationError>>>;
+type StageResults = NonEmptyArray<Result<Stage, Array<ValidationError>>>;
 
 /**
  * Type guard to check if array contains instruction Results.
  */
-function isInstructionArray(
-  arr:
-    | ReadonlyArray<Result<Instruction | Group, Array<ValidationError>>>
-    | ReadonlyArray<Result<Stage, Array<ValidationError>>>,
-): arr is ReadonlyArray<Result<Instruction | Group, Array<ValidationError>>> {
-  if (arr.length === 0) return true;
-
+function isInstructionArray(arr: EntryResults | StageResults): arr is EntryResults {
   // Find any Ok result to determine if it's an instruction or stage
   for (const item of arr) {
     const isInstruction = item.match(
@@ -712,7 +708,8 @@ function isInstructionArray(
 /**
  * Create a Containerfile definition supporting single-stage and multi-stage builds.
  *
- * @param items - Array of instruction Results (single-stage) or stage Results (multi-stage)
+ * @param items - One or more instruction or group Results (single-stage), or one or more
+ *   stage Results (multi-stage)
  * @returns Result with Containerfile on success, all ValidationErrors on failure
  *
  * @example
@@ -730,20 +727,20 @@ function isInstructionArray(
  *   stage("builder", [from("node:18", { as: "builder" }), run("npm install")]),
  *   stage("runtime", [from("node:18-alpine"), copy("./dist", "/app", { from: "builder" })]),
  * ]);
+ *
+ * // A computed array must be narrowed to NonEmptyArray first
+ * const steps = commands.map((c) => run(c));
+ * if (steps.length > 0) {
+ *   containerfile([from("node:18"), ...steps]);
+ * }
  * ```
  */
+export function containerfile(items: EntryResults): Result<Containerfile, Array<ValidationError>>;
+export function containerfile(items: StageResults): Result<Containerfile, Array<ValidationError>>;
 export function containerfile(
-  items: ReadonlyArray<Result<Instruction | Group, Array<ValidationError>>>,
-): Result<Containerfile, Array<ValidationError>>;
-export function containerfile(
-  items: ReadonlyArray<Result<Stage, Array<ValidationError>>>,
-): Result<Containerfile, Array<ValidationError>>;
-export function containerfile(
-  items:
-    | ReadonlyArray<Result<Instruction | Group, Array<ValidationError>>>
-    | ReadonlyArray<Result<Stage, Array<ValidationError>>>,
+  items: EntryResults | StageResults,
 ): Result<Containerfile, Array<ValidationError>> {
-  // Defensive: handle type bypass from JS or casting
+  // Defensive: the tuple type stops TypeScript callers, but not JS or casting
   if (!isReadonlyArray(items)) {
     return err([
       validationError("items", "must be an array of instruction or stage Results", items),
@@ -752,47 +749,17 @@ export function containerfile(
 
   if (items.length === 0) {
     return err([
-      {
-        field: "items",
-        message: "containerfile must have at least one instruction or stage",
-        value: items,
-      },
+      validationError("items", "containerfile must have at least one instruction or stage", items),
     ]);
   }
 
-  const errors: Array<ValidationError> = [];
-
   if (isInstructionArray(items)) {
-    // Single-stage: array of instruction Results
-    const instructions: Array<Instruction | Group> = [];
-
-    items.forEach((item, i) => {
-      item.match(
-        (instruction) => instructions.push(instruction),
-        (errs) => errors.push(...prefixErrors(`instructions[${i}]`, errs)),
-      );
-    });
-
-    if (errors.length > 0) {
-      return err(errors);
-    }
-
-    return ok({ instructions });
-  } else {
-    // Multi-stage: array of stage Results
-    const stages: Array<Stage> = [];
-
-    items.forEach((item, i) => {
-      item.match(
-        (stage) => stages.push(stage),
-        (errs) => errors.push(...prefixErrors(`stages[${i}]`, errs)),
-      );
-    });
-
-    if (errors.length > 0) {
-      return err(errors);
-    }
-
-    return ok({ stages });
+    return combineNonEmpty(items, (item, i) =>
+      item.mapErr((errors) => prefixErrors(`instructions[${i}]`, errors)),
+    ).map((instructions) => ({ instructions }));
   }
+
+  return combineNonEmpty(items, (item, i) =>
+    item.mapErr((errors) => prefixErrors(`stages[${i}]`, errors)),
+  ).map((stages) => ({ stages }));
 }

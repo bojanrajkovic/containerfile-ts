@@ -49,19 +49,20 @@ import {
   render,
 } from "@bojanrajkovic/containerfile-ts";
 
-const dockerfile = containerfile({
-  instructions: [
-    from("node:20-alpine"),
-    workdir("/app"),
-    copy("package*.json", "."),
-    run("npm ci"),
-    copy(".", "."),
-    expose(3000),
-    cmd(["node", "dist/index.js"]),
-  ],
-});
+const dockerfile = containerfile([
+  from("node:20-alpine"),
+  workdir("/app"),
+  copy("package*.json", "."),
+  run("npm ci"),
+  copy(".", "."),
+  expose(3000),
+  cmd(["node", "dist/index.js"]),
+]);
 
-console.log(render(dockerfile));
+dockerfile.match(
+  (cf) => console.log(render(cf)),
+  (errors) => console.error("Invalid Dockerfile:", errors),
+);
 ```
 
 Output:
@@ -90,26 +91,27 @@ import {
   render,
 } from "@bojanrajkovic/containerfile-ts";
 
-const dockerfile = containerfile({
-  stages: [
-    stage("builder", [
-      from("node:20", { as: "builder" }),
-      workdir("/app"),
-      copy("package*.json", "."),
-      run("npm ci"),
-      copy(".", "."),
-      run("npm run build"),
-    ]),
-    stage("runtime", [
-      from("node:20-alpine", { as: "runtime" }),
-      workdir("/app"),
-      copy("/app/dist", "./dist", { from: "builder" }),
-      cmd(["node", "dist/index.js"]),
-    ]),
-  ],
-});
+const dockerfile = containerfile([
+  stage("builder", [
+    from("node:20", { as: "builder" }),
+    workdir("/app"),
+    copy("package*.json", "."),
+    run("npm ci"),
+    copy(".", "."),
+    run("npm run build"),
+  ]),
+  stage("runtime", [
+    from("node:20-alpine", { as: "runtime" }),
+    workdir("/app"),
+    copy("/app/dist", "./dist", { from: "builder" }),
+    cmd(["node", "dist/index.js"]),
+  ]),
+]);
 
-console.log(render(dockerfile));
+dockerfile.match(
+  (cf) => console.log(render(cf)),
+  (errors) => console.error("Invalid Dockerfile:", errors),
+);
 ```
 
 ## API Reference
@@ -139,6 +141,18 @@ console.log(render(dockerfile));
 | Function                | Description                 |
 | ----------------------- | --------------------------- |
 | `render(containerfile)` | Render to Dockerfile string |
+
+### Building lists in code
+
+`containerfile()`, `stage()`, and `group()` take a non-empty array (`NonEmptyArray<T>`). An array literal satisfies that as written. A computed array needs a length check first, so an empty Dockerfile can't type-check:
+
+```typescript
+const steps = scripts.map((script) => run(`npm run ${script}`));
+if (steps.length === 0) {
+  throw new Error("no build scripts configured");
+}
+containerfile([from("node:20-alpine"), ...steps]);
+```
 
 ### Comments
 

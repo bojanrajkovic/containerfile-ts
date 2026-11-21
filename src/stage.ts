@@ -1,18 +1,26 @@
 // pattern: Functional Core
 
 import { Result, err } from "neverthrow";
-import type { Group, Instruction, Stage } from "./types.js";
-import { ValidationError, prefixErrors, validationError, isReadonlyArray } from "./errors.js";
+import type { Group, Instruction, NonEmptyArray, Stage } from "./types.js";
+import {
+  ValidationError,
+  combineNonEmpty,
+  prefixErrors,
+  validationError,
+  isReadonlyArray,
+} from "./errors.js";
 import { validateNonEmptyString } from "./schemas/index.js";
+
+type EntryResults = NonEmptyArray<Result<Instruction | Group, Array<ValidationError>>>;
 
 /**
  * Validate and combine instruction Results for a stage.
  * Returns all instructions on success, all collected errors on failure.
  */
 function validateInstructionResults(
-  instructions: ReadonlyArray<Result<Instruction | Group, Array<ValidationError>>>,
-): Result<Array<Instruction | Group>, Array<ValidationError>> {
-  // Defensive: handle type bypass from JS or casting
+  instructions: EntryResults,
+): Result<NonEmptyArray<Instruction | Group>, Array<ValidationError>> {
+  // Defensive: the tuple type stops TypeScript callers, but not JS or casting
   if (!isReadonlyArray(instructions)) {
     return err([
       validationError("instructions", "must be an array of instruction Results", instructions),
@@ -25,12 +33,9 @@ function validateInstructionResults(
     ]);
   }
 
-  // Map each instruction result to prefix errors with index
-  const prefixedResults = instructions.map((result, i) =>
+  return combineNonEmpty(instructions, (result, i) =>
     result.mapErr((errors) => prefixErrors(`instructions[${i}]`, errors)),
   );
-
-  return Result.combineWithAllErrors(prefixedResults).mapErr((errors) => errors.flat());
 }
 
 /**
@@ -41,7 +46,7 @@ function validateInstructionResults(
  * { as: "stagename" } in the stage's FROM instruction.
  *
  * @param name - Stage name (for organization; use FROM's `as` option for --from references)
- * @param instructions - Array of instruction Results from factory functions
+ * @param instructions - One or more instruction or group Results from factory functions
  * @returns Result with Stage on success, all ValidationErrors on failure
  *
  * @example
@@ -60,7 +65,7 @@ function validateInstructionResults(
  */
 export function stage(
   name: string,
-  instructions: ReadonlyArray<Result<Instruction | Group, Array<ValidationError>>>,
+  instructions: EntryResults,
 ): Result<Stage, Array<ValidationError>> {
   return Result.combineWithAllErrors([
     validateNonEmptyString(name, "name"),

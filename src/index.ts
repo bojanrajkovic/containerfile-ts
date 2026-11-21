@@ -26,7 +26,7 @@ export type {
   CommentInstruction,
 } from "./types.js";
 
-export type { Group, Stage, Containerfile } from "./types.js";
+export type { Group, Stage, Containerfile, NonEmptyArray } from "./types.js";
 
 export type {
   FromOptions,

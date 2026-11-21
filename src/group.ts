@@ -1,13 +1,16 @@
 // pattern: Functional Core
 
 import { Result, ok, err } from "neverthrow";
-import type { CommentInstruction, Group, Instruction } from "./types.js";
-import { ValidationError, prefixErrors, validationError, isReadonlyArray } from "./errors.js";
+import type { CommentInstruction, Group, Instruction, NonEmptyArray } from "./types.js";
+import {
+  ValidationError,
+  combineNonEmpty,
+  prefixErrors,
+  validationError,
+  isReadonlyArray,
+} from "./errors.js";
 
-type InstructionResults = readonly [
-  Result<Instruction, Array<ValidationError>>,
-  ...Array<Result<Instruction, Array<ValidationError>>>,
-];
+type InstructionResults = NonEmptyArray<Result<Instruction, Array<ValidationError>>>;
 
 /**
  * Group related instructions. `render()` puts a blank line on each side of a group and
@@ -62,13 +65,6 @@ export function group(
     }));
 }
 
-function prefixAt(
-  result: Result<Instruction, Array<ValidationError>>,
-  i: number,
-): Result<Instruction, Array<ValidationError>> {
-  return result.mapErr((errors) => prefixErrors(`instructions[${i}]`, errors));
-}
-
 function validateGroupInstructions(
   instructions: InstructionResults | undefined,
 ): Result<Group["instructions"], Array<ValidationError>> {
@@ -83,13 +79,7 @@ function validateGroupInstructions(
     ]);
   }
 
-  const [head, ...tail] = instructions;
-  return Result.combineWithAllErrors([
-    prefixAt(head, 0),
-    Result.combineWithAllErrors(tail.map((result, i) => prefixAt(result, i + 1))).mapErr((errors) =>
-      errors.flat(),
-    ),
-  ])
-    .mapErr((errors) => errors.flat())
-    .map(([first, rest]) => [first, ...rest] as const);
+  return combineNonEmpty(instructions, (result, i) =>
+    result.mapErr((errors) => prefixErrors(`instructions[${i}]`, errors)),
+  );
 }

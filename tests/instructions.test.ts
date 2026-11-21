@@ -619,8 +619,8 @@ describe("stage()", () => {
     }
   });
 
-  it("returns Err for empty instructions array", () => {
-    const result = stage("builder", []);
+  it("returns Err for an empty instructions array from untyped callers", () => {
+    const result = stage("builder", [] as never);
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
       expect(result.error[0].field).toBe("instructions");
@@ -666,8 +666,8 @@ describe("containerfile()", () => {
       }
     });
 
-    it("returns Err for empty array", () => {
-      const result = containerfile([]);
+    it("returns Err for an empty array from untyped callers", () => {
+      const result = containerfile([] as never);
       expect(result.isErr()).toBe(true);
     });
 
@@ -702,9 +702,9 @@ describe("containerfile()", () => {
       }
     });
 
-    it("returns Err for empty stages array", () => {
+    it("returns Err for an empty stages array from untyped callers", () => {
       const stagesResult: Array<Result<Stage, Array<ValidationError>>> = [];
-      const result = containerfile(stagesResult);
+      const result = containerfile(stagesResult as never);
       expect(result.isErr()).toBe(true);
     });
 

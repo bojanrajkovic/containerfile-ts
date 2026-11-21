@@ -128,8 +128,8 @@ describe("Error collection properties", () => {
     fc.assert(
       fc.property(fc.integer({ min: 2, max: 5 }), (count) => {
         // Create 'count' invalid from instructions (empty image)
-        const invalidInstructions = Array.from({ length: count }, () => from(""));
-        const result = containerfile(invalidInstructions);
+        const rest = Array.from({ length: count - 1 }, () => from(""));
+        const result = containerfile([from(""), ...rest]);
 
         expect(result.isErr()).toBe(true);
         if (result.isErr()) {

@@ -157,6 +157,10 @@ Validation functions return `Result<T, ValidationError[]>`:
 - `validateDockerPath(value, field?)` - Validates non-empty paths
 - `validatePortRange(value, field?)` - Validates port ranges (start <= end)
 
+### NonEmptyArray
+
+`NonEmptyArray<T> = readonly [T, ...Array<T>]`. `containerfile()`, `stage()`, `group()`, and `comment()` produce and accept it, so an empty Dockerfile, stage, group, or comment can't type-check. Callers narrow computed arrays with a length check.
+
 ### Stage Type
 
 For multi-stage builds:
@@ -164,14 +168,14 @@ For multi-stage builds:
 ```typescript
 type Stage = {
   readonly name: string;
-  readonly instructions: ReadonlyArray<Instruction | Group>;
+  readonly instructions: NonEmptyArray<Instruction | Group>;
 };
 
 // Instructions set off by blank lines; groups can't nest
 type Group = {
   readonly type: "GROUP";
   readonly comment: CommentInstruction | null;
-  readonly instructions: readonly [Instruction, ...Array<Instruction>];
+  readonly instructions: NonEmptyArray<Instruction>;
 };
 ```
 
@@ -181,38 +185,38 @@ Unified discriminated union supporting both single-stage and multi-stage:
 
 ```typescript
 type Containerfile =
-  | { readonly instructions: ReadonlyArray<Instruction | Group> } // Single-stage
-  | { readonly stages: ReadonlyArray<Stage> }; // Multi-stage
+  | { readonly instructions: NonEmptyArray<Instruction | Group> } // Single-stage
+  | { readonly stages: NonEmptyArray<Stage> }; // Multi-stage
 ```
 
 ### Factory Functions
 
 Factory functions create instruction objects with validation. All return `Result<Instruction, ValidationError[]>`:
 
-| Function          | Signature                                                                                                                     | Notes                                                                                                                                |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `from`            | `(image: string, options?: FromOptions): Result<FromInstruction, ValidationError[]>`                                          | `as`, `platform` options                                                                                                             |
-| `run`             | `(command: string \| ReadonlyArray<string>): Result<RunInstruction, ValidationError[]>`                                       | Shell or exec form                                                                                                                   |
-| `copy`            | `(src: string \| ReadonlyArray<string>, dest: string, options?: CopyOptions): Result<CopyInstruction, ValidationError[]>`     | `from`, `chown`, `chmod` options                                                                                                     |
-| `add`             | `(src: string \| ReadonlyArray<string>, dest: string, options?: AddOptions): Result<AddInstruction, ValidationError[]>`       | `chown`, `chmod` options                                                                                                             |
-| `workdir`         | `(path: string): Result<WorkdirInstruction, ValidationError[]>`                                                               |                                                                                                                                      |
-| `env`             | `(key: string, value: string): Result<EnvInstruction, ValidationError[]>`                                                     |                                                                                                                                      |
-| `expose`          | `(port: number \| PortRange, options?: ExposeOptions): Result<ExposeInstruction, ValidationError[]>`                          | Validates port range 0-65535                                                                                                         |
-| `cmd`             | `(command: string \| ReadonlyArray<string>): Result<CmdInstruction, ValidationError[]>`                                       | Shell or exec form                                                                                                                   |
-| `entrypoint`      | `(command: string \| ReadonlyArray<string>): Result<EntrypointInstruction, ValidationError[]>`                                | Shell or exec form                                                                                                                   |
-| `arg`             | `(name: string, options?: ArgOptions): Result<ArgInstruction, ValidationError[]>`                                             | `defaultValue` option                                                                                                                |
-| `label`           | `(key: string, value: string): Result<LabelInstruction, ValidationError[]>`                                                   |                                                                                                                                      |
-| `user`            | `(user: string, group?: string): Result<UserInstruction, ValidationError[]>`                                                  | No whitespace or `:` in either                                                                                                       |
-| `volume`          | `(paths: string \| ReadonlyArray<string>): Result<VolumeInstruction, ValidationError[]>`                                      | Always renders JSON form                                                                                                             |
-| `shell`           | `(command: ReadonlyArray<string>): Result<ShellInstruction, ValidationError[]>`                                               | Exec form only                                                                                                                       |
-| `healthcheck`     | `(command: string \| ReadonlyArray<string>, options?: HealthcheckOptions): Result<HealthcheckInstruction, ValidationError[]>` | `interval`, `timeout`, `startPeriod`, `startInterval` (non-negative `Temporal.Duration`, hours or smaller), `retries` (integer >= 1) |
-| `healthcheckNone` | `(): Result<HealthcheckInstruction, ValidationError[]>`                                                                       | Renders `HEALTHCHECK NONE`                                                                                                           |
-| `comment`         | `(line: string, ...more: ReadonlyArray<string>): Result<CommentInstruction, ValidationError[]>`                               | One argument per line; renders `# line`, or `#` for an empty line                                                                    |
-| `containerfile`   | `(items: ReadonlyArray<Result<Instruction, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                    | Single-stage                                                                                                                         |
-| `containerfile`   | `(items: ReadonlyArray<Result<Stage, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                          | Multi-stage                                                                                                                          |
-| `stage`           | `(name: string, instructions: ReadonlyArray<Result<Instruction, ValidationError[]>>): Result<Stage, ValidationError[]>`       | Creates named stage                                                                                                                  |
-| `group`           | `(instructions: readonly [Result<Instruction, ValidationError[]>, ...]): Result<Group, ValidationError[]>`                    | Errors prefixed `instructions[i]`                                                                                                    |
-| `group`           | `(comment: Result<CommentInstruction, ValidationError[]>, instructions: readonly [...]): Result<Group, ValidationError[]>`    | Comment errors prefixed `comment`                                                                                                    |
+| Function          | Signature                                                                                                                                                         | Notes                                                                                                                                |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `from`            | `(image: string, options?: FromOptions): Result<FromInstruction, ValidationError[]>`                                                                              | `as`, `platform` options                                                                                                             |
+| `run`             | `(command: string \| ReadonlyArray<string>): Result<RunInstruction, ValidationError[]>`                                                                           | Shell or exec form                                                                                                                   |
+| `copy`            | `(src: string \| ReadonlyArray<string>, dest: string, options?: CopyOptions): Result<CopyInstruction, ValidationError[]>`                                         | `from`, `chown`, `chmod` options                                                                                                     |
+| `add`             | `(src: string \| ReadonlyArray<string>, dest: string, options?: AddOptions): Result<AddInstruction, ValidationError[]>`                                           | `chown`, `chmod` options                                                                                                             |
+| `workdir`         | `(path: string): Result<WorkdirInstruction, ValidationError[]>`                                                                                                   |                                                                                                                                      |
+| `env`             | `(key: string, value: string): Result<EnvInstruction, ValidationError[]>`                                                                                         |                                                                                                                                      |
+| `expose`          | `(port: number \| PortRange, options?: ExposeOptions): Result<ExposeInstruction, ValidationError[]>`                                                              | Validates port range 0-65535                                                                                                         |
+| `cmd`             | `(command: string \| ReadonlyArray<string>): Result<CmdInstruction, ValidationError[]>`                                                                           | Shell or exec form                                                                                                                   |
+| `entrypoint`      | `(command: string \| ReadonlyArray<string>): Result<EntrypointInstruction, ValidationError[]>`                                                                    | Shell or exec form                                                                                                                   |
+| `arg`             | `(name: string, options?: ArgOptions): Result<ArgInstruction, ValidationError[]>`                                                                                 | `defaultValue` option                                                                                                                |
+| `label`           | `(key: string, value: string): Result<LabelInstruction, ValidationError[]>`                                                                                       |                                                                                                                                      |
+| `user`            | `(user: string, group?: string): Result<UserInstruction, ValidationError[]>`                                                                                      | No whitespace or `:` in either                                                                                                       |
+| `volume`          | `(paths: string \| ReadonlyArray<string>): Result<VolumeInstruction, ValidationError[]>`                                                                          | Always renders JSON form                                                                                                             |
+| `shell`           | `(command: ReadonlyArray<string>): Result<ShellInstruction, ValidationError[]>`                                                                                   | Exec form only                                                                                                                       |
+| `healthcheck`     | `(command: string \| ReadonlyArray<string>, options?: HealthcheckOptions): Result<HealthcheckInstruction, ValidationError[]>`                                     | `interval`, `timeout`, `startPeriod`, `startInterval` (non-negative `Temporal.Duration`, hours or smaller), `retries` (integer >= 1) |
+| `healthcheckNone` | `(): Result<HealthcheckInstruction, ValidationError[]>`                                                                                                           | Renders `HEALTHCHECK NONE`                                                                                                           |
+| `comment`         | `(line: string, ...more: ReadonlyArray<string>): Result<CommentInstruction, ValidationError[]>`                                                                   | One argument per line; renders `# line`, or `#` for an empty line                                                                    |
+| `containerfile`   | `(items: NonEmptyArray<Result<Instruction \| Group, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                                               | Single-stage                                                                                                                         |
+| `containerfile`   | `(items: NonEmptyArray<Result<Stage, ValidationError[]>>): Result<Containerfile, ValidationError[]>`                                                              | Multi-stage                                                                                                                          |
+| `stage`           | `(name: string, instructions: NonEmptyArray<Result<Instruction \| Group, ValidationError[]>>): Result<Stage, ValidationError[]>`                                  | Creates named stage                                                                                                                  |
+| `group`           | `(instructions: NonEmptyArray<Result<Instruction, ValidationError[]>>): Result<Group, ValidationError[]>`                                                         | Errors prefixed `instructions[i]`                                                                                                    |
+| `group`           | `(comment: Result<CommentInstruction, ValidationError[]>, instructions: NonEmptyArray<Result<Instruction, ValidationError[]>>): Result<Group, ValidationError[]>` | Comment errors prefixed `comment`                                                                                                    |
 
 ### Render Functions
 

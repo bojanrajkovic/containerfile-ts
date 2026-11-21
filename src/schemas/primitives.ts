@@ -225,9 +225,12 @@ export function validateNonEmptyString(
 }
 
 /**
- * `<<WORD`, `<<-WORD`, or `<<"WORD"`, which BuildKit treats as a heredoc. Excludes `<<<`.
+ * A heredoc redirect. BuildKit treats any shell word matching `^\d*<<-?\s*[^<]+$` as one
+ * (`reHeredoc` in frontend/dockerfile/parser/parser.go), so `<<EOF`, `<<\a`, and `<<$x` all
+ * count. This matches `<<` anywhere, before any character but `<` or whitespace, which
+ * covers every such word. Here-strings (`<<<`) don't match.
  */
-const HEREDOC = /(?<!<)<<-?["']?[A-Za-z_]/;
+const HEREDOC = /(?<!<)<<-?[^<\s]/;
 
 /**
  * Validate a shell-form command (RUN, CMD, ENTRYPOINT, HEALTHCHECK).

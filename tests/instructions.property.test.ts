@@ -174,7 +174,7 @@ describe("line safety properties", () => {
       fc.property(lineHostile, (command) => {
         run(command).map((instruction) => {
           const rendered = render({ instructions: [instruction] });
-          expect(rendered).not.toMatch(/(?<!<)<<-?["']?[A-Za-z_]/);
+          expect(rendered).not.toMatch(/(?<!<)<<-?[^<\s]/);
           const lines = rendered.split("\n");
           for (const line of lines.slice(0, -1)) {
             expect(line).toMatch(/(?:^|[^\\])\\[ \t]*$/);

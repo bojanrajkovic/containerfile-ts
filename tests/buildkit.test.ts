@@ -18,6 +18,7 @@ import {
   type NonEmptyArray,
   type ValidationError,
 } from "../src/index.js";
+import { LINE_BREAK } from "../src/schemas/primitives.js";
 import { describeWithBuildKit, parseWithBuildKit } from "./support/buildkit.js";
 
 /** Instruction types the model holds, in order, as BuildKit would count them. */
@@ -75,7 +76,7 @@ describeWithBuildKit("BuildKit parses rendered output as modeled", () => {
   });
 
   it("a heredoc script reaches BuildKit unchanged and unexpanded", () => {
-    const scriptLine = fc.string({ maxLength: 16 }).filter((s) => !/[\r\n]/.test(s));
+    const scriptLine = fc.string({ maxLength: 16 }).filter((s) => !LINE_BREAK.test(s));
     fc.assert(
       fc.property(fc.array(scriptLine, { minLength: 1, maxLength: 5 }), (lines) => {
         const [first, ...rest] = lines;

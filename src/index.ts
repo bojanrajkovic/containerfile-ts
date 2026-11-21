@@ -26,7 +26,7 @@ export type {
   CommentInstruction,
 } from "./types.js";
 
-export type { Stage, Containerfile } from "./types.js";
+export type { Group, Stage, Containerfile } from "./types.js";
 
 export type {
   FromOptions,
@@ -59,5 +59,7 @@ export {
 } from "./instructions.js";
 
 export { stage } from "./stage.js";
+
+export { group } from "./group.js";
 
 export { render } from "./render.js";

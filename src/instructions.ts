@@ -19,6 +19,7 @@ import type {
   HealthcheckOptions,
   CommentInstruction,
   Containerfile,
+  Group,
   Instruction,
   Stage,
   FromOptions,
@@ -689,9 +690,9 @@ export function comment(
  */
 function isInstructionArray(
   arr:
-    | ReadonlyArray<Result<Instruction, Array<ValidationError>>>
+    | ReadonlyArray<Result<Instruction | Group, Array<ValidationError>>>
     | ReadonlyArray<Result<Stage, Array<ValidationError>>>,
-): arr is ReadonlyArray<Result<Instruction, Array<ValidationError>>> {
+): arr is ReadonlyArray<Result<Instruction | Group, Array<ValidationError>>> {
   if (arr.length === 0) return true;
 
   // Find any Ok result to determine if it's an instruction or stage
@@ -732,14 +733,14 @@ function isInstructionArray(
  * ```
  */
 export function containerfile(
-  items: ReadonlyArray<Result<Instruction, Array<ValidationError>>>,
+  items: ReadonlyArray<Result<Instruction | Group, Array<ValidationError>>>,
 ): Result<Containerfile, Array<ValidationError>>;
 export function containerfile(
   items: ReadonlyArray<Result<Stage, Array<ValidationError>>>,
 ): Result<Containerfile, Array<ValidationError>>;
 export function containerfile(
   items:
-    | ReadonlyArray<Result<Instruction, Array<ValidationError>>>
+    | ReadonlyArray<Result<Instruction | Group, Array<ValidationError>>>
     | ReadonlyArray<Result<Stage, Array<ValidationError>>>,
 ): Result<Containerfile, Array<ValidationError>> {
   // Defensive: handle type bypass from JS or casting
@@ -763,7 +764,7 @@ export function containerfile(
 
   if (isInstructionArray(items)) {
     // Single-stage: array of instruction Results
-    const instructions: Array<Instruction> = [];
+    const instructions: Array<Instruction | Group> = [];
 
     items.forEach((item, i) => {
       item.match(

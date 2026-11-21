@@ -3,7 +3,6 @@
 import type {
   Instruction,
   Containerfile,
-  Stage,
   FromInstruction,
   RunInstruction,
   CopyInstruction,
@@ -20,6 +19,7 @@ import type {
   ShellInstruction,
   HealthcheckInstruction,
   CommentInstruction,
+  Group,
 } from "./types.js";
 
 /**
@@ -202,10 +202,30 @@ export function renderInstruction(instruction: Instruction): string {
 }
 
 /**
- * Renders a Stage to its Dockerfile string representation
+ * Renders a list of instructions and groups. Each group is its own block, and each run of
+ * ungrouped instructions is one block. Blocks are separated by one blank line, so there is
+ * never a blank line at the start or end, or two in a row.
  */
-function renderStage(stageToRender: Stage): string {
-  return stageToRender.instructions.map(renderInstruction).join("\n");
+function renderEntries(entries: ReadonlyArray<Instruction | Group>): string {
+  const blocks: Array<Array<string>> = [];
+  let loose: Array<string> | null = null;
+
+  for (const entry of entries) {
+    if (entry.type === "GROUP") {
+      loose = null;
+      const members =
+        entry.comment === null ? entry.instructions : [entry.comment, ...entry.instructions];
+      blocks.push(members.map(renderInstruction));
+    } else {
+      if (loose === null) {
+        loose = [];
+        blocks.push(loose);
+      }
+      loose.push(renderInstruction(entry));
+    }
+  }
+
+  return blocks.map((block) => block.join("\n")).join("\n\n");
 }
 
 /**
@@ -213,7 +233,7 @@ function renderStage(stageToRender: Stage): string {
  */
 function isSingleStage(
   containerfile: Containerfile,
-): containerfile is { readonly instructions: ReadonlyArray<Instruction> } {
+): containerfile is { readonly instructions: ReadonlyArray<Instruction | Group> } {
   return "instructions" in containerfile;
 }
 
@@ -223,8 +243,8 @@ function isSingleStage(
  */
 export function render(containerfile: Containerfile): string {
   if (isSingleStage(containerfile)) {
-    return containerfile.instructions.map(renderInstruction).join("\n");
+    return renderEntries(containerfile.instructions);
   }
 
-  return containerfile.stages.map(renderStage).join("\n\n");
+  return containerfile.stages.map((stage) => renderEntries(stage.instructions)).join("\n\n");
 }

@@ -1,7 +1,17 @@
 // pattern: Imperative Shell
 
 import { describe, it, expect } from "vitest";
-import { comment, containerfile, from, group, heredoc, run, stage, render } from "../src/index.js";
+import {
+  chain,
+  comment,
+  containerfile,
+  from,
+  group,
+  heredoc,
+  run,
+  stage,
+  render,
+} from "../src/index.js";
 
 function renderOk(result: ReturnType<typeof containerfile>): string {
   return result.match(render, (errors) => {
@@ -64,5 +74,20 @@ describe("render() with heredocs", () => {
     const output = renderOk(containerfile([run(script)]));
     expect(output.split("\n")[1]).toBe("echo $HOME `date` a\\\\b \\");
     expect(output.split("\n")[0]).toMatch(/^RUN bash <<'EOF_[0-9a-f]{8}'$/);
+  });
+});
+
+describe("render() with chains", () => {
+  it("puts each step after the first on its own line behind &&", () => {
+    const output = renderOk(
+      containerfile([run(chain(["apt-get update", "apt-get install -y curl", "rm -rf /tmp/x"]))]),
+    );
+    expect(output).toBe(
+      "RUN apt-get update \\\n    && apt-get install -y curl \\\n    && rm -rf /tmp/x",
+    );
+  });
+
+  it("renders a one-step chain on one line", () => {
+    expect(renderOk(containerfile([run(chain(["npm ci"]))]))).toBe("RUN npm ci");
   });
 });

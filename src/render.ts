@@ -47,6 +47,9 @@ function renderRun(instruction: RunInstruction): string {
   if (typeof command === "string") {
     return `RUN ${command}`;
   }
+  if ("steps" in command) {
+    return `RUN ${command.steps.join(" \\\n    && ")}`;
+  }
   if (!("delimiter" in command)) {
     return `RUN ${formatArray(command)}`;
   }

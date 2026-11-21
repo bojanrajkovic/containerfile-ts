@@ -14,6 +14,7 @@ import {
   arg,
   run,
   heredoc,
+  chain,
   cmd,
   entrypoint,
   copy,
@@ -898,5 +899,47 @@ describe("ENV, LABEL, and ARG values", () => {
 
   it("accepts a trailing backslash, which quoting escapes", () => {
     expect(env("K", "C:\\").isOk()).toBe(true);
+  });
+});
+
+describe("chain()", () => {
+  it("returns Ok with the steps in order", () => {
+    const result = chain(["apt-get update", "apt-get install -y curl"]);
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.steps).toEqual(["apt-get update", "apt-get install -y curl"]);
+    }
+  });
+
+  it.each([
+    ["empty", ""],
+    ["line break", "a\nb"],
+    ["continuation", "a \\\nb"],
+    ["trailing backslash", "a \\"],
+    ["heredoc", "cat <<EOF"],
+    ["comment at start", "# note"],
+    ["comment after a word", "make # build"],
+  ])("rejects a step with %s and names its index", (_name, step) => {
+    const result = chain(["ok", step]);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0]?.field).toBe("steps[1]");
+    }
+  });
+
+  it("accepts # inside a word", () => {
+    expect(chain(["echo a#b", "curl https://example.com/#x"]).isOk()).toBe(true);
+  });
+
+  it("returns Err for an empty array from untyped callers", () => {
+    expect(chain([] as never).isErr()).toBe(true);
+  });
+
+  it("prefixes chain errors with command inside run()", () => {
+    const result = run(chain(["ok", "# no"]));
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0]?.field).toBe("command.steps[1]");
+    }
   });
 });

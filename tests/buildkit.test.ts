@@ -7,6 +7,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import {
   arg,
+  chain,
   comment,
   env,
   label,
@@ -90,6 +91,24 @@ describeWithBuildKit("BuildKit parses rendered output as modeled", () => {
         const [doc] = parsed.instructions[1]?.heredocs ?? [];
         expect(doc?.expand).toBe(false);
         expect(doc?.content).toBe(`${lines.join("\n")}\n`);
+      }),
+      { numRuns: 200 },
+    );
+  });
+
+  it("an accepted chain() is one RUN that runs every step", () => {
+    fc.assert(
+      fc.property(fc.array(lineHostile, { minLength: 1, maxLength: 4 }), (steps) => {
+        const [first, ...rest] = steps;
+        chain([first ?? "", ...rest]).map((validated) => {
+          const parsed = parseWithBuildKit(
+            render(build([from("alpine"), run(ok(validated)), run("true")])),
+          );
+          expect(parsed.instructions.map((i) => i.cmd)).toEqual(["FROM", "RUN", "RUN"]);
+          const cmdLine = parsed.instructions[1]?.command?.["CmdLine"] as ReadonlyArray<string>;
+          // BuildKit joins each continuation onto the next line and trims the ends.
+          expect(cmdLine).toEqual([validated.steps.join("     && ").trim()]);
+        });
       }),
       { numRuns: 200 },
     );

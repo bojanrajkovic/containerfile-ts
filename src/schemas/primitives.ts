@@ -105,9 +105,11 @@ export function validateImageName(
 }
 
 /**
- * BuildKit continues a line that ends in `\`, even with spaces or tabs after it.
+ * BuildKit continues a line that ends in a single `\`, even with spaces or tabs after it.
+ * A doubled `\\` is an escaped backslash and doesn't continue. This mirrors BuildKit's
+ * `lineContinuationRegex` in frontend/dockerfile/parser/parser.go.
  */
-const CONTINUATION = /\\[ \t]*$/;
+const CONTINUATION = /(?:^|[^\\])\\[ \t]*$/;
 
 /**
  * Check that a string fits on one rendered Dockerfile line.

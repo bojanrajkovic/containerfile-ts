@@ -8,10 +8,12 @@ import {
   validateImageName,
   validateDockerPath,
   validateNonEmptyString,
+  LINE_BREAK,
+  LINE_CONTINUATION,
 } from "../../src/schemas/primitives.js";
 
 // Single-line: no line breaks and no trailing backslash (BuildKit allows spaces after it).
-const singleLine = (s: string) => !/[\r\n]/.test(s) && !/\\[ \t]*$/.test(s);
+const singleLine = (s: string) => !LINE_BREAK.test(s) && !LINE_CONTINUATION.test(s);
 
 describe("validatePort property tests", () => {
   it("accepts all valid port numbers (0-65535)", () => {

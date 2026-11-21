@@ -44,6 +44,7 @@ import {
   validateString,
   validateStringArray,
   validateShellCommand,
+  LINE_BREAK,
   validatePort,
   validatePortRange,
 } from "./schemas/index.js";
@@ -175,7 +176,7 @@ function validateHeredocLine(
     return err([validationError(field, "must be a string", value)]);
   }
   // The delimiter is quoted, so the body is literal: a trailing `\` is fine; a line break is not.
-  if (/[\r\n]/.test(value)) {
+  if (LINE_BREAK.test(value)) {
     return err([validationError(field, "must not contain line breaks", value)]);
   }
   return ok(value);
@@ -733,7 +734,7 @@ function validateCommentLine(
   if (typeof value !== "string") {
     return err([validationError(field, "must be a string", value)]);
   }
-  if (/[\r\n]/.test(value)) {
+  if (LINE_BREAK.test(value)) {
     return err([validationError(field, "must not contain line breaks", value)]);
   }
   if (/^\s*escape\s*=/i.test(value)) {

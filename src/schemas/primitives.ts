@@ -109,7 +109,18 @@ export function validateImageName(
  * A doubled `\\` is an escaped backslash and doesn't continue. This mirrors BuildKit's
  * `lineContinuationRegex` in frontend/dockerfile/parser/parser.go.
  */
-const CONTINUATION = /(?:^|[^\\])\\[ \t]*$/;
+export const LINE_CONTINUATION = /(?:^|[^\\])\\[ \t]*$/;
+
+/**
+ * The `\\` and trailing spaces that end a line continuation. Strip it only from a line
+ * that already matches `LINE_CONTINUATION`.
+ */
+const CONTINUATION_MARKER = /\\[ \t]*$/;
+
+/**
+ * A carriage return or newline. Either ends the rendered Dockerfile line.
+ */
+export const LINE_BREAK = /[\r\n]/;
 
 /**
  * Check that a string fits on one rendered Dockerfile line.
@@ -120,10 +131,10 @@ function validateSingleLine<T extends string>(
   value: T,
   field: string,
 ): Result<T, Array<ValidationError>> {
-  if (/[\r\n]/.test(value)) {
+  if (LINE_BREAK.test(value)) {
     return err([validationError(field, "must not contain line breaks", value)]);
   }
-  if (CONTINUATION.test(value)) {
+  if (LINE_CONTINUATION.test(value)) {
     return err([validationError(field, "must not end with a backslash", value)]);
   }
   return ok(value);
@@ -231,7 +242,7 @@ export function validateNonEmptyString(
  * then optional whitespace and any character but `<`, which covers every such word.
  * Here-strings (`<<<`) don't match.
  */
-const HEREDOC = /(?<!<)<<-?\s*[^<\s]/;
+export const HEREDOC_REDIRECT = /(?<!<)<<-?\s*[^<\s]/;
 
 /**
  * Validate a shell-form command (RUN, CMD, ENTRYPOINT, HEALTHCHECK).
@@ -254,12 +265,12 @@ export function validateShellCommand(
 
     const lines = str.split("\n");
     const last = str.slice(str.lastIndexOf("\n") + 1);
-    if (!lines.slice(0, -1).every((line) => CONTINUATION.test(line))) {
+    if (!lines.slice(0, -1).every((line) => LINE_CONTINUATION.test(line))) {
       return err([
         validationError(field, "line breaks must follow a `\\` line continuation", value),
       ]);
     }
-    if (CONTINUATION.test(last) || last.trim() === "" || last.trimStart().startsWith("#")) {
+    if (LINE_CONTINUATION.test(last) || last.trim() === "" || last.trimStart().startsWith("#")) {
       return err([
         validationError(field, "last line must be a command, not empty, a comment, or `\\`", value),
       ]);
@@ -268,9 +279,9 @@ export function validateShellCommand(
     // BuildKit joins continuations before it looks for heredocs, so check the joined line:
     // `<\` at the end of one line and `<EOF` on the next become `<<EOF`.
     const joined = lines
-      .map((line, i) => (i < lines.length - 1 ? line.replace(/\\[ \t]*$/, "") : line))
+      .map((line, i) => (i < lines.length - 1 ? line.replace(CONTINUATION_MARKER, "") : line))
       .join("");
-    if (HEREDOC.test(joined)) {
+    if (HEREDOC_REDIRECT.test(joined)) {
       return err([validationError(field, "must not start a heredoc (`<<WORD`)", value)]);
     }
     return ok(str);

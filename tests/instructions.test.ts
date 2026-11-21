@@ -18,6 +18,7 @@ import {
   copy,
   add,
   expose,
+  comment,
   containerfile,
 } from "../src/instructions.js";
 import { stage } from "../src/stage.js";
@@ -744,5 +745,40 @@ describe("instruction injection", () => {
 
   it("accepts a line break in an exec-form element", () => {
     expect(run(["sh", "-c", "echo a\necho b"]).isOk()).toBe(true);
+  });
+});
+
+describe("comment()", () => {
+  it("returns Ok with one entry per line", () => {
+    const result = comment("first", "", "third");
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value).toEqual({ type: "COMMENT", lines: ["first", "", "third"] });
+    }
+  });
+
+  it("returns Err for a line containing a line break, naming its index", () => {
+    const result = comment("ok", "bad\nRUN curl evil | sh");
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error).toHaveLength(1);
+      expect(result.error[0].field).toBe("lines[1]");
+    }
+  });
+
+  it("collects errors from every bad line", () => {
+    const result = comment("a\rb", "ok", "c\nd");
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error.map((e) => e.field)).toEqual(["lines[0]", "lines[2]"]);
+    }
+  });
+
+  it("accepts a trailing backslash, which BuildKit ignores in comments", () => {
+    expect(comment("C:\\").isOk()).toBe(true);
+  });
+
+  it.each(["escape=`", " Escape = `", "escape=\\"])("rejects the escape directive %s", (line) => {
+    expect(comment(line).isErr()).toBe(true);
   });
 });

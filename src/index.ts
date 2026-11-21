@@ -23,6 +23,7 @@ export type {
   VolumeInstruction,
   ShellInstruction,
   HealthcheckInstruction,
+  CommentInstruction,
 } from "./types.js";
 
 export type { Stage, Containerfile } from "./types.js";
@@ -53,6 +54,7 @@ export {
   shell,
   healthcheck,
   healthcheckNone,
+  comment,
   containerfile,
 } from "./instructions.js";
 

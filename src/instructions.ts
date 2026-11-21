@@ -17,6 +17,7 @@ import type {
   ShellInstruction,
   HealthcheckInstruction,
   HealthcheckOptions,
+  CommentInstruction,
   Containerfile,
   Instruction,
   Stage,
@@ -622,6 +623,65 @@ export function healthcheck(
  */
 export function healthcheckNone(): Result<HealthcheckInstruction, Array<ValidationError>> {
   return ok({ type: "HEALTHCHECK" as const, check: "NONE" as const });
+}
+
+/**
+ * Validate one comment line. A line break would end the comment and start an instruction.
+ * A trailing `\` is fine: BuildKit drops comment lines before it joins continuations.
+ * `escape=` is rejected because, as a parser directive, it changes the escape character
+ * that every line-continuation check depends on.
+ */
+function validateCommentLine(
+  value: unknown,
+  field: string,
+): Result<string, Array<ValidationError>> {
+  if (typeof value !== "string") {
+    return err([validationError(field, "must be a string", value)]);
+  }
+  if (/[\r\n]/.test(value)) {
+    return err([validationError(field, "must not contain line breaks", value)]);
+  }
+  if (/^\s*escape\s*=/i.test(value)) {
+    return err([validationError(field, "must not be an escape= parser directive", value)]);
+  }
+  return ok(value);
+}
+
+/**
+ * Create a full-line comment. Each argument is one line.
+ *
+ * Lines may be empty (rendered as a bare `#`), but must not contain line breaks. A comment
+ * at the very top of a Dockerfile in `key=value` form, such as `syntax=docker/dockerfile:1`,
+ * is read by BuildKit as a parser directive. `escape=` is rejected: the line-break checks
+ * assume the default `\` escape character.
+ *
+ * @param line - First comment line
+ * @param more - Further comment lines
+ * @returns Result with CommentInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * comment("Install dependencies", "", "Uses the lockfile only.").match(
+ *   (instruction) => console.log(instruction), // renders three lines: `# Install…`, `#`, `# Uses…`
+ *   (errors) => console.error(errors),
+ * );
+ * ```
+ */
+export function comment(
+  line: string,
+  ...more: ReadonlyArray<string>
+): Result<CommentInstruction, Array<ValidationError>> {
+  return Result.combineWithAllErrors([
+    validateCommentLine(line, "lines[0]"),
+    Result.combineWithAllErrors(
+      more.map((text, i) => validateCommentLine(text, `lines[${i + 1}]`)),
+    ).mapErr((errors) => errors.flat()),
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([first, rest]) => ({
+      type: "COMMENT" as const,
+      lines: [first, ...rest] as const,
+    }));
 }
 
 /**

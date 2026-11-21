@@ -31,7 +31,7 @@ importers:
         specifier: 21.2.4
         version: 21.2.4
       '@types/node':
-        specifier: ^20.19.43
+        specifier: 20.19.43
         version: 20.19.43
       conventional-commits-parser:
         specifier: 7.1.4

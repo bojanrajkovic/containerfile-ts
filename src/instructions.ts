@@ -37,6 +37,7 @@ import {
   validateDockerPath,
   validateString,
   validateStringArray,
+  validateShellCommand,
   validatePort,
   validatePortRange,
 } from "./schemas/index.js";
@@ -122,7 +123,7 @@ export function run(
   command: string | ReadonlyArray<string>,
 ): Result<RunInstruction, Array<ValidationError>> {
   if (typeof command === "string") {
-    return validateNonEmptyString(command, "command").map(() => ({
+    return validateShellCommand(command, "command").map(() => ({
       type: "RUN" as const,
       command,
     }));
@@ -329,7 +330,7 @@ export function cmd(
   command: string | ReadonlyArray<string>,
 ): Result<CmdInstruction, Array<ValidationError>> {
   if (typeof command === "string") {
-    return validateNonEmptyString(command, "command").map(() => ({
+    return validateShellCommand(command, "command").map(() => ({
       type: "CMD" as const,
       command,
     }));
@@ -366,7 +367,7 @@ export function entrypoint(
   command: string | ReadonlyArray<string>,
 ): Result<EntrypointInstruction, Array<ValidationError>> {
   if (typeof command === "string") {
-    return validateNonEmptyString(command, "command").map(() => ({
+    return validateShellCommand(command, "command").map(() => ({
       type: "ENTRYPOINT" as const,
       command,
     }));
@@ -592,7 +593,7 @@ export function healthcheck(
 ): Result<HealthcheckInstruction, Array<ValidationError>> {
   const validatedCommand =
     typeof command === "string"
-      ? validateNonEmptyString(command, "command")
+      ? validateShellCommand(command, "command")
       : validateStringArray(command, "command");
 
   return Result.combineWithAllErrors([

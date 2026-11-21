@@ -7,6 +7,8 @@ import {
   validateDockerPath,
   validatePortRange,
   validateNonEmptyString,
+  validateString,
+  validateShellCommand,
   validateStringArray,
   validateOptional,
 } from "../../src/schemas/primitives.js";
@@ -238,5 +240,64 @@ describe("validateOptional", () => {
   it("returns errors for invalid present values", () => {
     const result = validateOptional("", validateNonEmptyString);
     expect(result.isErr()).toBe(true);
+  });
+});
+
+describe("line-break checks", () => {
+  it.each([
+    ["validateNonEmptyString", validateNonEmptyString],
+    ["validateString", validateString],
+    ["validateDockerPath", validateDockerPath],
+  ] as const)("%s rejects line breaks and a trailing backslash", (_name, validate) => {
+    for (const bad of ["a\nUSER root", "a\rb", "a\r\nb", "C:\\", "x\\ ", "x\\\t"]) {
+      const result = validate(bad, "field");
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error[0].field).toBe("field");
+        expect(result.error[0].value).toBe(bad);
+      }
+    }
+  });
+
+  it("allows a backslash that is not at the end", () => {
+    expect(validateNonEmptyString("C:\\app").isOk()).toBe(true);
+  });
+
+  it("validateStringArray allows line breaks, which JSON form escapes", () => {
+    expect(validateStringArray(["sh", "-c", "echo a\necho b"]).isOk()).toBe(true);
+  });
+});
+
+describe("validateShellCommand", () => {
+  it("accepts single-line commands", () => {
+    expect(validateShellCommand("npm ci && npm test").isOk()).toBe(true);
+  });
+
+  it("accepts line continuations", () => {
+    expect(validateShellCommand("apt-get update && \\\n    apt-get install -y curl").isOk()).toBe(
+      true,
+    );
+    expect(validateShellCommand("a \\\n  # note \\\n  b").isOk()).toBe(true);
+    expect(validateShellCommand("a \\ \nb").isOk()).toBe(true);
+    expect(validateShellCommand("cat <<< hello").isOk()).toBe(true);
+  });
+
+  it.each([
+    ["empty", ""],
+    ["bare line break", "echo a\nUSER root"],
+    ["heredoc", "<<EOF\nnpm ci\nEOF"],
+    ["carriage return", "echo a \\\r\necho b"],
+    ["trailing backslash", "echo a \\"],
+    ["trailing backslash and space", "echo a \\ "],
+    ["inline heredoc", "cat <<EOF"],
+    ["quoted heredoc", "cat <<-'EOF'"],
+    ["continuation into an empty line", "echo a \\\n   "],
+    ["continuation into a comment", "echo a \\\n# done"],
+  ])("rejects %s", (_name, command) => {
+    const result = validateShellCommand(command, "command");
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0].field).toBe("command");
+    }
   });
 });

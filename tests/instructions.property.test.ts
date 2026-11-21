@@ -2,7 +2,7 @@
 
 import { describe, it, expect } from "vitest";
 import * as fc from "fast-check";
-import { from, workdir, env, expose, user, containerfile } from "../src/instructions.js";
+import { from, workdir, env, expose, user, run, containerfile } from "../src/instructions.js";
 import { render } from "../src/render.js";
 
 // Generator for valid Docker image names
@@ -10,14 +10,19 @@ const validImageName = fc
   .string({ minLength: 1, maxLength: 20 })
   .filter((s) => /^[a-z0-9]+$/.test(s));
 
+// Single-line: no line breaks and no trailing backslash (BuildKit allows spaces after it).
+const singleLine = (s: string) => !/[\r\n]/.test(s) && !/\\[ \t]*$/.test(s);
+
 // Generator for valid paths
-const validPath = fc.string({ minLength: 1, maxLength: 50 }).filter((s) => s.trim().length > 0);
+const validPath = fc
+  .string({ minLength: 1, maxLength: 50 })
+  .filter((s) => s.trim().length > 0 && singleLine(s));
 
 // Generator for valid port numbers
 const validPort = fc.integer({ min: 0, max: 65535 });
 
 // Generator for non-empty strings
-const nonEmptyString = fc.string({ minLength: 1, maxLength: 50 });
+const nonEmptyString = fc.string({ minLength: 1, maxLength: 50 }).filter(singleLine);
 
 describe("Factory function roundtrip properties", () => {
   it("from() with valid image produces renderable FROM instruction", () => {
@@ -53,7 +58,7 @@ describe("Factory function roundtrip properties", () => {
 
   it("env() with valid key produces renderable ENV instruction", () => {
     fc.assert(
-      fc.property(nonEmptyString, fc.string(), (key, value) => {
+      fc.property(nonEmptyString, fc.string().filter(singleLine), (key, value) => {
         const result = env(key, value);
         expect(result.isOk()).toBe(true);
         if (result.isOk()) {
@@ -95,7 +100,9 @@ describe("Factory function roundtrip properties", () => {
 });
 
 describe("user() properties", () => {
-  const userPart = fc.string({ minLength: 1, maxLength: 20 }).filter((s) => !/[\s:]/.test(s));
+  const userPart = fc
+    .string({ minLength: 1, maxLength: 20 })
+    .filter((s) => !/[\s:]/.test(s) && singleLine(s));
 
   it("renders user and group so they split back apart on ':'", () => {
     fc.assert(
@@ -129,6 +136,45 @@ describe("Error collection properties", () => {
           // Should have at least one error per invalid instruction
           expect(result.error.length).toBeGreaterThanOrEqual(count);
         }
+      }),
+    );
+  });
+});
+
+describe("line safety properties", () => {
+  // Characters that can break or join Dockerfile lines, mixed into ordinary text.
+  const lineHostile = fc.string({
+    unit: fc.constantFrom("a", " ", "\t", "#", "\\", "\n", "\r", "<", "E"),
+    maxLength: 12,
+  });
+
+  it("an accepted env() always renders as one line that doesn't continue", () => {
+    fc.assert(
+      fc.property(lineHostile, lineHostile, (key, value) => {
+        env(key, value).map((instruction) => {
+          const rendered = render({ instructions: [instruction] });
+          expect(rendered.split("\n")).toHaveLength(1);
+          expect(rendered).not.toMatch(/\\[ \t]*$/);
+        });
+      }),
+    );
+  });
+
+  it("an accepted shell-form run() ends its continuation on a command line", () => {
+    fc.assert(
+      fc.property(lineHostile, (command) => {
+        run(command).map((instruction) => {
+          const rendered = render({ instructions: [instruction] });
+          expect(rendered).not.toMatch(/(?<!<)<<-?["']?[A-Za-z_]/);
+          const lines = rendered.split("\n");
+          for (const line of lines.slice(0, -1)) {
+            expect(line).toMatch(/\\[ \t]*$/);
+          }
+          const last = lines[lines.length - 1];
+          expect(last).not.toMatch(/\\[ \t]*$/);
+          expect(last.trimStart().startsWith("#")).toBe(false);
+          expect(last.includes("\r")).toBe(false);
+        });
       }),
     );
   });

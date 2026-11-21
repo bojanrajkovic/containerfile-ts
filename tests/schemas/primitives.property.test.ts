@@ -10,6 +10,9 @@ import {
   validateNonEmptyString,
 } from "../../src/schemas/primitives.js";
 
+// Single-line: no line breaks and no trailing backslash (BuildKit allows spaces after it).
+const singleLine = (s: string) => !/[\r\n]/.test(s) && !/\\[ \t]*$/.test(s);
+
 describe("validatePort property tests", () => {
   it("accepts all valid port numbers (0-65535)", () => {
     fc.assert(
@@ -117,9 +120,9 @@ describe("validatePortRange property tests", () => {
 });
 
 describe("validateNonEmptyString property tests", () => {
-  it("accepts all non-empty strings", () => {
+  it("accepts all non-empty single-line strings", () => {
     fc.assert(
-      fc.property(fc.string({ minLength: 1 }), (str) => {
+      fc.property(fc.string({ minLength: 1 }).filter(singleLine), (str) => {
         const result = validateNonEmptyString(str);
         expect(result.isOk()).toBe(true);
         if (result.isOk()) {
@@ -155,9 +158,9 @@ describe("validateNonEmptyString property tests", () => {
 });
 
 describe("validateDockerPath property tests", () => {
-  it("accepts all non-empty strings as paths", () => {
+  it("accepts all non-empty single-line strings as paths", () => {
     fc.assert(
-      fc.property(fc.string({ minLength: 1 }), (path) => {
+      fc.property(fc.string({ minLength: 1 }).filter(singleLine), (path) => {
         const result = validateDockerPath(path);
         expect(result.isOk()).toBe(true);
       }),

@@ -4,7 +4,7 @@ export type { Result } from "neverthrow";
 
 export type { ValidationError } from "./errors.js";
 
-export type { Port, ImageName, DockerPath } from "./schemas/index.js";
+export type { Port, PortRange, ImageName, DockerPath } from "./schemas/index.js";
 
 export type {
   Instruction,

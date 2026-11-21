@@ -111,9 +111,9 @@ function renderExpose(instruction: ExposeInstruction): string {
       ? ""
       : `/${instruction.protocol}`;
   const portStr =
-    instruction.endPort !== null
-      ? `${instruction.port}-${instruction.endPort}`
-      : String(instruction.port);
+    typeof instruction.ports === "number"
+      ? String(instruction.ports)
+      : `${instruction.ports.start}-${instruction.ports.end}`;
   return `EXPOSE ${portStr}${protocolSuffix}`;
 }
 

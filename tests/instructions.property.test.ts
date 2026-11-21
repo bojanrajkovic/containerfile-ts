@@ -91,7 +91,7 @@ describe("Factory function roundtrip properties", () => {
         expect(result.isOk()).toBe(true);
         if (result.isOk()) {
           expect(result.value.type).toBe("EXPOSE");
-          expect(result.value.port).toBe(port);
+          expect(result.value.ports).toBe(port);
         }
       }),
     );
@@ -105,8 +105,7 @@ describe("Factory function roundtrip properties", () => {
         const result = expose({ start, end });
         expect(result.isOk()).toBe(true);
         if (result.isOk()) {
-          expect(result.value.port).toBe(start);
-          expect(result.value.endPort).toBe(end);
+          expect(result.value.ports).toEqual({ start, end });
         }
       }),
     );

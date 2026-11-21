@@ -2,7 +2,7 @@
 
 /// <reference lib="esnext.temporal" />
 
-import type { DockerPath, ImageName, Port } from "./schemas/index.js";
+import type { DockerPath, ImageName, Port, PortRange } from "./schemas/index.js";
 
 /**
  * FROM instruction - specifies base image
@@ -136,8 +136,7 @@ export type QuotedValue = {
  */
 export type ExposeInstruction = {
   readonly type: "EXPOSE";
-  readonly port: Port;
-  readonly endPort: Port | null;
+  readonly ports: Port | PortRange;
   readonly protocol: "tcp" | "udp" | "sctp" | null;
 };
 

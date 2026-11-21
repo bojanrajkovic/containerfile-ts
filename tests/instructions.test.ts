@@ -556,8 +556,7 @@ describe("expose()", () => {
     expect(result.isOk()).toBe(true);
     if (result.isOk()) {
       expect(result.value.type).toBe("EXPOSE");
-      expect(result.value.port).toBe(8080);
-      expect(result.value.endPort).toBeNull();
+      expect(result.value.ports).toBe(8080);
       expect(result.value.protocol).toBeNull();
     }
   });
@@ -566,8 +565,7 @@ describe("expose()", () => {
     const result = expose({ start: 8080, end: 8090 });
     expect(result.isOk()).toBe(true);
     if (result.isOk()) {
-      expect(result.value.port).toBe(8080);
-      expect(result.value.endPort).toBe(8090);
+      expect(result.value.ports).toEqual({ start: 8080, end: 8090 });
     }
   });
 

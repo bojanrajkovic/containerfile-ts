@@ -455,8 +455,7 @@ export function expose(
   if (typeof port === "number") {
     return validatePort(port, "port").map((validatedPort) => ({
       type: "EXPOSE" as const,
-      port: validatedPort,
-      endPort: null,
+      ports: validatedPort,
       protocol: options?.protocol ?? null,
     }));
   }
@@ -469,8 +468,7 @@ export function expose(
   // Port range - validatePortRange handles structure validation
   return validatePortRange(port, "port").map((range) => ({
     type: "EXPOSE" as const,
-    port: range.start,
-    endPort: range.end,
+    ports: range,
     protocol: options?.protocol ?? null,
   }));
 }

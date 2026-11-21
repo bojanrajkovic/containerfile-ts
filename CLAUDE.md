@@ -10,6 +10,7 @@ Type-safe Dockerfile/Containerfile generation with declarative TypeScript.
 pnpm install      # Install dependencies
 pnpm build        # Compile TypeScript
 pnpm test         # Run tests
+pnpm typecheck    # Typecheck src/ and tests/ (tsconfig.test.json)
 pnpm test:watch   # Run tests in watch mode
 pnpm lint         # Run linter
 pnpm lint:fix     # Run linter with auto-fix

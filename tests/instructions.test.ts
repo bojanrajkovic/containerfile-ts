@@ -73,7 +73,7 @@ describe("from()", () => {
     const result = from("");
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("image");
+      expect(result.error[0]?.field).toBe("image");
     }
   });
 
@@ -86,7 +86,7 @@ describe("from()", () => {
     const result = from("nginx", { as: "" });
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("as");
+      expect(result.error[0]?.field).toBe("as");
     }
   });
 });
@@ -105,7 +105,7 @@ describe("workdir()", () => {
     const result = workdir("");
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("path");
+      expect(result.error[0]?.field).toBe("path");
     }
   });
 });
@@ -125,7 +125,7 @@ describe("env()", () => {
     const result = env("", "value");
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("key");
+      expect(result.error[0]?.field).toBe("key");
     }
   });
 
@@ -139,8 +139,8 @@ describe("env()", () => {
     const result = env("KEY", 123 as unknown as string);
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("value");
-      expect(result.error[0].message).toContain("string");
+      expect(result.error[0]?.field).toBe("value");
+      expect(result.error[0]?.message).toContain("string");
     }
   });
 });
@@ -166,8 +166,8 @@ describe("label()", () => {
     const result = label("version", { obj: true } as unknown as string);
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("value");
-      expect(result.error[0].message).toContain("string");
+      expect(result.error[0]?.field).toBe("value");
+      expect(result.error[0]?.message).toContain("string");
     }
   });
 });
@@ -189,12 +189,12 @@ describe("user()", () => {
 
   it("returns Err for empty user", () => {
     const result = user("");
-    expect(result._unsafeUnwrapErr()[0].field).toBe("user");
+    expect(result._unsafeUnwrapErr()[0]?.field).toBe("user");
   });
 
   it("returns Err for empty group", () => {
     const result = user("app", "");
-    expect(result._unsafeUnwrapErr()[0].field).toBe("group");
+    expect(result._unsafeUnwrapErr()[0]?.field).toBe("group");
   });
 
   it.each(["a:b", "a b", "a\tb"])("returns Err for %j in user", (bad) => {
@@ -228,11 +228,11 @@ describe("volume()", () => {
   });
 
   it("returns Err for empty string", () => {
-    expect(volume("")._unsafeUnwrapErr()[0].field).toBe("paths[0]");
+    expect(volume("")._unsafeUnwrapErr()[0]?.field).toBe("paths[0]");
   });
 
   it("returns Err for empty array", () => {
-    expect(volume([])._unsafeUnwrapErr()[0].field).toBe("paths");
+    expect(volume([])._unsafeUnwrapErr()[0]?.field).toBe("paths");
   });
 
   it("collects errors for each bad element", () => {
@@ -252,11 +252,11 @@ describe("shell()", () => {
   });
 
   it("returns Err for empty array", () => {
-    expect(shell([])._unsafeUnwrapErr()[0].field).toBe("command");
+    expect(shell([])._unsafeUnwrapErr()[0]?.field).toBe("command");
   });
 
   it("returns Err for empty element", () => {
-    expect(shell(["/bin/bash", ""])._unsafeUnwrapErr()[0].field).toBe("command[1]");
+    expect(shell(["/bin/bash", ""])._unsafeUnwrapErr()[0]?.field).toBe("command[1]");
   });
 
   it("returns Err for a string at runtime", () => {
@@ -297,8 +297,8 @@ describe("healthcheck()", () => {
   });
 
   it("returns Err for empty command", () => {
-    expect(healthcheck("")._unsafeUnwrapErr()[0].field).toBe("command");
-    expect(healthcheck([])._unsafeUnwrapErr()[0].field).toBe("command");
+    expect(healthcheck("")._unsafeUnwrapErr()[0]?.field).toBe("command");
+    expect(healthcheck([])._unsafeUnwrapErr()[0]?.field).toBe("command");
   });
 
   it.each([
@@ -307,7 +307,7 @@ describe("healthcheck()", () => {
     ["a duration with days", Temporal.Duration.from({ days: 1 })],
   ])("returns Err for %s", (_name, bad) => {
     const result = healthcheck("true", { interval: bad as Temporal.Duration });
-    expect(result._unsafeUnwrapErr()[0].field).toBe("interval");
+    expect(result._unsafeUnwrapErr()[0]?.field).toBe("interval");
   });
 
   it("accepts a zero duration", () => {
@@ -316,7 +316,7 @@ describe("healthcheck()", () => {
   });
 
   it.each([0, -1, 1.5, Number.NaN])("returns Err for retries %j", (bad) => {
-    expect(healthcheck("true", { retries: bad })._unsafeUnwrapErr()[0].field).toBe("retries");
+    expect(healthcheck("true", { retries: bad })._unsafeUnwrapErr()[0]?.field).toBe("retries");
   });
 
   it("collects errors across fields", () => {
@@ -360,7 +360,7 @@ describe("arg()", () => {
     const result = arg("");
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("name");
+      expect(result.error[0]?.field).toBe("name");
     }
   });
 
@@ -369,8 +369,8 @@ describe("arg()", () => {
     const result = arg("VERSION", { defaultValue: 42 as unknown as string });
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("defaultValue");
-      expect(result.error[0].message).toContain("non-empty string");
+      expect(result.error[0]?.field).toBe("defaultValue");
+      expect(result.error[0]?.message).toContain("non-empty string");
     }
   });
 
@@ -378,7 +378,7 @@ describe("arg()", () => {
     const result = arg("VERSION", { defaultValue: "" });
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("defaultValue");
+      expect(result.error[0]?.field).toBe("defaultValue");
     }
   });
 });
@@ -414,6 +414,14 @@ describe("run()", () => {
   it("returns Err for array with empty string", () => {
     const result = run(["npm", ""]);
     expect(result.isErr()).toBe(true);
+  });
+
+  it.each([42, null, undefined, { foo: 1 }])("returns Err for %s from untyped callers", (value) => {
+    const result = run(value as never);
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error[0]?.field).toBe("command");
+    }
   });
 });
 
@@ -589,7 +597,7 @@ describe("expose()", () => {
     const result = expose({ start: 9000, end: 8000 });
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].message).toContain("start");
+      expect(result.error[0]?.message).toContain("start");
     }
   });
 
@@ -616,7 +624,7 @@ describe("stage()", () => {
     const result = stage("", [from("node:18")]);
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("name");
+      expect(result.error[0]?.field).toBe("name");
     }
   });
 
@@ -624,7 +632,7 @@ describe("stage()", () => {
     const result = stage("builder", [] as never);
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("instructions");
+      expect(result.error[0]?.field).toBe("instructions");
     }
   });
 
@@ -764,7 +772,7 @@ describe("comment()", () => {
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
       expect(result.error).toHaveLength(1);
-      expect(result.error[0].field).toBe("lines[1]");
+      expect(result.error[0]?.field).toBe("lines[1]");
     }
   });
 
@@ -819,7 +827,7 @@ describe("group()", () => {
     const result = group([] as never);
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("instructions");
+      expect(result.error[0]?.field).toBe("instructions");
     }
   });
 
@@ -827,7 +835,7 @@ describe("group()", () => {
     const result = stage("build", [from("node"), group([run("ok"), copy("a", "")])]);
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("instructions[1].instructions[1].dest");
+      expect(result.error[0]?.field).toBe("instructions[1].instructions[1].dest");
     }
   });
 });
@@ -865,7 +873,7 @@ describe("heredoc()", () => {
     const result = run(heredoc(["a\rb"]));
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("command.lines[0]");
+      expect(result.error[0]?.field).toBe("command.lines[0]");
     }
   });
 });

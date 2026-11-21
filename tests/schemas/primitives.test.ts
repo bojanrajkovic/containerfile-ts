@@ -47,7 +47,7 @@ describe("validatePort", () => {
     const result = validatePort("bad", "customField");
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("customField");
+      expect(result.error[0]?.field).toBe("customField");
     }
   });
 });
@@ -89,7 +89,7 @@ describe("validateImageName", () => {
     const result = validateImageName("", "baseImage");
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("baseImage");
+      expect(result.error[0]?.field).toBe("baseImage");
     }
   });
 });
@@ -117,7 +117,7 @@ describe("validateDockerPath", () => {
     const result = validateDockerPath("", "destination");
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("destination");
+      expect(result.error[0]?.field).toBe("destination");
     }
   });
 });
@@ -133,8 +133,8 @@ describe("validatePortRange", () => {
     const result = validatePortRange({ start: 100, end: 50 });
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].message).toContain("start");
-      expect(result.error[0].message).toContain("end");
+      expect(result.error[0]?.message).toContain("start");
+      expect(result.error[0]?.message).toContain("end");
     }
   });
 
@@ -191,7 +191,7 @@ describe("validateStringArray", () => {
     const result = validateStringArray(["valid", "", "also-valid"]);
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toContain("[1]");
+      expect(result.error[0]?.field).toContain("[1]");
     }
   });
 
@@ -207,7 +207,7 @@ describe("validateStringArray", () => {
     const result = validateStringArray([""], "command");
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("command[0]");
+      expect(result.error[0]?.field).toBe("command[0]");
     }
   });
 });
@@ -253,8 +253,8 @@ describe("line-break checks", () => {
       const result = validate(bad, "field");
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
-        expect(result.error[0].field).toBe("field");
-        expect(result.error[0].value).toBe(bad);
+        expect(result.error[0]?.field).toBe("field");
+        expect(result.error[0]?.value).toBe(bad);
       }
     }
   });
@@ -297,7 +297,7 @@ describe("validateShellCommand", () => {
     const result = validateShellCommand(command, "command");
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
-      expect(result.error[0].field).toBe("command");
+      expect(result.error[0]?.field).toBe("command");
     }
   });
 });

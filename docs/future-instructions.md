@@ -4,15 +4,6 @@ This document tracks Dockerfile instructions not yet implemented in containerfil
 
 ## Other Potential Instructions
 
-### HEALTHCHECK
-
-Configures container health monitoring.
-
-```dockerfile
-HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost/ || exit 1
-HEALTHCHECK NONE
-```
-
 ### STOPSIGNAL
 
 Sets the system call signal for container exit.
@@ -67,5 +58,4 @@ function portRange(start: number, end: number): ValidPortRange {
 
 ## Priority
 
-1. **Medium:** HEALTHCHECK - useful for production images
-2. **Low:** STOPSIGNAL, ONBUILD - less common use cases
+1. **Low:** STOPSIGNAL, ONBUILD - less common use cases

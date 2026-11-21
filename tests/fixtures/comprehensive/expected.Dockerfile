@@ -15,6 +15,9 @@ USER root
 USER node:node
 VOLUME ["/data"]
 VOLUME ["/var/log", "/var/cache"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --start-interval=1s --retries=3 CMD ["curl", "-f", "http://localhost:8080/"]
+HEALTHCHECK CMD curl -f http://localhost:8080/ || exit 1
+HEALTHCHECK NONE
 EXPOSE 5000-5010/udp
 EXPOSE 8080
 ENTRYPOINT ["node", "--experimental-specifier-resolution=node"]

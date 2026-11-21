@@ -15,6 +15,8 @@ import type {
   UserInstruction,
   VolumeInstruction,
   ShellInstruction,
+  HealthcheckInstruction,
+  HealthcheckOptions,
   Containerfile,
   Instruction,
   Stage,
@@ -527,6 +529,79 @@ export function shell(
     type: "SHELL" as const,
     command: validatedCommand,
   }));
+}
+
+// One or more `<number><unit>` pairs, as accepted by Go's time.ParseDuration.
+const DURATION_PATTERN = /^(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+$/;
+
+function validateDuration(
+  value: unknown,
+  field: string = "duration",
+): Result<string, Array<ValidationError>> {
+  return typeof value === "string" && DURATION_PATTERN.test(value)
+    ? ok(value)
+    : err([validationError(field, 'must be a duration such as "30s" or "1m30s"', value)]);
+}
+
+function validateRetries(
+  value: unknown,
+  field: string = "retries",
+): Result<number, Array<ValidationError>> {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1
+    ? ok(value)
+    : err([validationError(field, "must be a positive integer", value)]);
+}
+
+/**
+ * Create a HEALTHCHECK instruction that runs a command.
+ *
+ * @param command - Shell form (string) or exec form (array of strings)
+ * @param options - Optional settings (interval, timeout, startPeriod, startInterval, retries)
+ * @returns Result with HealthcheckInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * healthcheck(["curl", "-f", "http://localhost/"], { interval: "30s", retries: 3 }).match(
+ *   (instruction) => console.log(instruction),
+ *   (errors) => console.error(errors),
+ * );
+ * ```
+ */
+export function healthcheck(
+  command: string | ReadonlyArray<string>,
+  options?: HealthcheckOptions,
+): Result<HealthcheckInstruction, Array<ValidationError>> {
+  const validatedCommand =
+    typeof command === "string"
+      ? validateNonEmptyString(command, "command")
+      : validateStringArray(command, "command");
+
+  return Result.combineWithAllErrors([
+    validatedCommand,
+    validateOptional(options?.interval, validateDuration, "interval"),
+    validateOptional(options?.timeout, validateDuration, "timeout"),
+    validateOptional(options?.startPeriod, validateDuration, "startPeriod"),
+    validateOptional(options?.startInterval, validateDuration, "startInterval"),
+    validateOptional(options?.retries, validateRetries, "retries"),
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([cmdValue, interval, timeout, startPeriod, startInterval, retries]) => ({
+      type: "HEALTHCHECK" as const,
+      check: "CMD" as const,
+      command: cmdValue,
+      interval,
+      timeout,
+      startPeriod,
+      startInterval,
+      retries,
+    }));
+}
+
+/**
+ * Create a `HEALTHCHECK NONE` instruction, which disables any healthcheck inherited from the base image.
+ */
+export function healthcheckNone(): Result<HealthcheckInstruction, Array<ValidationError>> {
+  return ok({ type: "HEALTHCHECK" as const, check: "NONE" as const });
 }
 
 /**

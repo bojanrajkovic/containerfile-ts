@@ -18,6 +18,7 @@ import type {
   UserInstruction,
   VolumeInstruction,
   ShellInstruction,
+  HealthcheckInstruction,
 } from "./types.js";
 
 /**
@@ -135,6 +136,34 @@ function renderShell(instruction: ShellInstruction): string {
   return `SHELL ${formatArray(instruction.command)}`;
 }
 
+function renderHealthcheck(instruction: HealthcheckInstruction): string {
+  if (instruction.check === "NONE") {
+    return "HEALTHCHECK NONE";
+  }
+
+  let line = "HEALTHCHECK";
+  if (instruction.interval !== null) {
+    line += ` --interval=${instruction.interval}`;
+  }
+  if (instruction.timeout !== null) {
+    line += ` --timeout=${instruction.timeout}`;
+  }
+  if (instruction.startPeriod !== null) {
+    line += ` --start-period=${instruction.startPeriod}`;
+  }
+  if (instruction.startInterval !== null) {
+    line += ` --start-interval=${instruction.startInterval}`;
+  }
+  if (instruction.retries !== null) {
+    line += ` --retries=${instruction.retries}`;
+  }
+  const command =
+    typeof instruction.command === "string"
+      ? instruction.command
+      : formatArray(instruction.command);
+  return `${line} CMD ${command}`;
+}
+
 /**
  * Renderer dispatch table - maps instruction type to render function
  */
@@ -155,6 +184,7 @@ const renderers: {
   USER: renderUser,
   VOLUME: renderVolume,
   SHELL: renderShell,
+  HEALTHCHECK: renderHealthcheck,
 };
 
 /**

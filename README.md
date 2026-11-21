@@ -153,7 +153,7 @@ comment("Install dependencies first", "", "so the layer caches.");
 # so the layer caches.
 ```
 
-A comment at the very top of the file in `key=value` form, such as `comment("syntax=docker/dockerfile:1")`, is read by BuildKit as a [parser directive](https://docs.docker.com/reference/dockerfile/#parser-directives). Dockerfiles have no trailing comments: a `#` after an instruction is part of its arguments.
+A comment at the very top of the file in `key=value` form, such as `comment("syntax=docker/dockerfile:1")`, is read by BuildKit as a [parser directive](https://docs.docker.com/reference/dockerfile/#parser-directives). `comment()` rejects `escape=`, because the line-break checks assume the default `\` escape character. Dockerfiles have no trailing comments: a `#` after an instruction is part of its arguments.
 
 ### Line breaks
 

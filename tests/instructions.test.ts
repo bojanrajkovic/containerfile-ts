@@ -767,10 +767,18 @@ describe("comment()", () => {
   });
 
   it("collects errors from every bad line", () => {
-    const result = comment("a\rb", "ok", "c\\");
+    const result = comment("a\rb", "ok", "c\nd");
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
       expect(result.error.map((e) => e.field)).toEqual(["lines[0]", "lines[2]"]);
     }
+  });
+
+  it("accepts a trailing backslash, which BuildKit ignores in comments", () => {
+    expect(comment("C:\\").isOk()).toBe(true);
+  });
+
+  it.each(["escape=`", " Escape = `", "escape=\\"])("rejects the escape directive %s", (line) => {
+    expect(comment(line).isErr()).toBe(true);
   });
 });

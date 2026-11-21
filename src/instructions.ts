@@ -626,11 +626,34 @@ export function healthcheckNone(): Result<HealthcheckInstruction, Array<Validati
 }
 
 /**
+ * Validate one comment line. A line break would end the comment and start an instruction.
+ * A trailing `\` is fine: BuildKit drops comment lines before it joins continuations.
+ * `escape=` is rejected because, as a parser directive, it changes the escape character
+ * that every line-continuation check depends on.
+ */
+function validateCommentLine(
+  value: unknown,
+  field: string,
+): Result<string, Array<ValidationError>> {
+  if (typeof value !== "string") {
+    return err([validationError(field, "must be a string", value)]);
+  }
+  if (/[\r\n]/.test(value)) {
+    return err([validationError(field, "must not contain line breaks", value)]);
+  }
+  if (/^\s*escape\s*=/i.test(value)) {
+    return err([validationError(field, "must not be an escape= parser directive", value)]);
+  }
+  return ok(value);
+}
+
+/**
  * Create a full-line comment. Each argument is one line.
  *
- * Lines may be empty (rendered as a bare `#`), but must not contain line breaks or end
- * with a backslash. A comment at the very top of a Dockerfile in `key=value` form, such
- * as `syntax=docker/dockerfile:1`, is read by BuildKit as a parser directive.
+ * Lines may be empty (rendered as a bare `#`), but must not contain line breaks. A comment
+ * at the very top of a Dockerfile in `key=value` form, such as `syntax=docker/dockerfile:1`,
+ * is read by BuildKit as a parser directive. `escape=` is rejected: the line-break checks
+ * assume the default `\` escape character.
  *
  * @param line - First comment line
  * @param more - Further comment lines
@@ -649,9 +672,9 @@ export function comment(
   ...more: ReadonlyArray<string>
 ): Result<CommentInstruction, Array<ValidationError>> {
   return Result.combineWithAllErrors([
-    validateString(line, "lines[0]"),
+    validateCommentLine(line, "lines[0]"),
     Result.combineWithAllErrors(
-      more.map((text, i) => validateString(text, `lines[${i + 1}]`)),
+      more.map((text, i) => validateCommentLine(text, `lines[${i + 1}]`)),
     ).mapErr((errors) => errors.flat()),
   ])
     .mapErr((errors) => errors.flat())

@@ -233,7 +233,7 @@ function renderEntries(entries: ReadonlyArray<Instruction | Group>): string {
  */
 function isSingleStage(
   containerfile: Containerfile,
-): containerfile is { readonly instructions: ReadonlyArray<Instruction | Group> } {
+): containerfile is Extract<Containerfile, { readonly instructions: unknown }> {
   return "instructions" in containerfile;
 }
 

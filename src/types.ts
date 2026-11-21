@@ -181,6 +181,11 @@ export type HealthcheckInstruction =
     };
 
 /**
+ * An array with at least one element.
+ */
+export type NonEmptyArray<T> = readonly [T, ...Array<T>];
+
+/**
  * Full-line comment. Each entry in `lines` renders as `# line`; an empty entry renders as `#`.
  *
  * A comment at the very top of a Dockerfile in `key=value` form (for example
@@ -188,7 +193,7 @@ export type HealthcheckInstruction =
  */
 export type CommentInstruction = {
   readonly type: "COMMENT";
-  readonly lines: readonly [string, ...Array<string>];
+  readonly lines: NonEmptyArray<string>;
 };
 
 /**
@@ -219,7 +224,7 @@ export type Instruction =
 export type Group = {
   readonly type: "GROUP";
   readonly comment: CommentInstruction | null;
-  readonly instructions: readonly [Instruction, ...Array<Instruction>];
+  readonly instructions: NonEmptyArray<Instruction>;
 };
 
 /**
@@ -227,15 +232,15 @@ export type Group = {
  */
 export type Stage = {
   readonly name: string;
-  readonly instructions: ReadonlyArray<Instruction | Group>;
+  readonly instructions: NonEmptyArray<Instruction | Group>;
 };
 
 /**
  * A Containerfile definition - either single-stage (instructions) or multi-stage (stages)
  */
 export type Containerfile =
-  | { readonly instructions: ReadonlyArray<Instruction | Group> }
-  | { readonly stages: ReadonlyArray<Stage> };
+  | { readonly instructions: NonEmptyArray<Instruction | Group> }
+  | { readonly stages: NonEmptyArray<Stage> };
 
 /**
  * Options for the from() factory function

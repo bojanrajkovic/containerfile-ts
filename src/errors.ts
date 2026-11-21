@@ -1,5 +1,8 @@
 // pattern: Functional Core
 
+import { Result } from "neverthrow";
+import type { NonEmptyArray } from "./types.js";
+
 /**
  * Validation error returned when factory function input is invalid.
  * Field uses path notation for nested errors (e.g., "instructions[2].src").
@@ -37,4 +40,23 @@ export function prefixErrors(
  */
 export function isReadonlyArray<T>(value: T): value is T & readonly unknown[] {
   return Array.isArray(value);
+}
+
+/**
+ * Validate every item of a non-empty array, collecting all errors.
+ * Keeps the non-empty type, which `Result.combineWithAllErrors` alone would widen to an array.
+ */
+export function combineNonEmpty<A, T>(
+  items: NonEmptyArray<A>,
+  validate: (item: A, index: number) => Result<T, Array<ValidationError>>,
+): Result<NonEmptyArray<T>, Array<ValidationError>> {
+  const [head, ...tail] = items;
+  return Result.combineWithAllErrors([
+    validate(head, 0),
+    Result.combineWithAllErrors(tail.map((item, i) => validate(item, i + 1))).mapErr((errors) =>
+      errors.flat(),
+    ),
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([first, rest]) => [first, ...rest] as const);
 }

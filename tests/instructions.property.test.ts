@@ -179,7 +179,7 @@ describe("line safety properties", () => {
           for (const line of lines.slice(0, -1)) {
             expect(line).toMatch(/\\[ \t]*$/);
           }
-          const last = lines[lines.length - 1];
+          const last = lines.at(-1) ?? "";
           expect(last).not.toMatch(/\\[ \t]*$/);
           expect(last.trimStart().startsWith("#")).toBe(false);
           expect(last.includes("\r")).toBe(false);

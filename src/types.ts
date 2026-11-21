@@ -240,13 +240,13 @@ export type AddOptions = {
 
 /**
  * Options for the healthcheck() factory function.
- * Durations are Go-style strings such as "30s" or "1m30s".
+ * Durations must be non-negative and use only hours and smaller units (Go has no day unit).
  */
 export type HealthcheckOptions = {
-  readonly interval?: string;
-  readonly timeout?: string;
-  readonly startPeriod?: string;
-  readonly startInterval?: string;
+  readonly interval?: Temporal.Duration;
+  readonly timeout?: Temporal.Duration;
+  readonly startPeriod?: Temporal.Duration;
+  readonly startInterval?: Temporal.Duration;
   readonly retries?: number;
 };
 

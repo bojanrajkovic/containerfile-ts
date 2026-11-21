@@ -277,10 +277,10 @@ describe("healthcheck()", () => {
 
   it("returns Ok with all options", () => {
     const result = healthcheck(["curl", "-f", "http://localhost/"], {
-      interval: "1m30s",
-      timeout: "3s",
-      startPeriod: "5s",
-      startInterval: "500ms",
+      interval: Temporal.Duration.from({ minutes: 1, seconds: 30 }),
+      timeout: Temporal.Duration.from({ seconds: 3 }),
+      startPeriod: Temporal.Duration.from({ seconds: 5 }),
+      startInterval: Temporal.Duration.from({ milliseconds: 500 }),
       retries: 3,
     });
     expect(result._unsafeUnwrap()).toMatchObject({
@@ -298,8 +298,18 @@ describe("healthcheck()", () => {
     expect(healthcheck([])._unsafeUnwrapErr()[0].field).toBe("command");
   });
 
-  it.each(["30", "s", "30 s", "1d", "-5s", ""])("returns Err for duration %j", (bad) => {
-    expect(healthcheck("true", { interval: bad })._unsafeUnwrapErr()[0].field).toBe("interval");
+  it.each([
+    ["a string", "30s"],
+    ["a negative duration", Temporal.Duration.from({ seconds: -5 })],
+    ["a duration with days", Temporal.Duration.from({ days: 1 })],
+  ])("returns Err for %s", (_name, bad) => {
+    const result = healthcheck("true", { interval: bad as Temporal.Duration });
+    expect(result._unsafeUnwrapErr()[0].field).toBe("interval");
+  });
+
+  it("accepts a zero duration", () => {
+    const result = healthcheck("true", { timeout: Temporal.Duration.from({ seconds: 0 }) });
+    expect(result._unsafeUnwrap()).toMatchObject({ timeout: "0s" });
   });
 
   it.each([0, -1, 1.5, Number.NaN])("returns Err for retries %j", (bad) => {
@@ -307,7 +317,11 @@ describe("healthcheck()", () => {
   });
 
   it("collects errors across fields", () => {
-    const fields = healthcheck("", { interval: "x", timeout: "y", retries: 0 })
+    const fields = healthcheck("", {
+      interval: "x" as unknown as Temporal.Duration,
+      timeout: Temporal.Duration.from({ seconds: -1 }),
+      retries: 0,
+    })
       ._unsafeUnwrapErr()
       .map((e) => e.field);
     expect(fields).toEqual(["command", "interval", "timeout", "retries"]);

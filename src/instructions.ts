@@ -27,6 +27,7 @@ import type {
   ArgOptions,
 } from "./types.js";
 import { Result, ok, err } from "neverthrow";
+import { stringifyDuration } from "@bojanrajkovic/go-duration";
 import {
   validateImageName,
   validateNonEmptyString,
@@ -531,16 +532,29 @@ export function shell(
   }));
 }
 
-// One or more `<number><unit>` pairs, as accepted by Go's time.ParseDuration.
-const DURATION_PATTERN = /^(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+$/;
-
+/**
+ * Validate a Temporal.Duration and convert it to Go syntax (e.g. "1m30s").
+ * stringifyDuration throws RangeError for calendar units or values outside int64 nanoseconds.
+ */
 function validateDuration(
   value: unknown,
   field: string = "duration",
 ): Result<string, Array<ValidationError>> {
-  return typeof value === "string" && DURATION_PATTERN.test(value)
-    ? ok(value)
-    : err([validationError(field, 'must be a duration such as "30s" or "1m30s"', value)]);
+  if (!(value instanceof Temporal.Duration)) {
+    return err([validationError(field, "must be a Temporal.Duration", value)]);
+  }
+  if (value.sign < 0) {
+    return err([validationError(field, "must not be negative", value)]);
+  }
+
+  try {
+    return ok(stringifyDuration(value));
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return err([validationError(field, error.message, value)]);
+    }
+    throw error;
+  }
 }
 
 function validateRetries(
@@ -561,7 +575,10 @@ function validateRetries(
  *
  * @example
  * ```typescript
- * healthcheck(["curl", "-f", "http://localhost/"], { interval: "30s", retries: 3 }).match(
+ * healthcheck(["curl", "-f", "http://localhost/"], {
+ *   interval: Temporal.Duration.from({ seconds: 30 }),
+ *   retries: 3,
+ * }).match(
  *   (instruction) => console.log(instruction),
  *   (errors) => console.error(errors),
  * );

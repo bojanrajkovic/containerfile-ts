@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@bojanrajkovic/go-duration':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@sinclair/typebox':
         specifier: ^0.34.47
         version: 0.34.52
@@ -61,6 +64,15 @@ packages:
   '@babel/helper-validator-identifier@7.29.7':
     resolution: {integrity: sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==}
     engines: {node: '>=6.9.0'}
+
+  '@bojanrajkovic/go-duration@0.1.0':
+    resolution: {integrity: sha512-DoHcWQUGw/h4UjHSdZLjGKH9aVbqI+mipqp3qCeNPfxtwtBr2nbI6CEGgRtDrwyTb2AuW9fzSjbZsM6Ox8XApw==}
+    engines: {node: '>=26'}
+    peerDependencies:
+      temporal-polyfill: ^1.0.0
+    peerDependenciesMeta:
+      temporal-polyfill:
+        optional: true
 
   '@changesets/apply-release-plan@8.1.1':
     resolution: {integrity: sha512-nk2Hbq3M9NeHMdaIRBDvawKrQJzXB9sGyBUE5yWnIKtvdcNCPj75zBekJYr0gTT2ecJH3eFeTrc8eisPImcv0Q==}
@@ -1479,6 +1491,8 @@ snapshots:
       picocolors: 1.1.1
 
   '@babel/helper-validator-identifier@7.29.7': {}
+
+  '@bojanrajkovic/go-duration@0.1.0': {}
 
   '@changesets/apply-release-plan@8.1.1':
     dependencies:

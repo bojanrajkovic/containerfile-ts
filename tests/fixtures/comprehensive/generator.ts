@@ -89,10 +89,10 @@ const result = containerfile([
 
   // HEALTHCHECK with every option, then NONE (the last HEALTHCHECK wins at runtime)
   healthcheck(["curl", "-f", "http://localhost:8080/"], {
-    interval: "30s",
-    timeout: "3s",
-    startPeriod: "5s",
-    startInterval: "1s",
+    interval: Temporal.Duration.from({ seconds: 30 }),
+    timeout: Temporal.Duration.from({ seconds: 3 }),
+    startPeriod: Temporal.Duration.from({ seconds: 5 }),
+    startInterval: Temporal.Duration.from({ seconds: 1 }),
     retries: 3,
   }),
   healthcheck("curl -f http://localhost:8080/ || exit 1"),

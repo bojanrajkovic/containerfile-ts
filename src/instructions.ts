@@ -318,12 +318,18 @@ export function workdir(path: string): Result<WorkdirInstruction, Array<Validati
 }
 
 /**
+ * A character an ENV, LABEL, or ARG key can't contain: whitespace or `=` would split the
+ * key, and BuildKit processes quotes, `\\`, and `$`.
+ */
+export const KEY_UNSAFE_CHARACTER = /[\s="'\\$]/;
+
+/**
  * Validate an ENV, LABEL, or ARG key. Whitespace or `=` would split it into a different
  * key and value; quotes, `\\`, and `$` would be processed by BuildKit.
  */
 function validateKey(value: unknown, field: string): Result<string, Array<ValidationError>> {
   return validateNonEmptyString(value, field).andThen((str) =>
-    /[\s="'\\$]/.test(str)
+    KEY_UNSAFE_CHARACTER.test(str)
       ? err([validationError(field, "must not contain whitespace, =, quotes, \\, or $", value)])
       : ok(str),
   );

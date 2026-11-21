@@ -399,7 +399,7 @@ This project uses GitHub Actions for automated testing, publishing, and releases
 - **Versioning:** `feat:` → minor, `fix:` → patch, `BREAKING CHANGE:` → major
 - **Runs as:** the releaser bot (a GitHub App), in the `release` environment. The job mints an app token from the `RELEASER_BOT_CLIENT_ID` variable and `RELEASER_BOT_PRIVATE_KEY` secret. We use the bot instead of `GITHUB_TOKEN` because PRs and commits made with `GITHUB_TOKEN` don't trigger workflows, so the release PR would get no CI.
 - **Workflow:**
-  1. Generates changesets from conventional commits since last tag
+  1. Generates changesets from conventional commits since last tag. Each entry is the commit subject plus any `BREAKING CHANGE` note. The commit body (the PR description) stays out of the changelog.
   2. Creates or updates the "Version Packages" PR as the bot (if releasable changes exist)
   3. On PR merge (by a maintainer, by hand): publishes to npm with `@latest` tag, and the bot creates the git tag and GitHub Release
 - **Publishes to:** npm public registry as `@bojanrajkovic/containerfile-ts`

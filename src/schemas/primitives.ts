@@ -252,10 +252,6 @@ export function validateShellCommand(
       return err([validationError(field, "must not contain carriage returns", value)]);
     }
 
-    if (HEREDOC.test(str)) {
-      return err([validationError(field, "must not start a heredoc (`<<WORD`)", value)]);
-    }
-
     const lines = str.split("\n");
     const last = str.slice(str.lastIndexOf("\n") + 1);
     if (!lines.slice(0, -1).every((line) => CONTINUATION.test(line))) {
@@ -267,6 +263,15 @@ export function validateShellCommand(
       return err([
         validationError(field, "last line must be a command, not empty, a comment, or `\\`", value),
       ]);
+    }
+
+    // BuildKit joins continuations before it looks for heredocs, so check the joined line:
+    // `<\` at the end of one line and `<EOF` on the next become `<<EOF`.
+    const joined = lines
+      .map((line, i) => (i < lines.length - 1 ? line.replace(/\\[ \t]*$/, "") : line))
+      .join("");
+    if (HEREDOC.test(joined)) {
+      return err([validationError(field, "must not start a heredoc (`<<WORD`)", value)]);
     }
     return ok(str);
   });

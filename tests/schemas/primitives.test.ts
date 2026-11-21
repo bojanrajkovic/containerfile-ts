@@ -299,6 +299,7 @@ describe("validateShellCommand", () => {
     ["heredoc with a numeric word", "cat <<1"],
     ["heredoc on a file descriptor", "cat 3<<EOF"],
     ["heredoc with a space before the word", "cat << EOF"],
+    ["heredoc split by a continuation", "cat <\\\n<EOF"],
     ["quoted heredoc", "cat <<-'EOF'"],
     ["continuation into an empty line", "echo a \\\n   "],
     ["continuation into a comment", "echo a \\\n# done"],

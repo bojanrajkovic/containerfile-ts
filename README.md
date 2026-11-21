@@ -222,6 +222,23 @@ EOF_d2c21e47
 
 The script runs exactly as written. The delimiter is quoted, so the shell doesn't expand `$VAR` or process backslashes; read build args from the environment at run time. The delimiter comes from a hash of the script. The same script always gets the same delimiter, so the rendered line and BuildKit's layer cache stay stable, and no script line can end the heredoc early. Heredocs need BuildKit's Dockerfile frontend 1.4 or later.
 
+### ENV, LABEL, and ARG values
+
+Values render in double quotes and BuildKit stores them exactly as you pass them, including spaces, quotes, backslashes, and `$`:
+
+```typescript
+env("DB_PASS", 'hunter$2 "go"'); // ENV DB_PASS="hunter\$2 \"go\""
+```
+
+To reference a build arg or an earlier ENV value, pass `{ expand: true }`. `$` then passes through, and quotes and backslashes are still escaped:
+
+```typescript
+arg("APP_ENV", { defaultValue: "production" });
+env("NODE_ENV", "${APP_ENV}", { expand: true }); // ENV NODE_ENV="${APP_ENV}"
+```
+
+Keys can't contain whitespace, `=`, quotes, `\`, or `$`.
+
 ### Line breaks
 
 Each value must fit on its rendered line. A line break would start a new instruction, and a trailing single `\` (even with spaces after it) would pull the next instruction into this one, so factories reject both. A doubled `\\` is a literal backslash and is allowed.
@@ -259,6 +276,11 @@ Exec-form array elements can contain line breaks, because JSON form renders them
 ### ArgOptions
 
 - `defaultValue?: string` - Default value for build arg
+- `expand?: boolean` - Let BuildKit expand `$VAR` in `defaultValue` (default: false)
+
+### ValueOptions (env, label)
+
+- `expand?: boolean` - Let BuildKit expand `$VAR` in the value (default: false)
 
 ## Changelog
 

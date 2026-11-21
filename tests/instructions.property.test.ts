@@ -3,6 +3,7 @@
 import { describe, it, expect } from "vitest";
 import * as fc from "fast-check";
 import {
+  KEY_UNSAFE_CHARACTER,
   from,
   workdir,
   env,
@@ -33,6 +34,9 @@ const validPort = fc.integer({ min: 0, max: 65535 });
 
 // Generator for non-empty strings
 const nonEmptyString = fc.string({ minLength: 1, maxLength: 50 }).filter(singleLine);
+
+// Generator for valid ENV, LABEL, and ARG keys
+const envKey = nonEmptyString.filter((s) => !KEY_UNSAFE_CHARACTER.test(s));
 
 describe("Factory function roundtrip properties", () => {
   it("from() with valid image produces renderable FROM instruction", () => {
@@ -68,13 +72,13 @@ describe("Factory function roundtrip properties", () => {
 
   it("env() with valid key produces renderable ENV instruction", () => {
     fc.assert(
-      fc.property(nonEmptyString, fc.string().filter(singleLine), (key, value) => {
+      fc.property(envKey, fc.string().filter(singleLine), (key, value) => {
         const result = env(key, value);
         expect(result.isOk()).toBe(true);
         if (result.isOk()) {
           expect(result.value.type).toBe("ENV");
           expect(result.value.key).toBe(key);
-          expect(result.value.value).toBe(value);
+          expect(result.value.value).toEqual({ text: value, expand: false });
         }
       }),
     );

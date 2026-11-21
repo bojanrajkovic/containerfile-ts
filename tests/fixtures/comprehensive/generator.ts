@@ -52,7 +52,7 @@ const result = containerfile([
   label("version", "1.0.0"),
 
   // ENV for runtime configuration
-  env("NODE_ENV", "${APP_ENV}"),
+  env("NODE_ENV", "${APP_ENV}", { expand: true }),
   env("PORT", "8080"),
 
   // WORKDIR

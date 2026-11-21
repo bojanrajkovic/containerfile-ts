@@ -16,9 +16,9 @@ export {
   validateDockerPath,
   validatePortRange,
   validateString,
+  validateLine,
   validateNonEmptyString,
   validateStringArray,
   validateShellCommand,
   validateOptional,
-  LINE_BREAK,
 } from "./primitives.js";

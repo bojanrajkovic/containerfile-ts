@@ -1,10 +1,10 @@
 ARG NODE_VERSION
-ARG APP_ENV=production
+ARG APP_ENV="production"
 FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS builder
 LABEL maintainer="team@example.com"
 LABEL version="1.0.0"
-ENV NODE_ENV=${APP_ENV}
-ENV PORT=8080
+ENV NODE_ENV="${APP_ENV}"
+ENV PORT="8080"
 WORKDIR /app
 SHELL ["/bin/bash", "-c"]
 ADD --chown=node:node --chmod=755 https://example.com/config.tar.gz /app/config/

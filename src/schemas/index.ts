@@ -21,5 +21,4 @@ export {
   validateStringArray,
   validateShellCommand,
   validateOptional,
-  LINE_BREAK,
 } from "./primitives.js";

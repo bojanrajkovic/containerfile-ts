@@ -40,6 +40,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
+      # Go comes from .mise.toml; cache its modules for the BuildKit parser tests.
+      - name: Setup Go module cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('tests/buildkit/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

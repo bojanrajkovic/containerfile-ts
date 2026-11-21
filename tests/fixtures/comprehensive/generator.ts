@@ -7,6 +7,7 @@ import {
   label,
   user,
   volume,
+  shell,
   env,
   workdir,
   add,
@@ -28,6 +29,7 @@ import {
  * - RUN with exec form (array)
  * - USER with and without group
  * - VOLUME with one path and several
+ * - SHELL instruction
  * - EXPOSE with port range and UDP protocol
  * - ENTRYPOINT instruction
  * - CMD instruction
@@ -52,6 +54,9 @@ const result = containerfile([
 
   // WORKDIR
   workdir("/app"),
+
+  // SHELL for later shell-form commands
+  shell(["/bin/bash", "-c"]),
 
   // ADD with chown and chmod options
   add("https://example.com/config.tar.gz", "/app/config/", {

@@ -17,6 +17,7 @@ import type {
   LabelInstruction,
   UserInstruction,
   VolumeInstruction,
+  ShellInstruction,
 } from "./types.js";
 
 /**
@@ -130,6 +131,10 @@ function renderVolume(instruction: VolumeInstruction): string {
   return `VOLUME ${formatArray(instruction.paths)}`;
 }
 
+function renderShell(instruction: ShellInstruction): string {
+  return `SHELL ${formatArray(instruction.command)}`;
+}
+
 /**
  * Renderer dispatch table - maps instruction type to render function
  */
@@ -149,6 +154,7 @@ const renderers: {
   LABEL: renderLabel,
   USER: renderUser,
   VOLUME: renderVolume,
+  SHELL: renderShell,
 };
 
 /**

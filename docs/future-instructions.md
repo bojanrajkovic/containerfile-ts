@@ -2,24 +2,6 @@
 
 This document tracks Dockerfile instructions not yet implemented in containerfile-ts that could be added in future phases.
 
-## SHELL Instruction
-
-Overrides the default shell used for the shell form of commands.
-
-```dockerfile
-SHELL ["powershell", "-command"]
-SHELL ["/bin/bash", "-c"]
-```
-
-**Proposed type:**
-
-```typescript
-export type ShellInstruction = {
-  readonly type: "SHELL";
-  readonly command: ReadonlyArray<string>;
-};
-```
-
 ## Other Potential Instructions
 
 ### HEALTHCHECK
@@ -85,5 +67,5 @@ function portRange(start: number, end: number): ValidPortRange {
 
 ## Priority
 
-1. **Medium:** SHELL, HEALTHCHECK - useful for production images
+1. **Medium:** HEALTHCHECK - useful for production images
 2. **Low:** STOPSIGNAL, ONBUILD - less common use cases

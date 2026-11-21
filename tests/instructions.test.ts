@@ -8,6 +8,7 @@ import {
   label,
   user,
   volume,
+  shell,
   arg,
   run,
   cmd,
@@ -234,6 +235,27 @@ describe("volume()", () => {
       ._unsafeUnwrapErr()
       .map((e) => e.field);
     expect(fields).toEqual(["paths[0]", "paths[2]"]);
+  });
+});
+
+describe("shell()", () => {
+  it("returns Ok for a valid command", () => {
+    expect(shell(["/bin/bash", "-c"])._unsafeUnwrap()).toEqual({
+      type: "SHELL",
+      command: ["/bin/bash", "-c"],
+    });
+  });
+
+  it("returns Err for empty array", () => {
+    expect(shell([])._unsafeUnwrapErr()[0].field).toBe("command");
+  });
+
+  it("returns Err for empty element", () => {
+    expect(shell(["/bin/bash", ""])._unsafeUnwrapErr()[0].field).toBe("command[1]");
+  });
+
+  it("returns Err for a string at runtime", () => {
+    expect(shell("/bin/bash" as unknown as ReadonlyArray<string>).isErr()).toBe(true);
   });
 });
 

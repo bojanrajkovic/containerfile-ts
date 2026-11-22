@@ -27,8 +27,9 @@ function placeEntry(entry: SourceEntry): Result<Array<Placed>, Array<ParseError>
  *
  * `render(parse(text))` is the same Dockerfile in normal form: keywords in upper case, one
  * space between words, blank lines kept as groups. Input the model can't represent is an
- * error, never silently dropped: an instruction it has no type for, a flag, a heredoc, or a
- * `# escape=` directive other than a backslash. Every error carries its 1-based line.
+ * error, never silently dropped: an instruction it has no type for, a flag or mount it has no
+ * field for, a heredoc other than one quoted delimiter on a RUN, or a `# escape=` directive
+ * other than a backslash. Every error carries its 1-based line.
  *
  * @param text - Dockerfile text
  * @returns Result with the Containerfile, or every ParseError found

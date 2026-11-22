@@ -247,13 +247,18 @@ describe("parse() errors", () => {
     ],
     [
       "a RUN flag",
-      "FROM a\nRUN --mount=type=cache,target=/c x",
-      { line: 2, field: "flag", message: "RUN --mount isn't supported" },
+      "FROM a\nRUN --network=none x",
+      { line: 2, field: "flag", message: "RUN --network isn't supported" },
     ],
     [
-      "a RUN heredoc",
+      "an unquoted RUN heredoc",
       "FROM a\nRUN <<EOF\nx\nEOF",
-      { line: 2, field: "heredoc", message: "RUN heredocs aren't supported" },
+      {
+        line: 2,
+        field: "heredoc",
+        message:
+          "unquoted heredocs aren't supported: the shell would expand $VAR in the body, so write <<'EOF'",
+      },
     ],
     [
       "a backtick escape directive",

@@ -77,14 +77,20 @@ export function parseJsonStringArray(text: string): Array<string> | null {
   }
 }
 
+// Whitespace, or a `\` continuation, which BuildKit reads as whitespace.
+const GAP = String.raw`(?:\s|\\[ \t]*\n)*`;
+const LEADING_GAP = new RegExp(`^${GAP}`);
+const FLAG = new RegExp(`^(--\\S*)${GAP}`);
+
 /**
  * Split off the words at the start that look like flags (`--name=value`). BuildKit reads
- * flags only before the first other word.
+ * flags only before the first other word. A `\` continuation between words counts as
+ * whitespace, so this also reads text that still has its continuations.
  */
 export function splitFlags(text: string): { readonly flags: Array<string>; readonly rest: string } {
   const flags: Array<string> = [];
-  let rest = text.trimStart();
-  for (let match = /^(--\S*)\s*/.exec(rest); match !== null; match = /^(--\S*)\s*/.exec(rest)) {
+  let rest = text.replace(LEADING_GAP, "");
+  for (let match = FLAG.exec(rest); match !== null; match = FLAG.exec(rest)) {
     flags.push(match[1] ?? "");
     rest = rest.slice(match[0].length);
   }

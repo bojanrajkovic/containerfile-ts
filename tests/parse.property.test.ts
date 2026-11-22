@@ -17,6 +17,7 @@ import {
   group,
   healthcheck,
   healthcheckNone,
+  heredoc,
   label,
   parse,
   render,
@@ -29,6 +30,7 @@ import {
   type Containerfile,
   type Group,
   type Instruction,
+  type MountOptions,
   type NonEmptyArray,
   type Stage,
   type ValidationError,
@@ -55,6 +57,64 @@ const quoted = fc.oneof(
   fc
     .tuple(plain, fc.constantFrom("$a", "${b}"), plain)
     .map(([a, variable, b]) => ({ text: a + variable + b, expand: true })),
+);
+
+const path = word.map((w) => `/${w}`);
+const maybe = <T>(arbitrary: fc.Arbitrary<T>) => fc.option(arbitrary, { nil: undefined });
+const mode = maybe(fc.integer({ min: 0, max: 0o7777 }));
+const owner = maybe(fc.integer({ min: 0, max: 65535 }));
+
+const mountOptions: fc.Arbitrary<MountOptions> = fc.oneof(
+  fc.record({
+    type: fc.constant("bind" as const),
+    target: path,
+    source: maybe(path),
+    from: maybe(word),
+    readwrite: fc.boolean(),
+  }),
+  fc.record({
+    type: fc.constant("cache" as const),
+    target: path,
+    id: maybe(word),
+    sharing: maybe(fc.constantFrom("shared" as const, "private" as const, "locked" as const)),
+    from: maybe(word),
+    source: maybe(path),
+    mode,
+    uid: owner,
+    gid: owner,
+    readonly: fc.boolean(),
+  }),
+  fc.record({
+    type: fc.constant("tmpfs" as const),
+    target: path,
+    size: maybe(fc.constantFrom("64m", "1g", "1024")),
+  }),
+  fc.record({
+    type: fc.constant("secret" as const),
+    id: word,
+    target: maybe(path),
+    env: maybe(fc.constantFrom("TOKEN", "A_B")),
+    required: fc.boolean(),
+    mode,
+    uid: owner,
+    gid: owner,
+  }),
+  fc.record({
+    type: fc.constant("ssh" as const),
+    id: maybe(word),
+    target: maybe(path),
+    required: fc.boolean(),
+    mode,
+    uid: owner,
+    gid: owner,
+  }),
+);
+const mounts = fc.array(mountOptions, { maxLength: 3 });
+
+// Lines a script can hold that the parser must not mistake for Dockerfile text.
+const scriptLine = fc.oneof(
+  fc.string({ unit: fc.constantFrom("a", " ", "#", "\\", "<", "'", "$", "F"), maxLength: 8 }),
+  fc.constantFrom("FROM x", "# note", "", "RUN y", "EOF", "<<'EOF'"),
 );
 
 const seconds = fc.option(fc.integer({ min: 1, max: 5000 }), { nil: undefined });
@@ -99,6 +159,13 @@ const instruction: fc.Arbitrary<Built<Instruction>> = fc
     words.map((ws) => run(ws)),
     words.map((ws) => run(ws.join(" && "))),
     words.map((ws) => run(`${ws.join(" ")} \\\n    && true`)),
+    fc.tuple(words, mounts).map(([ws, list]) => run(ws, { mounts: list })),
+    fc.tuple(words, mounts).map(([ws, list]) => run(ws.join(" "), { mounts: list })),
+    fc
+      .tuple(fc.array(scriptLine, { minLength: 1, maxLength: 4 }), maybe(word), mounts)
+      .map(([lines, interpreter, list]) =>
+        run(heredoc(nonEmpty(lines), { interpreter }), { mounts: list }),
+      ),
     fc.constant(shell(["/bin/sh", "-c"])),
     words.map(([first, ...rest]) => comment(first ?? "x", ...rest)),
     // The factories reject some values, such as one ending in a backslash.

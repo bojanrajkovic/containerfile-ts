@@ -329,14 +329,34 @@ The output of `render(parse(text))` is a normal form of the same Dockerfile: upp
 Input the model can't represent is an error, never dropped silently. `parse()` reads `FROM`, `RUN`, `CMD`, `ENTRYPOINT`, `WORKDIR`, `USER`, `VOLUME`, `EXPOSE`, `SHELL`, `ENV`, `LABEL`, `ARG`, `COPY`, `ADD`, `HEALTHCHECK`, and comments. These return an error:
 
 - Any other instruction, such as `ONBUILD` or `STOPSIGNAL`.
-- A flag the instruction doesn't take, a repeated flag, or a flag written with a space (`--chown app:app`). The flags read are `FROM --platform`, `COPY --from --chown --chmod`, `ADD --chown --chmod`, and the five `HEALTHCHECK` flags. Values can't contain quotes or a backslash.
-- A `RUN --mount` flag and a `RUN`, `COPY`, or `ADD` heredoc.
+- A flag the instruction doesn't take, a repeated flag, or a flag written with a space (`--chown app:app`). The flags read are `FROM --platform`, `COPY --from --chown --chmod`, `ADD --chown --chmod`, `RUN --mount` (which can repeat), and the five `HEALTHCHECK` flags. Values can't contain quotes or a backslash.
+- A `--mount` the model can't hold: an unknown type or key, a key the type doesn't take (`size` on a cache mount), a missing `target` on a bind, cache, or tmpfs mount, or a path or id with a comma or whitespace.
+- A `RUN` heredoc that isn't one quoted delimiter. See Heredocs.
 - A `COPY` or `ADD` path with whitespace, since `render()` writes paths unquoted.
 - A `# escape=` directive that isn't a backslash.
 
 Shell-form `RUN` keeps its text as written, `\` continuations included. `parse()` never turns `&&` into a `chain()`. `CMD`, `ENTRYPOINT`, and `RUN` are exec form only when the text is a JSON array of strings, which is how BuildKit reads them. A comment inside a continued instruction moves to just above it. Words in `VOLUME`, `EXPOSE`, `COPY`, and `ADD` can be quoted with `'` or `"`.
 
+#### Mounts
+
+Each `--mount` flag becomes one entry of `run()`'s `mounts` option, in order, and the mount factory validates it. `parse()` reads BuildKit's spellings: keys and `type` in any case, `src`, `dst`, and `destination` for `source` and `target`, a default `type` of `bind`, and `ro`, `rw`, and `required` bare or as `=true` and `=false`. It writes the canonical form, so `--mount=src=.,dst=/s,rw` comes back as `--mount=type=bind,source=.,target=/s,rw`.
+
+#### Heredocs
+
+A `RUN` heredoc is read when it has one quoted delimiter, `<<'EOF'` or `<<"EOF"`, an optional interpreter before it, and the delimiter alone on the last line. The body keeps its blank lines, `#` lines, and backslashes exactly. BuildKit accepts the forms below, but the model has no field for them, so each is an error:
+
+- An unquoted `<<EOF`. BuildKit expands `$VAR` in an unquoted body before the script runs. Quote the delimiter instead: the shell then reads the same `ARG` and `ENV` values from the environment when the script runs.
+- `<<-EOF`, which strips leading tabs. Remove the tabs and use `<<'EOF'`.
+- More than one heredoc on a line. Use one `RUN` for each.
+- Text after the delimiter, such as `| sort` or `> /file`. Put it in the script, or use an interpreter that does it.
+- A heredoc on `COPY` or `ADD`. Create the file with a `RUN` heredoc.
+- An empty body. `heredoc()` needs at least one line.
+
+A heredoc with no terminating line is an error too, and BuildKit rejects it as well.
+
 Some input comes back in a different but equivalent form:
+
+- A heredoc gets a new delimiter derived from its body, and `<<"EOF"` is written with single quotes.
 
 - `EXPOSE 80 443` becomes one instruction per port. `ENV`, `LABEL`, and `ARG` with several pairs become one instruction per pair. `ENV A=1 B=$A` is an error, because a later pair in one `ENV` doesn't see an earlier one, and separate instructions would.
 - `ENV` and `LABEL` accept the old form, `ENV name value`, and write it as `name="value"`.

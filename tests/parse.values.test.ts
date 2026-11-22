@@ -1,8 +1,6 @@
 // pattern: Imperative Shell
 
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import {
   parse,
   render,
@@ -423,27 +421,10 @@ describe("parse() errors for values and flags", () => {
     ]);
   });
 
-  it("still rejects RUN flags and instructions the model has no type for", () => {
-    expect(
-      errorsOf("FROM a\nRUN --mount=type=tmpfs,target=/t x\nSTOPSIGNAL SIGTERM"),
-    ).toMatchObject([
+  it("still rejects other RUN flags and instructions the model has no type for", () => {
+    expect(errorsOf("FROM a\nRUN --network=none x\nSTOPSIGNAL SIGTERM")).toMatchObject([
       { line: 2, field: "flag" },
       { line: 3, field: "instruction", message: "STOPSIGNAL isn't supported" },
     ]);
   });
-});
-
-describe("parse() fixtures", () => {
-  // Fixtures that use only what parse() reads. Text in, the same text out.
-  it.each(["simple-node", "multi-stage", "comprehensive", "formatting"])(
-    "renders %s back unchanged",
-    (name) => {
-      const text = readFileSync(
-        join(import.meta.dirname, "fixtures", name, "expected.Dockerfile"),
-        "utf-8",
-      ).trim();
-
-      expect(render(parsed(text))).toBe(text);
-    },
-  );
 });

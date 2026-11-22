@@ -12,7 +12,43 @@ const POSITION_FIELDS = ["Location", "SourceCode", "OrigCmd", "Comments", "DocCo
 // together, so the comparison runs the pairs of neighboring instructions together too.
 const PAIR_FIELDS: Record<string, string> = { ENV: "Env", LABEL: "Labels", ARG: "Args" };
 
-type Meaning = { cmd: string; error: string | undefined; command: Record<string, unknown> };
+type Meaning = {
+  cmd: string;
+  error: string | undefined;
+  command: Record<string, unknown>;
+  mounts: ReadonlyArray<unknown>;
+  heredocs: ReadonlyArray<{ expand: boolean; content: string }>;
+};
+
+/**
+ * `command` with the heredoc delimiters named alike. parse() derives a new delimiter from the
+ * script, so the original's name would never match.
+ */
+function withoutDelimiters(
+  command: Record<string, unknown>,
+  names: ReadonlyArray<string>,
+): Record<string, unknown> {
+  if (names.length === 0) {
+    return command;
+  }
+  // parse() also writes a double-quoted delimiter in single quotes. Both stop expansion.
+  const strip = (text: unknown) =>
+    typeof text === "string"
+      ? names
+          .reduce((t, name) => t.replaceAll(name, "DELIM"), text)
+          .replaceAll('"DELIM"', "'DELIM'")
+      : text;
+  const { CmdLine, Files } = command;
+  return {
+    ...command,
+    CmdLine: Array.isArray(CmdLine) ? CmdLine.map(strip) : CmdLine,
+    Files: Array.isArray(Files)
+      ? Files.map((file: unknown) =>
+          typeof file === "object" && file !== null ? { ...file, Name: "DELIM" } : file,
+        )
+      : Files,
+  };
+}
 
 // BuildKit records whether ENV and LABEL used `name value` or `name=value`.
 function withoutNoDelim(pair: unknown): unknown {
@@ -53,12 +89,17 @@ function meaning(dockerfile: string) {
     warnings: parsed.warnings,
     // The typed command, not the raw words: parse() drops quotes and writes AS in upper case.
     instructions: mergePairs(
-      parsed.instructions.map(({ cmd, error, command }) => ({
+      parsed.instructions.map(({ cmd, error, command, mounts, heredocs }) => ({
         cmd: cmd.toUpperCase(),
         error,
-        command: Object.fromEntries(
-          Object.entries(command ?? {}).filter(([key]) => !POSITION_FIELDS.includes(key)),
+        command: withoutDelimiters(
+          Object.fromEntries(
+            Object.entries(command ?? {}).filter(([key]) => !POSITION_FIELDS.includes(key)),
+          ),
+          heredocs.map((heredoc) => heredoc.name),
         ),
+        mounts,
+        heredocs: heredocs.map(({ expand, content }) => ({ expand, content })),
       })),
     ),
   };
@@ -126,6 +167,42 @@ ENV A="x y" B='$z' C=a\ b D="a\"b\\c" E=\$F G="a\qb" H=a"b c"'d e'f I= J=""`,
       "several stages",
       '# syntax=docker/dockerfile:1\nFROM a AS b\nRUN x\n\n# last\nFROM b\nSHELL ["/bin/sh", "-c"]',
     ],
+    [
+      "every mount type",
+      [
+        "FROM a",
+        "RUN --mount=type=bind,source=.,target=/s true",
+        "RUN --mount=type=cache,target=/c,id=i,sharing=private,from=a,source=/x,mode=0755,uid=1,gid=2,ro true",
+        "RUN --mount=type=tmpfs,target=/t,size=1g true",
+        "RUN --mount=type=secret,id=s,target=/r,env=E,required,mode=0600,uid=3,gid=4 true",
+        "RUN --mount=type=ssh,id=default,target=/ssh,required true",
+      ].join("\n"),
+    ],
+    [
+      "mount aliases, case, and the default type",
+      "FROM a\nRUN --mount=SRC=.,Dst=/s,RW true\nRUN --mount=type=Cache,destination=/c,readonly=true true",
+    ],
+    [
+      "mount booleans spelled out",
+      "FROM a\nRUN --mount=type=bind,target=/s,rw=false true\nRUN --mount=type=secret,id=x,required=1 true\nRUN --mount=type=cache,target=/c,ro=false true",
+    ],
+    [
+      "mounts over lines, around a comment",
+      "FROM a\nRUN --mount=type=tmpfs,target=/a \\\n  # note\n  --mount=type=tmpfs,target=/b \\\n  npm ci",
+    ],
+    ["mounts on exec form", 'FROM a\nRUN --mount=type=tmpfs,target=/t ["a", "b c"]'],
+    ["a heredoc", "FROM a\nRUN <<'EOF'\nset -e\nnpm ci\nEOF\nCMD x"],
+    ["a heredoc with double quotes and an interpreter", 'FROM a\nRUN python3 <<"PY"\nprint(1)\nPY'],
+    [
+      "a heredoc body with blank lines, comments, keywords, and escapes",
+      "FROM a\nRUN <<'EOF'\n# not a comment\n\n  FROM x\ntrailing \\\necho $HOME\ncat <<X\nEOF\nCMD y",
+    ],
+    [
+      "a heredoc with mounts and a continued start line",
+      "FROM a\nRUN --mount=type=cache,target=/c \\\n    python3 <<'EOF'\nprint(1)\nEOF",
+    ],
+    ["heredocs in several stages", "FROM a AS b\nRUN <<'EOF'\nx\nEOF\n\nFROM b\nRUN <<'E2'\ny\nE2"],
+    ["a here-string", "FROM a\nRUN cat <<< hi"],
   ])("reads %s as the original does", (_name, dockerfile) => {
     const reparsed = render(parse(dockerfile)._unsafeUnwrap());
 

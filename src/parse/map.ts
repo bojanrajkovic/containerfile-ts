@@ -17,6 +17,7 @@ import {
   from,
   healthcheck,
   healthcheckNone,
+  heredoc,
   label,
   run,
   shell,
@@ -24,9 +25,11 @@ import {
   volume,
   workdir,
 } from "../instructions.js";
-import type { ExposeOptions, Instruction, NonEmptyArray } from "../types.js";
+import type { ExposeOptions, Instruction, MountOptions, NonEmptyArray } from "../types.js";
 import { type Arg, type Pair, splitArgs, splitPairs } from "./assignments.js";
 import { readFlags } from "./flags.js";
+import { parseMount } from "./mounts.js";
+import { joinContinuations } from "./source.js";
 import { parseJsonStringArray, splitFlags, splitWords } from "./words.js";
 
 type Mapped = Result<NonEmptyArray<Instruction>, Array<ValidationError>>;
@@ -72,13 +75,98 @@ function mapFrom({ joined }: Args): Mapped {
   });
 }
 
-function mapRun({ raw, joined }: Args): Mapped {
-  const { flags } = splitFlags(joined);
-  return readFlags("RUN", flags, []).andThen(() =>
-    HEREDOC_REDIRECT.test(raw)
-      ? heredocError("RUN", raw)
-      : one(run(parseJsonStringArray(joined) ?? raw)),
+/** The `--mount` flags of a RUN as `run()` options. Any other flag is an error. */
+function readRunFlags(
+  flags: ReadonlyArray<string>,
+): Result<Array<MountOptions>, Array<ValidationError>> {
+  const isMount = (flag: string) => flag === "--mount" || flag.startsWith("--mount=");
+  return Result.combineWithAllErrors([
+    readFlags(
+      "RUN",
+      flags.filter((flag) => !isMount(flag)),
+      [],
+    ),
+    // One flag at a time: --mount may repeat, which readFlags otherwise rejects.
+    Result.combineWithAllErrors(
+      flags
+        .filter(isMount)
+        .map((flag) =>
+          readFlags("RUN", [flag], ["--mount"]).andThen((values) =>
+            parseMount(values["--mount"] ?? ""),
+          ),
+        ),
+    ).mapErr((errors) => errors.flat()),
+  ])
+    .mapErr((errors) => errors.flat())
+    .map(([, mounts]) => mounts);
+}
+
+/** What a heredoc start line may look like: an optional interpreter, then `<<'NAME'`. */
+const HEREDOC_START = /^(?<interpreter>.*?)\s*(?<!<)<<\s*(?<quote>['"])(?<name>[\w.-]+)\k<quote>$/;
+
+function heredocStartError(start: string): string {
+  if (/(?<!<)<<-/.test(start)) {
+    return "<<-EOF heredocs, which strip leading tabs, aren't supported";
+  }
+  if (/(?<!<)<<\s*[^'"\s]/.test(start)) {
+    return "unquoted heredocs aren't supported: the shell would expand $VAR in the body, so write <<'EOF'";
+  }
+  if (/<<\s*(['"])[\w.-]+\1\s*\S/.test(start)) {
+    return "text after the heredoc delimiter, such as a pipe or redirect, isn't supported";
+  }
+  return "a heredoc must start with a quoted delimiter, such as <<'EOF'";
+}
+
+/**
+ * A RUN that starts a heredoc: `[interpreter ]<<'NAME'`, the body, then `NAME` alone on a line.
+ * BuildKit keeps more forms than the model does, so those are errors, not rewrites.
+ */
+function mapHeredoc(
+  start: string,
+  body: ReadonlyArray<string>,
+  mounts: ReadonlyArray<MountOptions>,
+): Mapped {
+  const redirects = start.match(new RegExp(HEREDOC_REDIRECT.source, "g")) ?? [];
+  const match = HEREDOC_START.exec(start);
+  const name = match?.groups?.["name"];
+  const fail = (message: string) => err([validationError("heredoc", message, start)]);
+
+  if (redirects.length > 1) {
+    return fail("more than one heredoc per RUN isn't supported");
+  }
+  if (name === undefined) {
+    return fail(heredocStartError(start));
+  }
+  if (body.at(-1) !== name) {
+    return fail(`unterminated heredoc: no line holds only ${name}`);
+  }
+  const [first, ...rest] = body.slice(0, -1);
+  if (first === undefined) {
+    return fail("an empty heredoc isn't supported: heredoc() needs at least one line");
+  }
+  const interpreter = match?.groups?.["interpreter"]?.trim();
+  return one(
+    run(heredoc([first, ...rest], { interpreter: interpreter === "" ? undefined : interpreter }), {
+      mounts,
+    }),
   );
+}
+
+function mapRun({ raw, joined }: Args): Mapped {
+  const { flags, rest } = splitFlags(joined);
+  const [start = "", ...body] = rest.split("\n");
+  return readRunFlags(flags).andThen((mounts) => {
+    if (HEREDOC_REDIRECT.test(start)) {
+      return mapHeredoc(start, body, mounts);
+    }
+    // The command keeps its continuations, so read it from the text that still has them. A
+    // continuation inside a flag would cut the two readings in different places.
+    const written = splitFlags(raw).rest;
+    if (joinContinuations(written) !== rest) {
+      return argumentsError("a flag can't run into a line continuation", joined);
+    }
+    return one(run(parseJsonStringArray(rest) ?? written, { mounts }));
+  });
 }
 
 function mapCommand(

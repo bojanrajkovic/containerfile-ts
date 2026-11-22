@@ -21,7 +21,10 @@ export type SourceEntry =
       readonly block: number;
       /** Upper case, as `dockerfile-ast` reports it. */
       readonly keyword: string;
-      /** Text after the keyword, `\` continuations kept and comment lines inside it removed. */
+      /**
+       * Text after the keyword, `\` continuations kept and comment lines inside it removed.
+       * A heredoc's body follows the line that starts it, line for line.
+       */
       readonly raw: string;
       /** `raw` with the continuations joined, the way BuildKit reads the instruction. */
       readonly joined: string;
@@ -36,6 +39,11 @@ export type Source = {
 // A `\` that ends a line continues it, unless the `\` is itself escaped.
 const CONTINUATION = /(^|[^\\])\\[ \t]*\n/g;
 
+/** Text with its `\` continuations joined, the way BuildKit reads it. */
+export function joinContinuations(text: string): string {
+  return text.replace(CONTINUATION, "$1");
+}
+
 function commentText(line: string): string {
   const text = line.trim().slice(1);
   return (text.startsWith(" ") ? text.slice(1) : text).trimEnd();
@@ -49,6 +57,25 @@ type Located = {
   readonly keywordEnd: number;
 };
 
+/** A line of an instruction between its first line and the line `dockerfile-ast` ends it at. */
+function isSkipped(lines: ReadonlyArray<string>, start: number, i: number): boolean {
+  const text = (lines[i] ?? "").trim();
+  return i > start && (text === "" || text.startsWith("#"));
+}
+
+/**
+ * The line of the instruction that starts at `start` and ends at `end` where a heredoc
+ * starts, or -1 when it has none. The lines after it are the body, up to `end`.
+ */
+function heredocLine(lines: ReadonlyArray<string>, start: number, end: number): number {
+  for (let i = start; i <= end; i++) {
+    if (!isSkipped(lines, start, i) && HEREDOC_REDIRECT.test(lines[i] ?? "")) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 /**
  * The last line of the instruction that starts at `start` and that `dockerfile-ast` ends at
  * `end`, as BuildKit reads it. `dockerfile-ast` continues an instruction past a line that
@@ -56,13 +83,11 @@ type Located = {
  * so an instruction that starts a heredoc keeps its range.
  */
 function lastLine(lines: ReadonlyArray<string>, start: number, end: number): number {
-  if (HEREDOC_REDIRECT.test(lines[start] ?? "")) {
-    return end;
-  }
   for (let i = start; i < end; i++) {
-    const text = (lines[i] ?? "").trim();
-    const skipped = i > start && (text === "" || text.startsWith("#"));
-    if (!skipped && !LINE_CONTINUATION.test(lines[i] ?? "")) {
+    if (HEREDOC_REDIRECT.test(lines[i] ?? "") && !isSkipped(lines, start, i)) {
+      return end;
+    }
+    if (!isSkipped(lines, start, i) && !LINE_CONTINUATION.test(lines[i] ?? "")) {
       return i;
     }
   }
@@ -126,8 +151,12 @@ export function readSource(text: string): Source {
     if (instruction !== undefined) {
       enter();
       const end = instruction.end;
+      // A heredoc body is text: blank lines, `#` lines, and `\` endings mean nothing in it.
+      const bodyStart = heredocLine(lines, i, end) + 1;
+      const headEnd = bodyStart === 0 ? end : bodyStart - 1;
+      const body = bodyStart === 0 ? [] : lines.slice(bodyStart, end + 1);
       const kept = [line.slice(instruction.keywordEnd).trimStart()];
-      for (let j = i + 1; j <= end; j++) {
+      for (let j = i + 1; j <= headEnd; j++) {
         const next = lines[j] ?? "";
         if (next.trim() === "") {
           continue;
@@ -139,14 +168,15 @@ export function readSource(text: string): Source {
         }
         kept.push(next);
       }
-      const raw = kept.join("\n").trimEnd();
+      // The body keeps its end: a terminator with trailing spaces doesn't end a heredoc.
+      const head = kept.join("\n").trimEnd();
       entries.push({
         kind: "instruction",
         line: i + 1,
         block,
         keyword: instruction.keyword,
-        raw,
-        joined: raw.replace(CONTINUATION, "$1"),
+        raw: [head, ...body].join("\n"),
+        joined: [joinContinuations(head), ...body].join("\n"),
       });
       i = end;
     } else if (line.trim() === "") {

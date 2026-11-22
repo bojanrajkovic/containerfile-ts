@@ -29,6 +29,7 @@ src/
   stage.ts          # Stage factory (Functional Core)
   render.ts         # Dockerfile rendering (Functional Core)
   parse.ts          # parse(): Dockerfile text to Containerfile (Functional Core)
+  edit.ts           # edit(): immutable editor for a Containerfile (Functional Core)
   parse/            # Parser internals: source, words, flags, assignments, map, structure (Functional Core)
   errors.ts         # ValidationError and ParseError types and helpers (Functional Core)
   schemas/          # TypeBox validation schemas
@@ -83,6 +84,7 @@ src/
   stage.ts        # Factory function for creating multi-stage stages
   group.ts        # Factory function for instruction groups
   render.ts       # Rendering functions for Dockerfile output
+  edit.ts         # edit(): immutable editor; applies recorded edits to stage units, rebuilds through the factories
   parse.ts        # parse(): reads each entry, maps it, assembles the Containerfile
   parse/
     source.ts     # Splits text into comments and instructions (the only dockerfile-ast import)
@@ -108,6 +110,7 @@ tests/
   buildkit/                       # Go program that runs BuildKit's parser (pinned version)
   support/buildkit.ts             # parseWithBuildKit() helper and Go detection
   support/buildkit-setup.ts       # Builds the parser once before tests (globalSetup)
+  edit.test.ts                    # edit(): every method, groups, stages, errors, parse round trip
   mounts.test.ts                  # run() mounts: validation and rendering
   render.test.ts                  # Blank-line placement around groups
   instructions.test.ts            # Unit tests for instruction factories
@@ -247,6 +250,7 @@ Factory functions create instruction objects with validation. All return `Result
 | -------- | ----------------------------------------------------- | ----------------------------------------------- |
 | `render` | `(containerfile: Containerfile): string`              | Renders full Containerfile to Dockerfile string |
 | `parse`  | `(text: string): Result<Containerfile, ParseError[]>` | Reads Dockerfile text; see Parsing              |
+| `edit`   | `(containerfile: Containerfile): ContainerfileEditor` | Starts an immutable editor; see Editing         |
 
 Rendering behavior:
 
@@ -280,6 +284,17 @@ Rendering behavior:
 - **Heredocs:** `source.ts` keeps a heredoc's body verbatim, since blank lines, `#` lines, and `\` mean nothing inside it. `mapRun` reads a start line of `[interpreter ]<<'NAME'` or `<<"NAME"`, takes the body up to a last line that is exactly `NAME`, and passes the lines to `heredoc()`, which derives the delimiter. `<<EOF`, `<<-EOF`, a second heredoc, text after the delimiter, a missing terminator, and an empty body are `heredoc` errors. COPY and ADD heredocs are errors too (`mapCopy`).
 - **ENV, LABEL, ARG:** `parse/assignments.ts` reads `name=value` words and the old `ENV name value` form with BuildKit's quote rules: single quotes are literal, double quotes escape only `"`, `$`, and `\`, and a backslash outside quotes escapes the next character. `expand` is true when the value has a `$` BuildKit would expand. Several pairs split into one instruction each, except an `ENV` with an expanding value, which is an error. Values `QuotedValue` can't hold are errors: a literal `$` next to an expanding one, and a variable name followed by a quote or escape (`$A\b`). A `$` before a quote or backslash is literal, because BuildKit reads a variable name only from the characters right after the `$`.
 - **HEALTHCHECK:** `NONE`, or `CMD` with flags before it. Durations go through `parseDuration()` from `@bojanrajkovic/go-duration`, so `90s` renders back as `1m30s`. A continued shell command is joined into one line.
+
+### Editing
+
+`edit(containerfile)` returns a `ContainerfileEditor`: `append`, `prepend`, `insertBefore`, `insertAfter`, `replace`, `remove`, `stage(name, fn)`, and `build()`. Every method but `build()` returns a new editor, so editors and the input are never modified. Methods take factory `Result`s, and `build()` returns `Result<Containerfile, ValidationError[]>`.
+
+- Edits are plain data. `build()` applies them in order to a list of units (one per stage, or one for a single-stage file), then rebuilds through `group()`, `stage()`, and `containerfile()`, so their validation applies.
+- A `match` predicate sees `Instruction`s, including those inside groups. `insertBefore`, `insertAfter`, `replace`, and `remove` apply to every match in every stage. An insert or replace stays in the matched instruction's group.
+- `append` goes to the end of the last stage and `prepend` to the start of the first, as ungrouped entries. They accept `Instruction` or `Group` Results. The other methods accept `Instruction` Results.
+- Errors: no match, a `remove` that empties a group, stage, or file, `stage()` on a single-stage file or with an unknown name, and a `stage()` callback that returns something other than its editor.
+- A failed call changes nothing. Later calls still run and report, so one `build()` returns every error. Fields are `edits[i].<method>[argument].<field>`, and errors inside `stage()` continue the path as `edits[i].edits[j]...`.
+- `StageEditor` is an interface-based type, so each editor can name itself as the return type. It's the one place the project uses `interface` for a type that isn't a class contract.
 
 ### Mounts
 

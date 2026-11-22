@@ -111,6 +111,20 @@ describe("workdir()", () => {
   });
 });
 
+describe("ENV, LABEL, and ARG keys", () => {
+  it.each([
+    ["env", (key: string) => env(key, "1")],
+    ["label", (key: string) => label(key, "1")],
+    ["arg", (key: string) => arg(key)],
+  ])("%s() rejects a key that starts with --, which BuildKit reads as a flag", (_name, make) => {
+    const errors = make("--b")._unsafeUnwrapErr();
+
+    expect(errors[0]?.message).toContain("--");
+    expect(make("a--b").isOk()).toBe(true);
+    expect(make("-b").isOk()).toBe(true);
+  });
+});
+
 describe("env()", () => {
   it("returns Ok for valid key-value", () => {
     const result = env("NODE_ENV", "production");

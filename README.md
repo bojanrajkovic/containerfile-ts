@@ -282,7 +282,7 @@ arg("APP_ENV", { defaultValue: "production" });
 env("NODE_ENV", "${APP_ENV}", { expand: true }); // ENV NODE_ENV="${APP_ENV}"
 ```
 
-Keys can't contain whitespace, `=`, quotes, `\`, or `$`.
+Keys can't contain whitespace, `=`, quotes, `\`, or `$`, and can't start with `--`, which BuildKit reads as a flag.
 
 ### Line breaks
 
@@ -317,23 +317,31 @@ CMD ["node", "index.js"]
 `parse()` returns `Result<Containerfile, ParseError[]>`. A `ParseError` is a `ValidationError` with the 1-based `line` of the instruction that caused it. Errors are collected, so one call reports every problem:
 
 ```typescript
-parse("FROM node:20\nENV A=1\nEXPOSE 99999");
+parse("FROM node:20\nCOPY --link . /app\nEXPOSE 99999");
 // [
-//   { line: 2, field: "instruction", message: "ENV isn't supported", value: "ENV" },
+//   { line: 2, field: "flag", message: "COPY --link isn't supported", value: "--link" },
 //   { line: 3, field: "port", message: "invalid port: must be integer 0-65535", value: 99999 },
 // ]
 ```
 
 The output of `render(parse(text))` is a normal form of the same Dockerfile: upper-case keywords, one space between words, and `\r\n` read as `\n`. A `FROM` starts each stage, and a stage with two or more blank-line blocks becomes one group per block. A stage is named by its `AS` value, or `stage-<index>` counting from 0.
 
-Input the model can't represent is an error, never dropped silently. This release reads `FROM`, `RUN`, `CMD`, `ENTRYPOINT`, `WORKDIR`, `USER`, `VOLUME`, `EXPOSE`, `SHELL`, and comments. These return an error:
+Input the model can't represent is an error, never dropped silently. `parse()` reads `FROM`, `RUN`, `CMD`, `ENTRYPOINT`, `WORKDIR`, `USER`, `VOLUME`, `EXPOSE`, `SHELL`, `ENV`, `LABEL`, `ARG`, `COPY`, `ADD`, `HEALTHCHECK`, and comments. These return an error:
 
-- Any other instruction, such as `ENV`, `COPY`, or `ONBUILD`.
-- A flag, such as `FROM --platform` or `RUN --mount`.
-- A `RUN` heredoc.
+- Any other instruction, such as `ONBUILD` or `STOPSIGNAL`.
+- A flag the instruction doesn't take, a repeated flag, or a flag written with a space (`--chown app:app`). The flags read are `FROM --platform`, `COPY --from --chown --chmod`, `ADD --chown --chmod`, and the five `HEALTHCHECK` flags. Values can't contain quotes or a backslash.
+- A `RUN --mount` flag and a `RUN`, `COPY`, or `ADD` heredoc.
+- A `COPY` or `ADD` path with whitespace, since `render()` writes paths unquoted.
 - A `# escape=` directive that isn't a backslash.
 
-Shell-form `RUN` keeps its text as written, `\` continuations included. `parse()` never turns `&&` into a `chain()`. `CMD`, `ENTRYPOINT`, and `RUN` are exec form only when the text is a JSON array of strings, which is how BuildKit reads them. A comment inside a continued instruction moves to just above it. `EXPOSE 80 443` becomes one instruction per port. Words in `VOLUME` and `EXPOSE` can be quoted with `'` or `"`.
+Shell-form `RUN` keeps its text as written, `\` continuations included. `parse()` never turns `&&` into a `chain()`. `CMD`, `ENTRYPOINT`, and `RUN` are exec form only when the text is a JSON array of strings, which is how BuildKit reads them. A comment inside a continued instruction moves to just above it. Words in `VOLUME`, `EXPOSE`, `COPY`, and `ADD` can be quoted with `'` or `"`.
+
+Some input comes back in a different but equivalent form:
+
+- `EXPOSE 80 443` becomes one instruction per port. `ENV`, `LABEL`, and `ARG` with several pairs become one instruction per pair. `ENV A=1 B=$A` is an error, because a later pair in one `ENV` doesn't see an earlier one, and separate instructions would.
+- `ENV` and `LABEL` accept the old form, `ENV name value`, and write it as `name="value"`.
+- A value that uses a variable (`$VAR`, `${VAR}`) gets `expand: true`. A `$` that is escaped, in single quotes, or before a quote or backslash is text. A value that mixes the two, or has a quote or escape right after a variable name (`$A\b`), is an error. Write `${A}` instead.
+- A `HEALTHCHECK` duration comes back in Go's canonical form: `90s` becomes `1m30s`. A continued `HEALTHCHECK CMD` joins into one line.
 
 ## Options
 

@@ -227,8 +227,8 @@ describe("parse() errors", () => {
   it.each<[string, string, { line: number; field: string; message?: string; value?: unknown }]>([
     [
       "an unsupported instruction",
-      "FROM a\nENV A=1",
-      { line: 2, field: "instruction", message: "ENV isn't supported", value: "ENV" },
+      "FROM a\nSTOPSIGNAL SIGTERM",
+      { line: 2, field: "instruction", message: "STOPSIGNAL isn't supported", value: "STOPSIGNAL" },
     ],
     [
       "an unknown instruction",
@@ -242,13 +242,8 @@ describe("parse() errors", () => {
     ],
     [
       "a FROM flag",
-      "FROM --platform=linux/amd64 a",
-      {
-        line: 1,
-        field: "flag",
-        message: "FROM --platform isn't supported",
-        value: "--platform=linux/amd64",
-      },
+      "FROM --link a",
+      { line: 1, field: "flag", message: "FROM --link isn't supported", value: "--link" },
     ],
     [
       "a RUN flag",
@@ -313,7 +308,7 @@ describe("parse() errors", () => {
   });
 
   it("collects every error with its own line", () => {
-    expect(errorsOf("ENV A=1\nFOO\nFROM --x a")).toMatchObject([
+    expect(errorsOf("STOPSIGNAL x\nFOO\nFROM --x a")).toMatchObject([
       { line: 1, field: "instruction" },
       { line: 2, field: "instruction" },
       { line: 3, field: "flag" },
@@ -321,11 +316,11 @@ describe("parse() errors", () => {
   });
 
   it("counts lines of continued instructions", () => {
-    expect(errorsOf("FROM a\nRUN a \\\n  b\n\nENV X=1")).toMatchObject([{ line: 5 }]);
+    expect(errorsOf("FROM a\nRUN a \\\n  b\n\nSTOPSIGNAL x")).toMatchObject([{ line: 5 }]);
   });
 
   it("reports an escape directive alone, since later lines would parse wrongly", () => {
-    expect(errorsOf("# escape=`\nENV A=1\nFROM a")).toMatchObject([{ field: "directive" }]);
+    expect(errorsOf("# escape=`\nSTOPSIGNAL x\nFROM a")).toMatchObject([{ field: "directive" }]);
   });
 
   it("drops an explicit backslash escape directive, which is the default", () => {

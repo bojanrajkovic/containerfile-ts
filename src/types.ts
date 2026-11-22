@@ -20,7 +20,82 @@ export type FromInstruction = {
 export type RunInstruction = {
   readonly type: "RUN";
   readonly command: string | ReadonlyArray<string> | Heredoc | Chain;
+  readonly mounts: ReadonlyArray<Mount>;
 };
+
+export type SharingMode = "shared" | "private" | "locked";
+
+/**
+ * `RUN --mount=type=bind`: files from the build context or another stage. Read-only unless
+ * `readwrite` is set.
+ */
+export type BindMount = {
+  readonly type: "bind";
+  readonly target: DockerPath;
+  readonly source: DockerPath | null;
+  readonly from: string | null;
+  readonly readwrite: boolean;
+};
+
+/**
+ * `RUN --mount=type=cache`: a directory that persists between builds, such as a package
+ * manager's download cache. Read-write unless `readonly` is set.
+ */
+export type CacheMount = {
+  readonly type: "cache";
+  readonly target: DockerPath;
+  readonly id: string | null;
+  readonly sharing: SharingMode | null;
+  readonly from: string | null;
+  readonly source: DockerPath | null;
+  /** Permission bits, such as `0o755`. */
+  readonly mode: number | null;
+  readonly uid: number | null;
+  readonly gid: number | null;
+  readonly readonly: boolean;
+};
+
+/**
+ * `RUN --mount=type=tmpfs`: an in-memory directory. `size` is a byte count with an optional
+ * unit, such as `64m` or `1g`.
+ */
+export type TmpfsMount = {
+  readonly type: "tmpfs";
+  readonly target: DockerPath;
+  readonly size: string | null;
+};
+
+/**
+ * `RUN --mount=type=secret`: a build secret as a file at `target`, or in the environment
+ * variable `env`. `id` or `target` is always set.
+ */
+export type SecretMount = {
+  readonly type: "secret";
+  readonly id: string | null;
+  readonly target: DockerPath | null;
+  readonly env: string | null;
+  readonly required: boolean;
+  /** Permission bits, such as `0o600`. */
+  readonly mode: number | null;
+  readonly uid: number | null;
+  readonly gid: number | null;
+};
+
+/**
+ * `RUN --mount=type=ssh`: the SSH agent socket, or the key behind `id`.
+ */
+export type SshMount = {
+  readonly type: "ssh";
+  readonly id: string | null;
+  readonly target: DockerPath | null;
+  readonly required: boolean;
+  /** Permission bits, such as `0o600`. */
+  readonly mode: number | null;
+  readonly uid: number | null;
+  readonly gid: number | null;
+};
+
+export type Mount = BindMount | CacheMount | TmpfsMount | SecretMount | SshMount;
 
 /**
  * Shell commands for RUN that stop at the first failure, rendered as an `&&` chain with
@@ -344,6 +419,59 @@ export type ValueOptions = {
  */
 export type ArgOptions = ValueOptions & {
   readonly defaultValue?: string;
+};
+
+/**
+ * One entry of `RunOptions.mounts`. Paths and ids can't contain `,`, `"`, `\`, or whitespace,
+ * since a mount renders as one comma-separated flag. `$VAR` in a path or id expands at build
+ * time.
+ */
+export type MountOptions =
+  | {
+      readonly type: "bind";
+      readonly target: string;
+      readonly source?: string;
+      readonly from?: string;
+      readonly readwrite?: boolean;
+    }
+  | {
+      readonly type: "cache";
+      readonly target: string;
+      readonly id?: string;
+      readonly sharing?: SharingMode;
+      readonly from?: string;
+      readonly source?: string;
+      readonly mode?: number;
+      readonly uid?: number;
+      readonly gid?: number;
+      readonly readonly?: boolean;
+    }
+  | { readonly type: "tmpfs"; readonly target: string; readonly size?: string }
+  | {
+      readonly type: "secret";
+      readonly id?: string;
+      readonly target?: string;
+      readonly env?: string;
+      readonly required?: boolean;
+      readonly mode?: number;
+      readonly uid?: number;
+      readonly gid?: number;
+    }
+  | {
+      readonly type: "ssh";
+      readonly id?: string;
+      readonly target?: string;
+      readonly required?: boolean;
+      readonly mode?: number;
+      readonly uid?: number;
+      readonly gid?: number;
+    };
+
+/**
+ * Options for the run() factory function
+ */
+export type RunOptions = {
+  readonly mounts?: ReadonlyArray<MountOptions>;
 };
 
 /**

@@ -20,6 +20,7 @@ import type {
   HealthcheckInstruction,
   CommentInstruction,
   Group,
+  Mount,
   QuotedValue,
 } from "./types.js";
 
@@ -42,22 +43,84 @@ function renderFrom(instruction: FromInstruction): string {
   return line;
 }
 
+/** `key=value`, or nothing when the option isn't set. */
+function option(key: string, value: string | number | null): Array<string> {
+  return value === null ? [] : [`${key}=${value}`];
+}
+
+/** Permission bits as four octal digits, the way `mode=` reads them. */
+function octal(mode: number | null): string | null {
+  return mode === null ? null : mode.toString(8).padStart(4, "0");
+}
+
+function mountFields(mount: Mount): Array<string> {
+  switch (mount.type) {
+    case "bind":
+      return [
+        ...option("source", mount.source),
+        `target=${mount.target}`,
+        ...option("from", mount.from),
+        ...(mount.readwrite ? ["rw"] : []),
+      ];
+    case "cache":
+      return [
+        `target=${mount.target}`,
+        ...option("id", mount.id),
+        ...option("sharing", mount.sharing),
+        ...option("from", mount.from),
+        ...option("source", mount.source),
+        ...option("mode", octal(mount.mode)),
+        ...option("uid", mount.uid),
+        ...option("gid", mount.gid),
+        ...(mount.readonly ? ["ro"] : []),
+      ];
+    case "tmpfs":
+      return [`target=${mount.target}`, ...option("size", mount.size)];
+    case "secret":
+      return [
+        ...option("id", mount.id),
+        ...option("target", mount.target),
+        ...option("env", mount.env),
+        ...option("mode", octal(mount.mode)),
+        ...option("uid", mount.uid),
+        ...option("gid", mount.gid),
+        ...(mount.required ? ["required"] : []),
+      ];
+    case "ssh":
+      return [
+        ...option("id", mount.id),
+        ...option("target", mount.target),
+        ...option("mode", octal(mount.mode)),
+        ...option("uid", mount.uid),
+        ...option("gid", mount.gid),
+        ...(mount.required ? ["required"] : []),
+      ];
+  }
+}
+
+function renderMount(mount: Mount): string {
+  return `--mount=${[`type=${mount.type}`, ...mountFields(mount)].join(",")}`;
+}
+
 function renderRun(instruction: RunInstruction): string {
   const { command } = instruction;
+  const head = ["RUN", ...instruction.mounts.map(renderMount)].join(" ");
   if (typeof command === "string") {
-    return `RUN ${command}`;
+    return `${head} ${command}`;
   }
   if ("steps" in command) {
-    return `RUN ${command.steps.join(" \\\n    && ")}`;
+    return `${head} ${command.steps.join(" \\\n    && ")}`;
   }
   if (!("delimiter" in command)) {
-    return `RUN ${formatArray(command)}`;
+    return `${head} ${formatArray(command)}`;
   }
   const interpreter = command.interpreter === null ? "" : `${command.interpreter} `;
   // Quoted, so the shell passes the script through without expansion or `\` handling.
-  return [`RUN ${interpreter}<<'${command.delimiter}'`, ...command.lines, command.delimiter].join(
-    "\n",
-  );
+  return [
+    `${head} ${interpreter}<<'${command.delimiter}'`,
+    ...command.lines,
+    command.delimiter,
+  ].join("\n");
 }
 
 function renderCopy(instruction: CopyInstruction): string {

@@ -27,9 +27,16 @@ export type {
 } from "./types.js";
 
 export type {
+  BindMount,
+  CacheMount,
   Chain,
   Group,
   Heredoc,
+  Mount,
+  SecretMount,
+  SharingMode,
+  SshMount,
+  TmpfsMount,
   QuotedValue,
   Stage,
   Containerfile,
@@ -38,6 +45,8 @@ export type {
 
 export type {
   FromOptions,
+  RunOptions,
+  MountOptions,
   CopyOptions,
   AddOptions,
   ExposeOptions,

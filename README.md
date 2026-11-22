@@ -121,7 +121,7 @@ dockerfile.match(
 | Function                         | Description                              |
 | -------------------------------- | ---------------------------------------- |
 | `from(image, options?)`          | FROM instruction                         |
-| `run(command)`                   | RUN instruction (string or exec form)    |
+| `run(command, options?)`         | RUN instruction (string or exec form)    |
 | `copy(src, dest, options?)`      | COPY instruction                         |
 | `add(src, dest, options?)`       | ADD instruction                          |
 | `workdir(path)`                  | WORKDIR instruction                      |
@@ -237,6 +237,35 @@ EOF_d2c21e47
 ```
 
 The script runs exactly as written. The delimiter is quoted, so the shell doesn't expand `$VAR` or process backslashes; read build args from the environment at run time. The delimiter comes from a hash of the script. The same script always gets the same delimiter, so the rendered line and BuildKit's layer cache stay stable, and no script line can end the heredoc early. Heredocs need BuildKit's Dockerfile frontend 1.4 or later.
+
+### Mounts
+
+`run()` takes a `mounts` option for BuildKit's `--mount` flag. Each mount has a `type`, and each type accepts only its own options:
+
+```typescript
+run("npm ci", {
+  mounts: [
+    { type: "cache", target: "/root/.npm", id: "npm", sharing: "locked" },
+    { type: "secret", id: "npmrc", target: "/root/.npmrc", required: true },
+  ],
+});
+```
+
+```dockerfile
+RUN --mount=type=cache,target=/root/.npm,id=npm,sharing=locked --mount=type=secret,id=npmrc,target=/root/.npmrc,required npm ci
+```
+
+| `type`   | Options                                                                             |
+| -------- | ----------------------------------------------------------------------------------- |
+| `bind`   | `target`, `source`, `from`, `readwrite`                                             |
+| `cache`  | `target`, `id`, `sharing`, `from`, `source`, `mode`, `uid`, `gid`, `readonly`       |
+| `tmpfs`  | `target`, `size`                                                                    |
+| `secret` | `id`, `target`, `env`, `required`, `mode`, `uid`, `gid` (`id` or `target` required) |
+| `ssh`    | `id`, `target`, `required`, `mode`, `uid`, `gid`                                    |
+
+`target` is required for `bind`, `cache`, and `tmpfs`. `mode` is a number such as `0o755` and renders as four octal digits. Bind mounts are read-only unless `readwrite` is set. `sharing` is `shared`, `private`, or `locked`. `size` is a byte count with an optional unit, such as `64m`.
+
+A mount renders as one comma-separated flag, so paths and ids can't contain a comma, a quote, a backslash, or whitespace. `$VAR` in a path or id expands at build time. Mounts work with every form of `run()`, including `chain()` and `heredoc()`, and need BuildKit.
 
 ### ENV, LABEL, and ARG values
 

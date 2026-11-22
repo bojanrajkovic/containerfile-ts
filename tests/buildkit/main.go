@@ -31,7 +31,10 @@ type instruction struct {
 	// Typed command (or stage, for FROM) after BuildKit's variable expansion, or null if
 	// parsing it failed.
 	Command any    `json:"command"`
-	Error   string `json:"error,omitempty"`
+	// The parsed --mount flags of a RUN, after variable expansion. BuildKit keeps them
+	// outside the typed command, so they get their own field.
+	Mounts []*instructions.Mount `json:"mounts"`
+	Error  string                `json:"error,omitempty"`
 }
 
 type output struct {
@@ -69,6 +72,7 @@ func main() {
 			Flags:    append([]string{}, node.Flags...),
 			Heredocs: []heredoc{},
 			Comments: append([]string{}, node.PrevComment...),
+			Mounts:   []*instructions.Mount{},
 		}
 		for next := node.Next; next != nil; next = next.Next {
 			ins.Args = append(ins.Args, next.Value)
@@ -88,6 +92,9 @@ func main() {
 			ins.Error = err.Error()
 		} else {
 			ins.Command = cmd
+			if run, ok := cmd.(*instructions.RunCommand); ok {
+				ins.Mounts = append(ins.Mounts, instructions.GetMounts(run)...)
+			}
 		}
 		out.Instructions = append(out.Instructions, ins)
 	}

@@ -19,6 +19,7 @@ import {
   type Containerfile,
   type Group,
   type Instruction,
+  type MountOptions,
   type NonEmptyArray,
   type ValidationError,
 } from "../src/index.js";
@@ -127,6 +128,138 @@ describeWithBuildKit("BuildKit parses rendered output as modeled", () => {
       }),
       { numRuns: 200 },
     );
+  });
+
+  describe("RUN --mount", () => {
+    function parsedMounts(mounts: ReadonlyArray<MountOptions>) {
+      const parsed = parseWithBuildKit(
+        render(build([from("alpine"), run("true", { mounts }), run("true")])),
+      );
+      expect(parsed.warnings).toEqual([]);
+      expect(parsed.instructions.map((i) => i.cmd)).toEqual(["FROM", "RUN", "RUN"]);
+      expect(parsed.instructions[1]?.error).toBeUndefined();
+      return parsed.instructions[1]?.mounts ?? [];
+    }
+
+    it("reads every option of every mount type as modeled", () => {
+      expect(
+        parsedMounts([
+          { type: "bind", source: ".", target: "/src", from: "build", readwrite: true },
+          { type: "bind", target: "/ro" },
+          {
+            type: "cache",
+            target: "/c",
+            id: "npm",
+            sharing: "locked",
+            from: "base",
+            source: "/s",
+            mode: 0o755,
+            uid: 1000,
+            gid: 1001,
+            readonly: true,
+          },
+          { type: "cache", target: "/rw" },
+          { type: "tmpfs", target: "/tmp", size: "64m" },
+          {
+            type: "secret",
+            id: "npmrc",
+            target: "/root/.npmrc",
+            env: "NPM_TOKEN",
+            required: true,
+            mode: 0o600,
+            uid: 0,
+            gid: 2,
+          },
+          { type: "ssh", id: "default", target: "/ssh", required: true, mode: 0o600, uid: 3 },
+        ]),
+      ).toMatchObject([
+        { Type: "bind", Source: ".", Target: "/src", From: "build", ReadOnly: false },
+        { Type: "bind", Target: "/ro", ReadOnly: true },
+        {
+          Type: "cache",
+          Target: "/c",
+          CacheID: "npm",
+          CacheSharing: "locked",
+          From: "base",
+          Source: "/s",
+          Mode: 0o755,
+          UID: 1000,
+          GID: 1001,
+          ReadOnly: true,
+        },
+        { Type: "cache", Target: "/rw", ReadOnly: false },
+        { Type: "tmpfs", Target: "/tmp", SizeLimit: 64 * 1024 * 1024 },
+        {
+          Type: "secret",
+          CacheID: "npmrc",
+          Target: "/root/.npmrc",
+          Env: "NPM_TOKEN",
+          Required: true,
+          Mode: 0o600,
+          UID: 0,
+          GID: 2,
+        },
+        { Type: "ssh", CacheID: "default", Target: "/ssh", Required: true, Mode: 0o600, UID: 3 },
+      ]);
+    });
+
+    it("reads a mount and a heredoc on the same RUN", () => {
+      const parsed = parseWithBuildKit(
+        render(
+          build([
+            from("alpine"),
+            run(heredoc(["print(1)"], { interpreter: "python3" }), {
+              mounts: [{ type: "cache", target: "/c", id: "pip" }],
+            }),
+          ]),
+        ),
+      );
+
+      expect(parsed.instructions[1]?.error).toBeUndefined();
+      expect(parsed.instructions[1]?.mounts).toMatchObject([
+        { Type: "cache", Target: "/c", CacheID: "pip" },
+      ]);
+      expect(parsed.instructions[1]?.heredocs.map((h) => [h.expand, h.content])).toEqual([
+        [false, "print(1)\n"],
+      ]);
+    });
+
+    it("an accepted mount is one mount with the modeled target, whatever the characters", () => {
+      // `$` is left out: BuildKit expands it, by design, so the target wouldn't match.
+      const text = fc.string({
+        unit: fc.constantFrom(
+          "a",
+          "/",
+          ",",
+          '"',
+          "=",
+          " ",
+          "\t",
+          "'",
+          "\\",
+          "#",
+          "\n",
+          "<",
+          "&",
+          ";",
+          "`",
+          "{",
+        ),
+        minLength: 1,
+        maxLength: 10,
+      });
+      fc.assert(
+        fc.property(text, text, (target, id) => {
+          const result = run("true", { mounts: [{ type: "cache", target, id }] });
+          result.map(() => {
+            const [mount, ...more] = parsedMounts([{ type: "cache", target, id }]);
+            expect(more).toEqual([]);
+            expect(mount).toMatchObject({ Type: "cache", Target: target, CacheID: id });
+          });
+        }),
+        { numRuns: 300 },
+      );
+    });
   });
 
   describe("ENV, LABEL, and ARG values", () => {

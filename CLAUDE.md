@@ -25,6 +25,7 @@ src/
   index.ts          # Public exports
   types.ts          # Instruction types (Functional Core)
   instructions.ts   # Factory functions (Functional Core)
+  mounts.ts         # RUN --mount validation (Functional Core)
   stage.ts          # Stage factory (Functional Core)
   render.ts         # Dockerfile rendering (Functional Core)
   errors.ts         # ValidationError type and helpers (Functional Core)
@@ -76,6 +77,7 @@ src/
   index.ts        # Public API exports
   types.ts        # All instruction types, Stage, option types
   instructions.ts # Factory functions for creating instructions
+  mounts.ts       # validateMounts() for run()'s mounts option
   stage.ts        # Factory function for creating multi-stage stages
   group.ts        # Factory function for instruction groups
   render.ts       # Rendering functions for Dockerfile output
@@ -89,6 +91,7 @@ tests/
   buildkit/                       # Go program that runs BuildKit's parser (pinned version)
   support/buildkit.ts             # parseWithBuildKit() helper and Go detection
   support/buildkit-setup.ts       # Builds the parser once before tests (globalSetup)
+  mounts.test.ts                  # run() mounts: validation and rendering
   render.test.ts                  # Blank-line placement around groups
   instructions.test.ts            # Unit tests for instruction factories
   instructions.property.test.ts   # Property-based tests for factories
@@ -196,7 +199,7 @@ Factory functions create instruction objects with validation. All return `Result
 | Function          | Signature                                                                                                                                                         | Notes                                                                                                                                |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `from`            | `(image: string, options?: FromOptions): Result<FromInstruction, ValidationError[]>`                                                                              | `as`, `platform` options                                                                                                             |
-| `run`             | `(command: string \| ReadonlyArray<string> \| Result<Heredoc \| Chain, ValidationError[]>): Result<RunInstruction, ValidationError[]>`                            | Shell or exec form                                                                                                                   |
+| `run`             | `(command: string \| ReadonlyArray<string> \| Result<Heredoc \| Chain, ValidationError[]>, options?: RunOptions): Result<RunInstruction, ValidationError[]>`      | Shell or exec form; `mounts` option (see Mounts)                                                                                     |
 | `heredoc`         | `(lines: NonEmptyArray<string>, options?: HeredocOptions): Result<Heredoc, ValidationError[]>`                                                                    | `interpreter` option; delimiter is `EOF_` + 8 hex chars of the script's SHA-256                                                      |
 | `chain`           | `(steps: NonEmptyArray<string>): Result<Chain, ValidationError[]>`                                                                                                | One line of shell per step; no `#` comment at the start of a word                                                                    |
 | `copy`            | `(src: string \| ReadonlyArray<string>, dest: string, options?: CopyOptions): Result<CopyInstruction, ValidationError[]>`                                         | `from`, `chown`, `chmod` options                                                                                                     |
@@ -232,12 +235,24 @@ Rendering behavior:
 - Multi-stage: Stages joined with double newlines (blank line separator)
 - Groups: each group, and each run of ungrouped instructions, is a block; blocks are joined with one blank line. A group's comment renders directly above its first instruction.
 - RUN with array uses exec form `["cmd", "arg"]`
+- RUN with mounts renders one `--mount=type=...` flag per mount before the command, heredoc interpreter included. Fields render in a fixed order per type, `mode` as four octal digits, and `readwrite`, `readonly`, and `required` as bare `rw`, `ro`, and `required`.
 - RUN with a chain renders `RUN step1 \` then `    && stepN` per later step
 - RUN with a heredoc renders `RUN [interpreter ]<<'DELIM'`, the lines, then `DELIM`
 - EXPOSE omits `/tcp` suffix (default protocol)
 - ENV, LABEL, and ARG values render in double quotes with `\` and `"` escaped. `$` is escaped too unless the value has `expand: true` (`QuotedValue`), so BuildKit stores the value exactly.
 - COMMENT renders one `# line` per entry, `#` for an empty entry
 - Options rendered in order: `--platform`, `--from`, `--chown`, `--chmod`
+
+### Mounts
+
+`RunInstruction.mounts` is a `ReadonlyArray<Mount>`, empty when there are none. `Mount` is a union discriminated on `type`, and each member holds only the fields BuildKit accepts for that type: `bind`, `cache`, `tmpfs`, `secret`, `ssh`. Absent optional fields are `null`, and the flags `readwrite` (bind), `readonly` (cache), and `required` (secret, ssh) are `false`. `run()` takes `MountOptions` and validates them with `validateMounts()`:
+
+- `target` is required for `bind`, `cache`, and `tmpfs`. A secret needs an `id` or a `target`.
+- Paths and ids can't contain a comma, a quote, a backslash, or whitespace. A mount renders as one comma-separated flag, and BuildKit's parser drops backslashes from flag values. `from` can't contain `$`, since BuildKit reads it before expanding variables.
+- `uid` and `gid` are integers from 0 to 2³²−1. `mode` is permission bits from 0 to `0o7777`.
+- Errors carry fields like `mounts[1].target`.
+
+`tests/buildkit/main.go` prints BuildKit's parsed mounts, so `tests/buildkit.test.ts` checks every mount type against BuildKit's own reading.
 
 ### Error Handling
 

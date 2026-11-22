@@ -16,7 +16,26 @@ export type ParsedInstruction = {
   readonly heredocs: ReadonlyArray<{ name: string; expand: boolean; content: string }>;
   readonly comments: ReadonlyArray<string>;
   readonly command: Record<string, unknown> | null;
+  /** The RUN's --mount flags as BuildKit parsed them; Go field names, since Mount has no JSON tags. */
+  readonly mounts: ReadonlyArray<ParsedMount>;
   readonly error?: string;
+};
+
+/** BuildKit's `instructions.Mount`. `Mode`, `UID`, and `GID` are null when unset. */
+export type ParsedMount = {
+  readonly Type: string;
+  readonly From: string;
+  readonly Source: string;
+  readonly Target: string;
+  readonly ReadOnly: boolean;
+  readonly SizeLimit: number;
+  readonly CacheID: string;
+  readonly CacheSharing: string;
+  readonly Required: boolean;
+  readonly Env: string | null;
+  readonly Mode: number | null;
+  readonly UID: number | null;
+  readonly GID: number | null;
 };
 
 export type ParsedDockerfile = {

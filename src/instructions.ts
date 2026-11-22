@@ -33,6 +33,7 @@ import type {
   Heredoc,
   HeredocOptions,
   Chain,
+  RunOptions,
 } from "./types.js";
 // Must load before go-duration, which throws at import if the global Temporal is missing.
 import "temporal-polyfill/global";
@@ -58,6 +59,7 @@ import {
   validationError,
   isReadonlyArray,
 } from "./errors.js";
+import { validateMounts } from "./mounts.js";
 
 /**
  * Validate one Docker path or an array of them (COPY/ADD src, VOLUME paths).
@@ -121,42 +123,21 @@ export function from(
 }
 
 /**
- * Create a RUN instruction.
- *
- * @param command - Shell form (string), exec form (array of strings), or a `heredoc()` Result
- * @returns Result with RunInstruction on success, ValidationError[] on failure
- *
- * @example
- * ```typescript
- * // Shell form
- * const shellResult = run("npm install && npm build");
- *
- * // Exec form
- * const execResult = run(["npm", "install"]);
- *
- * // Heredoc
- * const heredocResult = run(heredoc(["set -e", "npm ci", "npm run build"]));
- * ```
+ * Validate the command of a RUN, in whichever form it was given.
  */
-export function run(
+function validateRunCommand(
   command:
     | string
     | ReadonlyArray<string>
     | Result<Heredoc, Array<ValidationError>>
     | Result<Chain, Array<ValidationError>>,
-): Result<RunInstruction, Array<ValidationError>> {
+): Result<RunInstruction["command"], Array<ValidationError>> {
   if (typeof command === "string") {
-    return validateShellCommand(command, "command").map(() => ({
-      type: "RUN" as const,
-      command,
-    }));
+    return validateShellCommand(command, "command").map(() => command);
   }
 
   if (Array.isArray(command)) {
-    return validateStringArray(command, "command").map((validatedCommand) => ({
-      type: "RUN" as const,
-      command: validatedCommand,
-    }));
+    return validateStringArray(command, "command");
   }
 
   // Defensive: JS callers can pass anything; only a Result has match().
@@ -170,9 +151,48 @@ export function run(
     ]);
   }
 
-  return (command as Result<Heredoc | Chain, Array<ValidationError>>)
-    .mapErr((errors) => prefixErrors("command", errors))
-    .map((validated) => ({ type: "RUN" as const, command: validated }));
+  return (command as Result<Heredoc | Chain, Array<ValidationError>>).mapErr((errors) =>
+    prefixErrors("command", errors),
+  );
+}
+
+/**
+ * Create a RUN instruction.
+ *
+ * @param command - Shell form (string), exec form (array of strings), or a `heredoc()` or `chain()` Result
+ * @param options - Optional settings (mounts)
+ * @returns Result with RunInstruction on success, ValidationError[] on failure
+ *
+ * @example
+ * ```typescript
+ * // Shell form
+ * const shellResult = run("npm install && npm build");
+ *
+ * // Exec form
+ * const execResult = run(["npm", "install"]);
+ *
+ * // Heredoc
+ * const heredocResult = run(heredoc(["set -e", "npm ci", "npm run build"]));
+ *
+ * // Cache mount: the npm download cache survives between builds
+ * const cached = run("npm ci", { mounts: [{ type: "cache", target: "/root/.npm" }] });
+ * ```
+ */
+export function run(
+  command:
+    | string
+    | ReadonlyArray<string>
+    | Result<Heredoc, Array<ValidationError>>
+    | Result<Chain, Array<ValidationError>>,
+  options?: RunOptions,
+): Result<RunInstruction, Array<ValidationError>> {
+  return Result.combineWithAllErrors([validateRunCommand(command), validateMounts(options?.mounts)])
+    .mapErr((errors) => errors.flat())
+    .map(([validatedCommand, mounts]) => ({
+      type: "RUN" as const,
+      command: validatedCommand,
+      mounts,
+    }));
 }
 
 /**

@@ -201,7 +201,9 @@ describe("heredoc() properties", () => {
       fc.property(fc.array(scriptLine, { minLength: 1, maxLength: 8 }), (lines) => {
         const [first, ...rest] = lines;
         const script = heredoc([first ?? "", ...rest])._unsafeUnwrap();
-        const rendered = render({ instructions: [{ type: "RUN", command: script }] }).split("\n");
+        const rendered = render({
+          instructions: [{ type: "RUN", command: script, mounts: [] }],
+        }).split("\n");
         expect(rendered.indexOf(script.delimiter)).toBe(rendered.length - 1);
       }),
     );

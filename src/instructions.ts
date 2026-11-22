@@ -395,14 +395,22 @@ export const KEY_UNSAFE_CHARACTER = /[\s="'\\$]/;
 
 /**
  * Validate an ENV, LABEL, or ARG key. Whitespace or `=` would split it into a different
- * key and value; quotes, `\\`, and `$` would be processed by BuildKit.
+ * key and value; quotes, `\\`, and `$` would be processed by BuildKit. A key that starts
+ * with `--` would be read as a flag, and BuildKit would drop the pair.
  */
 function validateKey(value: unknown, field: string): Result<string, Array<ValidationError>> {
-  return validateNonEmptyString(value, field).andThen((str) =>
-    KEY_UNSAFE_CHARACTER.test(str)
-      ? err([validationError(field, "must not contain whitespace, =, quotes, \\, or $", value)])
-      : ok(str),
-  );
+  return validateNonEmptyString(value, field).andThen((str) => {
+    if (KEY_UNSAFE_CHARACTER.test(str)) {
+      return err([
+        validationError(field, "must not contain whitespace, =, quotes, \\, or $", value),
+      ]);
+    }
+    return str.startsWith("--")
+      ? err([
+          validationError(field, "must not start with --, which BuildKit reads as a flag", value),
+        ])
+      : ok(str);
+  });
 }
 
 /**

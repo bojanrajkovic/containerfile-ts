@@ -4,13 +4,20 @@ import { describe, it, expect } from "vitest";
 import * as fc from "fast-check";
 import type { Result } from "neverthrow";
 import {
+  add,
+  arg,
   cmd,
   comment,
   containerfile,
+  copy,
   entrypoint,
+  env,
   expose,
   from,
   group,
+  healthcheck,
+  healthcheckNone,
+  label,
   parse,
   render,
   run,
@@ -34,25 +41,69 @@ type Chunk = readonly [ReadonlyArray<Built<Instruction>>, boolean];
 const word = fc.stringMatching(/^[a-z][a-z0-9]{0,6}$/);
 const words = fc.array(word, { minLength: 1, maxLength: 3 });
 
-// Only instructions parse() reads in this release.
-const instruction: fc.Arbitrary<Built<Instruction>> = fc.oneof(
-  word.map((w) => workdir(`/${w}`)),
-  fc.tuple(word, fc.option(word, { nil: undefined })).map(([u, g]) => user(u, g)),
-  words.map((ws) => volume(ws.map((w) => `/${w}`))),
-  // "tcp" is left out: it renders as no suffix, so it parses back as no protocol.
+// Characters a value can hold that quoting and escaping have to get right.
+const plain = fc.string({
+  unit: fc.constantFrom("a", "b", " ", '"', "'", "\\", "{", "}", "=", "#"),
+  maxLength: 6,
+});
+
+// Either every `$` is text, or the value expands a real variable. A lone `$`, like a trailing
+// one, isn't a variable to BuildKit, so it parses back as text.
+const quoted = fc.oneof(
+  plain.map((text) => ({ text, expand: false })),
+  fc.tuple(plain, plain).map(([a, b]) => ({ text: a + "$" + b, expand: false })),
   fc
-    .tuple(fc.integer({ min: 0, max: 65535 }), fc.constantFrom(undefined, "udp", "sctp" as const))
-    .map(([port, protocol]) => expose(port, protocol === undefined ? {} : { protocol })),
-  fc.integer({ min: 0, max: 60000 }).map((start) => expose({ start, end: start + 10 })),
-  words.map((ws) => cmd(ws)),
-  words.map((ws) => cmd(ws.join(" "))),
-  words.map((ws) => entrypoint(ws)),
-  words.map((ws) => run(ws)),
-  words.map((ws) => run(ws.join(" && "))),
-  words.map((ws) => run(`${ws.join(" ")} \\\n    && true`)),
-  fc.constant(shell(["/bin/sh", "-c"])),
-  words.map(([first, ...rest]) => comment(first ?? "x", ...rest)),
+    .tuple(plain, fc.constantFrom("$a", "${b}"), plain)
+    .map(([a, variable, b]) => ({ text: a + variable + b, expand: true })),
 );
+
+const seconds = fc.option(fc.integer({ min: 1, max: 5000 }), { nil: undefined });
+const duration = seconds.map((n) =>
+  n === undefined ? undefined : Temporal.Duration.from({ seconds: n }),
+);
+
+// Only instructions parse() reads.
+const instruction: fc.Arbitrary<Built<Instruction>> = fc
+  .oneof(
+    quoted.map(({ text, expand }) => env("K", text, { expand })),
+    quoted.map(({ text, expand }) => label("org.example.k", text, { expand })),
+    fc
+      .option(quoted, { nil: null })
+      .map((value) =>
+        value === null ? arg("V") : arg("V", { defaultValue: value.text, expand: value.expand }),
+      ),
+    fc
+      .tuple(words, word, fc.option(word, { nil: undefined }), fc.option(word, { nil: undefined }))
+      .map(([srcs, dest, from_, chown]) => copy(srcs, `/${dest}`, { from: from_, chown })),
+    fc.tuple(words, word).map(([srcs, dest]) => add(srcs, `/${dest}`, { chmod: "644" })),
+    fc.constant(healthcheckNone()),
+    fc
+      .tuple(
+        words,
+        duration,
+        duration,
+        fc.option(fc.integer({ min: 1, max: 9 }), { nil: undefined }),
+      )
+      .map(([ws, interval, timeout, retries]) => healthcheck(ws, { interval, timeout, retries })),
+    word.map((w) => workdir(`/${w}`)),
+    fc.tuple(word, fc.option(word, { nil: undefined })).map(([u, g]) => user(u, g)),
+    words.map((ws) => volume(ws.map((w) => `/${w}`))),
+    // "tcp" is left out: it renders as no suffix, so it parses back as no protocol.
+    fc
+      .tuple(fc.integer({ min: 0, max: 65535 }), fc.constantFrom(undefined, "udp", "sctp" as const))
+      .map(([port, protocol]) => expose(port, protocol === undefined ? {} : { protocol })),
+    fc.integer({ min: 0, max: 60000 }).map((start) => expose({ start, end: start + 10 })),
+    words.map((ws) => cmd(ws)),
+    words.map((ws) => cmd(ws.join(" "))),
+    words.map((ws) => entrypoint(ws)),
+    words.map((ws) => run(ws)),
+    words.map((ws) => run(ws.join(" && "))),
+    words.map((ws) => run(`${ws.join(" ")} \\\n    && true`)),
+    fc.constant(shell(["/bin/sh", "-c"])),
+    words.map(([first, ...rest]) => comment(first ?? "x", ...rest)),
+    // The factories reject some values, such as one ending in a backslash.
+  )
+  .filter((built) => built.isOk());
 
 // Each chunk of a stage is either left plain or wrapped in a group.
 const chunks = fc.array(

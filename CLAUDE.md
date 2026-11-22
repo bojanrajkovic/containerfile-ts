@@ -29,7 +29,7 @@ src/
   stage.ts          # Stage factory (Functional Core)
   render.ts         # Dockerfile rendering (Functional Core)
   parse.ts          # parse(): Dockerfile text to Containerfile (Functional Core)
-  parse/            # Parser internals: source, words, map, structure (Functional Core)
+  parse/            # Parser internals: source, words, flags, assignments, map, structure (Functional Core)
   errors.ts         # ValidationError and ParseError types and helpers (Functional Core)
   schemas/          # TypeBox validation schemas
     index.ts        # Schema exports
@@ -87,6 +87,8 @@ src/
   parse/
     source.ts     # Splits text into comments and instructions (the only dockerfile-ast import)
     words.ts      # Quote-aware word splitting, JSON string arrays, flag detection
+    flags.ts      # readFlags(): the --name=value flags an instruction accepts
+    assignments.ts # ENV, LABEL, and ARG pairs: BuildKit's quote and $ rules
     map.ts        # One Dockerfile instruction to model instructions, through the factories
     structure.ts  # Stages from FROM, groups from blank-line blocks
   errors.ts       # ValidationError, ParseError, and helper functions
@@ -95,6 +97,7 @@ src/
     primitives.ts # Branded types, schemas, and validation functions
 tests/
   parse.test.ts                   # parse(): stages, groups, comments, instructions, errors
+  parse.values.test.ts            # parse(): ENV, LABEL, ARG, COPY, ADD, HEALTHCHECK, flags, fixtures
   parse.property.test.ts          # parse(render(cf)) keeps the text and the instructions
   parse.buildkit.test.ts          # parse() compared with BuildKit's reading
   generation.test.ts              # Fixture-based generation tests
@@ -262,13 +265,16 @@ Rendering behavior:
 
 `render(parse(text))` is the normal form of the same Dockerfile: `parse(render(cf))` keeps every instruction and renders the same text (adjacent comments join, and stage names come from `AS`). The decision to error instead of dropping or rewriting is in `adrs/00-parser-errors-on-unrepresentable-input.md`.
 
-- **Instructions read:** FROM, RUN, CMD, ENTRYPOINT, WORKDIR, USER, VOLUME, EXPOSE, SHELL, and comments. Any other instruction, any flag, a `RUN` heredoc, and a `# escape=` other than `\` are errors. A `# escape=\` line is dropped.
+- **Instructions read:** FROM, RUN, CMD, ENTRYPOINT, WORKDIR, USER, VOLUME, EXPOSE, SHELL, ENV, LABEL, ARG, COPY, ADD, HEALTHCHECK, and comments. Any other instruction, a flag an instruction doesn't take, `RUN --mount`, a heredoc, and a `# escape=` other than `\` are errors. A `# escape=\` line is dropped.
 - **Source reading:** `parse/source.ts` is the only `dockerfile-ast` import. It uses the library for instruction start and end lines only. Where the library continues past a line ending in `\\` (BuildKit doesn't), `source.ts` parses the rest again. CRLF becomes LF first.
 - **Exec form:** `JSON.parse` of the text with continuations joined decides it, and only an array of strings counts. `CMD ['a','b']` is shell form.
 - **Shell form:** the text stays as written, continuations included, with comment and blank lines inside a continuation removed. A removed comment moves above its instruction. The parser never produces `chain()`.
 - **Stages:** each `FROM` after the first starts a stage, and comment lines directly above it go with it. One `FROM` gives `{ instructions }`, and more give `{ stages }` named by `AS` or `stage-<index>`.
 - **Groups:** a stage with two or more blank-line blocks becomes one `Group` per block with `comment: null`. One block stays plain.
-- **Words:** `splitWords()` honors `'` and `"`. BuildKit splits `VOLUME` on whitespace first, so it rejects a quoted word that contains a space, and `parse()` accepts it.
+- **Words:** `splitWords()` honors `'` and `"`. BuildKit splits `VOLUME` on whitespace first, so it rejects a quoted word that contains a space, and `parse()` accepts it. `COPY` and `ADD` reject any path with whitespace, because `render()` writes paths unquoted.
+- **Flags:** `parse/flags.ts` `readFlags()` takes the flags before the first word (`splitFlags()`) and the names an instruction accepts: FROM `--platform`; COPY `--from --chown --chmod`; ADD `--chown --chmod`; HEALTHCHECK `--interval --timeout --start-period --start-interval --retries`; RUN none. Each flag must be `--name=value`, appear once, and have no quote or backslash in its value. Each bad flag is its own `flag` error.
+- **ENV, LABEL, ARG:** `parse/assignments.ts` reads `name=value` words and the old `ENV name value` form with BuildKit's quote rules: single quotes are literal, double quotes escape only `"`, `$`, and `\`, and a backslash outside quotes escapes the next character. `expand` is true when the value has a `$` BuildKit would expand. Several pairs split into one instruction each, except an `ENV` with an expanding value, which is an error. Values `QuotedValue` can't hold are errors: a literal `$` next to an expanding one, and a variable name followed by a quote or escape (`$A\b`). A `$` before a quote or backslash is literal, because BuildKit reads a variable name only from the characters right after the `$`.
+- **HEALTHCHECK:** `NONE`, or `CMD` with flags before it. Durations go through `parseDuration()` from `@bojanrajkovic/go-duration`, so `90s` renders back as `1m30s`. A continued shell command is joined into one line.
 
 ### Mounts
 
@@ -321,7 +327,7 @@ All factory functions validate inputs and return Results:
 - **Image names**: Must match Docker registry format
 - **Paths**: Must be non-empty strings
 - **Command arrays**: Must be non-empty with non-empty elements
-- **ENV, LABEL, and ARG keys**: Non-empty, with no whitespace, `=`, quotes, `\`, or `$`.
+- **ENV, LABEL, and ARG keys**: Non-empty, with no whitespace, `=`, quotes, `\`, or `$`, and not starting with `--` (BuildKit reads that as a flag and drops the pair).
 - **Line breaks**: Values rendered as plain text reject `\r`, `\n`, and a trailing continuation: a single `\`, optionally followed by spaces or tabs, matching BuildKit's `lineContinuationRegex`. A doubled `\\` is a literal backslash, so they can't inject or join instructions. Shell-form commands allow `\` line continuations when the last line is a command, and reject heredoc redirects (`validateShellCommand`). Exec-form elements allow line breaks, since JSON form escapes them.
 
 Errors are collected, not short-circuited. A single call may return multiple ValidationErrors.

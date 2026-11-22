@@ -363,6 +363,64 @@ Some input comes back in a different but equivalent form:
 - A value that uses a variable (`$VAR`, `${VAR}`) gets `expand: true`. A `$` that is escaped, in single quotes, or before a quote or backslash is text. A value that mixes the two, or has a quote or escape right after a variable name (`$A\b`), is an error. Write `${A}` instead.
 - A `HEALTHCHECK` duration comes back in Go's canonical form: `90s` becomes `1m30s`. A continued `HEALTHCHECK CMD` joins into one line.
 
+### Editing
+
+Containerfiles are immutable, so `edit()` builds a changed copy. It works on the result of `parse()` or `containerfile()`:
+
+```typescript
+import { parse, edit, render, expose, env, run } from "@bojanrajkovic/containerfile-ts";
+
+const text = `
+FROM node:20-alpine AS build
+WORKDIR /app
+RUN npm install
+
+FROM nginx
+CMD ["nginx"]
+`;
+
+parse(text)
+  .andThen((cf) =>
+    edit(cf)
+      .insertAfter((i) => i.type === "WORKDIR", env("NODE_ENV", "production"))
+      .stage("build", (s) => s.replace((i) => i.type === "RUN", run("npm ci")))
+      .append(expose(80))
+      .build(),
+  )
+  .map(render);
+```
+
+```dockerfile
+FROM node:20-alpine AS build
+WORKDIR /app
+ENV NODE_ENV="production"
+RUN npm ci
+
+FROM nginx
+CMD ["nginx"]
+EXPOSE 80
+```
+
+Each method returns a new editor. Nothing you pass in changes, and one editor can start several results. Methods take the `Result`s the factories return, so a bad `expose(99999)` shows up in `build()` instead of throwing.
+
+| Method                          | What it does                                                                   |
+| ------------------------------- | ------------------------------------------------------------------------------ |
+| `append(...items)`              | Add to the end of the file, or of the last stage                               |
+| `prepend(...items)`             | Add to the start of the file, or of the first stage                            |
+| `insertBefore(match, ...items)` | Add above each instruction `match` accepts                                     |
+| `insertAfter(match, ...items)`  | Add below each instruction `match` accepts                                     |
+| `replace(match, ...items)`      | Swap each instruction `match` accepts for the items                            |
+| `remove(match)`                 | Delete each instruction `match` accepts                                        |
+| `stage(name, (s) => s.…)`       | Run the same methods against one stage of a multi-stage file                   |
+| `build()`                       | Apply the calls in order and return `Result<Containerfile, ValidationError[]>` |
+
+How the calls apply:
+
+- `match` sees every instruction, including those inside groups. An insert or replace stays in the group of the instruction it matched. On a multi-stage file, a top-level `match` applies in every stage. Use `stage()` to limit it to one.
+- `append` and `prepend` add ungrouped instructions. After a group, they render as their own block with a blank line before it. They can also take a `group()`. `prepend` puts instructions above `FROM`, which is only valid for `ARG`.
+- A `match` that finds nothing is an error, as is `remove` leaving a group, stage, or the file empty. `stage()` is an error on a single-stage file or for an unknown name. If several stages share a name, it edits the first.
+- `build()` collects every error. A failed call changes nothing, and later calls still run. Error fields name the call: `edits[1].append[0].port` is the `port` of the first argument of the second call, and `edits[0].edits[1].remove` is the second call inside the first `stage()`.
+
 ## Options
 
 ### FromOptions

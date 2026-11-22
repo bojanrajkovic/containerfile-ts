@@ -86,3 +86,7 @@ export { group } from "./group.js";
 export { render } from "./render.js";
 
 export { parse } from "./parse.js";
+
+export { edit } from "./edit.js";
+
+export type { ContainerfileEditor, StageEditor, EditPredicate } from "./edit.js";

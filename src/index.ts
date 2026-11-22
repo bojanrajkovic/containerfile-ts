@@ -2,7 +2,7 @@
 
 export type { Result } from "neverthrow";
 
-export type { ValidationError } from "./errors.js";
+export type { ValidationError, ParseError } from "./errors.js";
 
 export type { Port, PortRange, ImageName, DockerPath } from "./schemas/index.js";
 
@@ -84,3 +84,5 @@ export { stage } from "./stage.js";
 export { group } from "./group.js";
 
 export { render } from "./render.js";
+
+export { parse } from "./parse.js";

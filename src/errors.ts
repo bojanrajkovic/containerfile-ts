@@ -14,6 +14,12 @@ export type ValidationError = {
 };
 
 /**
+ * A ValidationError found while parsing Dockerfile text. `line` is 1-based and points at the
+ * first line of the instruction, or comment, that caused it.
+ */
+export type ParseError = ValidationError & { readonly line: number };
+
+/**
  * Create a validation error with consistent structure.
  */
 export function validationError(field: string, message: string, value: unknown): ValidationError {

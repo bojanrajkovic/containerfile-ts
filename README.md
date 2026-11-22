@@ -296,6 +296,45 @@ run("apt-get update && \\\n    apt-get install -y curl");
 
 Exec-form array elements can contain line breaks, because JSON form renders them as `\n`.
 
+### Parsing
+
+`parse()` reads Dockerfile text into the same `Containerfile` the factories build, so you can inspect it or render it back:
+
+```typescript
+import { parse, render } from "@bojanrajkovic/containerfile-ts";
+
+parse(`
+FROM node:20-alpine
+WORKDIR /app
+RUN npm ci
+CMD ["node", "index.js"]
+`).match(
+  (containerfile) => console.log(render(containerfile)),
+  (errors) => errors.forEach((e) => console.error(`line ${e.line}: ${e.message}`)),
+);
+```
+
+`parse()` returns `Result<Containerfile, ParseError[]>`. A `ParseError` is a `ValidationError` with the 1-based `line` of the instruction that caused it. Errors are collected, so one call reports every problem:
+
+```typescript
+parse("FROM node:20\nENV A=1\nEXPOSE 99999");
+// [
+//   { line: 2, field: "instruction", message: "ENV isn't supported", value: "ENV" },
+//   { line: 3, field: "port", message: "invalid port: must be integer 0-65535", value: 99999 },
+// ]
+```
+
+The output of `render(parse(text))` is a normal form of the same Dockerfile: upper-case keywords, one space between words, and `\r\n` read as `\n`. A `FROM` starts each stage, and a stage with two or more blank-line blocks becomes one group per block. A stage is named by its `AS` value, or `stage-<index>` counting from 0.
+
+Input the model can't represent is an error, never dropped silently. This release reads `FROM`, `RUN`, `CMD`, `ENTRYPOINT`, `WORKDIR`, `USER`, `VOLUME`, `EXPOSE`, `SHELL`, and comments. These return an error:
+
+- Any other instruction, such as `ENV`, `COPY`, or `ONBUILD`.
+- A flag, such as `FROM --platform` or `RUN --mount`.
+- A `RUN` heredoc.
+- A `# escape=` directive that isn't a backslash.
+
+Shell-form `RUN` keeps its text as written, `\` continuations included. `parse()` never turns `&&` into a `chain()`. `CMD`, `ENTRYPOINT`, and `RUN` are exec form only when the text is a JSON array of strings, which is how BuildKit reads them. A comment inside a continued instruction moves to just above it. `EXPOSE 80 443` becomes one instruction per port. Words in `VOLUME` and `EXPOSE` can be quoted with `'` or `"`.
+
 ## Options
 
 ### FromOptions

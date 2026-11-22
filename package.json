@@ -48,6 +48,7 @@
   "dependencies": {
     "@bojanrajkovic/go-duration": "^0.1.0",
     "@sinclair/typebox": "^0.34.47",
+    "dockerfile-ast": "0.7.1",
     "neverthrow": "^8.2.0",
     "temporal-polyfill": "^1.0.8"
   },

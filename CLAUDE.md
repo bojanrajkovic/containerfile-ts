@@ -28,7 +28,9 @@ src/
   mounts.ts         # RUN --mount validation (Functional Core)
   stage.ts          # Stage factory (Functional Core)
   render.ts         # Dockerfile rendering (Functional Core)
-  errors.ts         # ValidationError type and helpers (Functional Core)
+  parse.ts          # parse(): Dockerfile text to Containerfile (Functional Core)
+  parse/            # Parser internals: source, words, map, structure (Functional Core)
+  errors.ts         # ValidationError and ParseError types and helpers (Functional Core)
   schemas/          # TypeBox validation schemas
     index.ts        # Schema exports
     primitives.ts   # Branded types and validators (Port, ImageName, etc.)
@@ -81,11 +83,20 @@ src/
   stage.ts        # Factory function for creating multi-stage stages
   group.ts        # Factory function for instruction groups
   render.ts       # Rendering functions for Dockerfile output
-  errors.ts       # ValidationError type and helper functions
+  parse.ts        # parse(): reads each entry, maps it, assembles the Containerfile
+  parse/
+    source.ts     # Splits text into comments and instructions (the only dockerfile-ast import)
+    words.ts      # Quote-aware word splitting, JSON string arrays, flag detection
+    map.ts        # One Dockerfile instruction to model instructions, through the factories
+    structure.ts  # Stages from FROM, groups from blank-line blocks
+  errors.ts       # ValidationError, ParseError, and helper functions
   schemas/        # TypeBox validation schemas
     index.ts      # Re-exports from primitives
     primitives.ts # Branded types, schemas, and validation functions
 tests/
+  parse.test.ts                   # parse(): stages, groups, comments, instructions, errors
+  parse.property.test.ts          # parse(render(cf)) keeps the text and the instructions
+  parse.buildkit.test.ts          # parse() compared with BuildKit's reading
   generation.test.ts              # Fixture-based generation tests
   buildkit.test.ts                # Rendered output checked with BuildKit's parser
   buildkit/                       # Go program that runs BuildKit's parser (pinned version)
@@ -109,6 +120,7 @@ tests/
 - `neverthrow` - Type-safe Result types for error handling without exceptions
 - `@bojanrajkovic/go-duration` - Converts `Temporal.Duration` to Go duration strings for HEALTHCHECK. It needs a global `Temporal`, which `temporal-polyfill` supplies where the runtime lacks it.
 - `temporal-polyfill` - Provides the global `Temporal` (and its types). It does nothing on runtimes that already have `Temporal`.
+- `dockerfile-ast` - Finds where each instruction starts and ends, for `parse()`. It's CommonJS and imported by name. Its argument values ignore quotes, and it never validates, so `parse()` reads values from the text itself and validates through the factories.
 
 **Dev dependencies (testing):**
 
@@ -225,9 +237,10 @@ Factory functions create instruction objects with validation. All return `Result
 
 ### Render Functions
 
-| Function | Signature                                | Notes                                           |
-| -------- | ---------------------------------------- | ----------------------------------------------- |
-| `render` | `(containerfile: Containerfile): string` | Renders full Containerfile to Dockerfile string |
+| Function | Signature                                             | Notes                                           |
+| -------- | ----------------------------------------------------- | ----------------------------------------------- |
+| `render` | `(containerfile: Containerfile): string`              | Renders full Containerfile to Dockerfile string |
+| `parse`  | `(text: string): Result<Containerfile, ParseError[]>` | Reads Dockerfile text; see Parsing              |
 
 Rendering behavior:
 
@@ -242,6 +255,20 @@ Rendering behavior:
 - ENV, LABEL, and ARG values render in double quotes with `\` and `"` escaped. `$` is escaped too unless the value has `expand: true` (`QuotedValue`), so BuildKit stores the value exactly.
 - COMMENT renders one `# line` per entry, `#` for an empty entry
 - Options rendered in order: `--platform`, `--from`, `--chown`, `--chmod`
+
+### Parsing
+
+`parse(text)` returns `Result<Containerfile, ParseError[]>`, where `ParseError = ValidationError & { readonly line: number }` and `line` is 1-based. It's a pure function. Errors from every instruction are collected. Factory `ValidationError`s pass through with `line` added, and the parser's own errors use the fields `instruction`, `flag`, `heredoc`, `directive`, `arguments`, `ports`, `command`, and `text`.
+
+`render(parse(text))` is the normal form of the same Dockerfile: `parse(render(cf))` keeps every instruction and renders the same text (adjacent comments join, and stage names come from `AS`). The decision to error instead of dropping or rewriting is in `adrs/00-parser-errors-on-unrepresentable-input.md`.
+
+- **Instructions read:** FROM, RUN, CMD, ENTRYPOINT, WORKDIR, USER, VOLUME, EXPOSE, SHELL, and comments. Any other instruction, any flag, a `RUN` heredoc, and a `# escape=` other than `\` are errors. A `# escape=\` line is dropped.
+- **Source reading:** `parse/source.ts` is the only `dockerfile-ast` import. It uses the library for instruction start and end lines only. Where the library continues past a line ending in `\\` (BuildKit doesn't), `source.ts` parses the rest again. CRLF becomes LF first.
+- **Exec form:** `JSON.parse` of the text with continuations joined decides it, and only an array of strings counts. `CMD ['a','b']` is shell form.
+- **Shell form:** the text stays as written, continuations included, with comment and blank lines inside a continuation removed. A removed comment moves above its instruction. The parser never produces `chain()`.
+- **Stages:** each `FROM` after the first starts a stage, and comment lines directly above it go with it. One `FROM` gives `{ instructions }`, and more give `{ stages }` named by `AS` or `stage-<index>`.
+- **Groups:** a stage with two or more blank-line blocks becomes one `Group` per block with `comment: null`. One block stays plain.
+- **Words:** `splitWords()` honors `'` and `"`. BuildKit splits `VOLUME` on whitespace first, so it rejects a quoted word that contains a space, and `parse()` accepts it.
 
 ### Mounts
 

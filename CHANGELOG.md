@@ -1,5 +1,56 @@
 # @bojanrajkovic/containerfile-ts
 
+## 3.0.0
+
+### Major Changes
+
+- render ENV, LABEL, and ARG values literally in quotes (#382)
+
+  BREAKING CHANGE: env(), label(), and arg() defaults are now literal:
+  $VAR is no longer expanded unless the value is created with { expand:
+  true }. EnvInstruction.value, LabelInstruction.value, and
+  ArgInstruction.defaultValue are QuotedValue objects instead of strings.
+
+  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+  ***
+
+- require non-empty instruction and stage lists (#372)
+
+  BREAKING CHANGE: containerfile() and stage() take NonEmptyArray<T>
+  instead of ReadonlyArray<T>. Array literals still type-check. A computed
+  array must be narrowed with a length check before it is passed in.
+
+  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+- type instruction fields with the branded Port, ImageName, and DockerPath (#384)
+
+  BREAKING CHANGE: ExposeInstruction.port and endPort are replaced by
+
+### Minor Changes
+
+- add HEALTHCHECK instruction support (#366)
+- add group() to set instructions apart with blank lines (#371)
+- add chain() for multi-step RUN commands (#383)
+- parse RUN mounts and quoted heredocs (#391)
+- add comment() for full-line Dockerfile comments (#370)
+- add heredoc() for multi-line RUN scripts (#373)
+- add USER instruction support (#363)
+- parse Dockerfiles into the containerfile model (#388)
+- add edit() to change a parsed or generated containerfile (#392)
+- add VOLUME instruction support (#364)
+- add SHELL instruction support (#365)
+- add RUN --mount through run()'s mounts option (#387)
+- parse ENV, LABEL, ARG, COPY, ADD, and HEALTHCHECK values and flags (#390)
+
+### Patch Changes
+
+- match BuildKit's continuation and heredoc rules (#379)
+- update dependency @sinclair/typebox to v0.34.50 (#205)
+- typecheck tests and reject non-command values in run() (#378)
+- reject line breaks that inject Dockerfile instructions (#369)
+- keep PR descriptions out of generated changelog entries (#368)
+
 ## 2.0.0
 
 ### Major Changes
